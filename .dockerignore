@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+!.env.example
+.git
+.gitignore
+**/*.log
+data/
+uploads/
+.DS_Store
+**/.turbo
+**/.vite

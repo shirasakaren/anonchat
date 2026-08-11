@@ -94,7 +94,9 @@ export async function buildApp(): Promise<FastifyInstance> {
   );
 
   if (env.NODE_ENV === "production") {
-    const webDist = join(__dirname, "../../web/dist");
+    // Defaults to the monorepo's dev layout (apps/server/dist -> ../../web/dist);
+    // the Docker image sets WEB_DIST_DIR explicitly since its deployed layout differs.
+    const webDist = process.env.WEB_DIST_DIR ?? join(__dirname, "../../web/dist");
     await app.register(staticPlugin, { root: webDist, wildcard: false });
     app.setNotFoundHandler((request, reply) => {
       if (request.raw.url?.startsWith("/api")) {
