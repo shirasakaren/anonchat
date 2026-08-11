@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
 import { formatDistanceToNowStrict } from "date-fns";
-import type { AdminConversationSummaryDto } from "@termine/shared";
+import type { AdminConversationSummaryDto, ServerWsEvent } from "@termine/shared";
 import { listConversations } from "../../api/admin.js";
 import { decryptMessageText, getConversationKey } from "../../crypto/conversationCrypto.js";
 import { getAdminMessages } from "../../api/admin.js";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
+import { useRealtimeSocket } from "../../hooks/useRealtimeSocket.js";
 
 type StatusFilter = "ALL" | "UNREAD" | "READ" | "ACTIVE" | "ARCHIVED" | "BLOCKED";
 
@@ -30,6 +31,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
   const [filter, setFilter] = useState<StatusFilter>("ALL");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [liveToken, setLiveToken] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,7 +47,27 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
     return () => {
       cancelled = true;
     };
-  }, [filter, search, refreshToken]);
+  }, [filter, search, refreshToken, liveToken]);
+
+  // The list otherwise only learns about a brand-new conversation or an
+  // out-of-view conversation's new message on the next manual filter/search
+  // change - this is what makes a first-time message show up immediately
+  // (spec: "the admin should immediately see the new conversation").
+  const handleLiveEvent = useCallback((event: ServerWsEvent) => {
+    if (event.type === "message.created") {
+      // Invalidate this conversation's cached preview so the effect below
+      // refetches its now-stale "last message" text.
+      setPreviews((prev) => {
+        if (!(event.conversationId in prev)) return prev;
+        const { [event.conversationId]: _removed, ...rest } = prev;
+        return rest;
+      });
+      setLiveToken((n) => n + 1);
+    } else if (event.type === "conversation.updated") {
+      setLiveToken((n) => n + 1);
+    }
+  }, []);
+  useRealtimeSocket(handleLiveEvent, true);
 
   useEffect(() => {
     if (!identity) return;
