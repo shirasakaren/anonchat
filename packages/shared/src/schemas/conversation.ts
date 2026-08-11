@@ -62,6 +62,8 @@ export interface ConversationDto {
   updatedAt: string;
   lastMessageAt: string | null;
   unreadCount: number;
+  /** The anonymous participant's X25519 public key - needed by the admin's client to derive the shared conversation key via ECDH. */
+  anonymousExchangePublicKey: string;
 }
 
 export interface MessagePage {

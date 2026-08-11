@@ -106,6 +106,8 @@ export interface AdminConversationSummaryDto {
   unreadCount: number;
   createdAt: string;
   lastMessageAt: string | null;
+  /** Needed by the admin's client to derive the shared conversation key via ECDH, for client-side previews/search. */
+  anonymousExchangePublicKey: string;
 }
 
 export interface SiteSettingsDto {

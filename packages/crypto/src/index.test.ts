@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   base64urlToBytes,
   bytesToBase64url,
+  decryptBlob,
   decryptBytes,
   decryptJSON,
   deriveConversationKey,
   deriveIdentity,
+  encryptBlob,
   encryptBytes,
   encryptJSON,
   formatRecoverySecret,
@@ -142,6 +144,30 @@ describe("authenticated encryption", () => {
     tamperedBytes.set([tamperedBytes[0]! ^ 0xff], 0);
     const tampered = { ...payload, ciphertext: bytesToBase64url(tamperedBytes) };
     expect(() => decryptBytes(key, tampered)).toThrow();
+  });
+});
+
+describe("blob encryption", () => {
+  it("round-trips binary data", () => {
+    const key = deriveIdentity(generateRecoverySecret()).exchangeSecretKey;
+    const plaintext = new Uint8Array(4096).map((_, i) => i % 256);
+    const blob = encryptBlob(key, plaintext);
+    expect(decryptBlob(key, blob)).toEqual(plaintext);
+  });
+
+  it("produces a different nonce prefix every call", () => {
+    const key = deriveIdentity(generateRecoverySecret()).exchangeSecretKey;
+    const plaintext = new TextEncoder().encode("same content");
+    const blobA = encryptBlob(key, plaintext);
+    const blobB = encryptBlob(key, plaintext);
+    expect(blobA.slice(0, 24)).not.toEqual(blobB.slice(0, 24));
+  });
+
+  it("fails to decrypt with the wrong key", () => {
+    const keyA = deriveIdentity(generateRecoverySecret()).exchangeSecretKey;
+    const keyB = deriveIdentity(generateRecoverySecret()).exchangeSecretKey;
+    const blob = encryptBlob(keyA, new TextEncoder().encode("secret file"));
+    expect(() => decryptBlob(keyB, blob)).toThrow();
   });
 });
 

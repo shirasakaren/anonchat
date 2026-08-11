@@ -32,3 +32,26 @@ export function decryptJSON<T>(key: Uint8Array, payload: EncryptedPayload, aad?:
   const bytes = decryptBytes(key, payload, aad);
   return JSON.parse(new TextDecoder().decode(bytes)) as T;
 }
+
+/**
+ * Nonce-prefixed single blob, for binary payloads (attachment bytes) that
+ * travel as one opaque upload/download rather than as JSON - the nonce
+ * must never be reused, so each call mints a fresh one and ships it
+ * alongside the ciphertext instead of relying on a caller-managed nonce.
+ */
+export function encryptBlob(key: Uint8Array, plaintext: Uint8Array): Uint8Array {
+  const nonce = randomBytes(XCHACHA_NONCE_BYTES);
+  const cipher = xchacha20poly1305(key, nonce);
+  const ciphertext = cipher.encrypt(plaintext);
+  const out = new Uint8Array(nonce.length + ciphertext.length);
+  out.set(nonce, 0);
+  out.set(ciphertext, nonce.length);
+  return out;
+}
+
+export function decryptBlob(key: Uint8Array, blob: Uint8Array): Uint8Array {
+  const nonce = blob.slice(0, XCHACHA_NONCE_BYTES);
+  const ciphertext = blob.slice(XCHACHA_NONCE_BYTES);
+  const cipher = xchacha20poly1305(key, nonce);
+  return cipher.decrypt(ciphertext);
+}

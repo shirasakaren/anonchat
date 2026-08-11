@@ -20,7 +20,7 @@ export function registerConversationRoutes(app: FastifyInstance): void {
   app.get("/conversation", { preHandler: requireAnon }, async (request) => {
     const conversation = request.anonUser!.conversation!;
     const unreadCount = await countUnread(conversation.id, "USER");
-    return toConversationDto(conversation, request.anonUser!.publicId, unreadCount);
+    return toConversationDto(conversation, request.anonUser!, unreadCount);
   });
 
   app.get("/conversation/messages", { preHandler: requireAnon }, async (request) => {

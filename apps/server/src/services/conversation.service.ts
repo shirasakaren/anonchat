@@ -1,4 +1,5 @@
 import type { Conversation, ConversationStatus, Prisma, SenderType } from "@prisma/client";
+import { bytesToBase64url } from "@termine/crypto";
 import type { AdminConversationSummaryDto, ConversationDto, MessagePage } from "@termine/shared";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@termine/shared";
 import { prisma } from "../db.js";
@@ -6,6 +7,8 @@ import { publishToConversation } from "../realtime/hub.js";
 import { getStorageAdapter } from "../storage/index.js";
 import { Errors } from "../utils/errors.js";
 import { MESSAGE_INCLUDE, toMessageDto } from "../utils/dto.js";
+
+const ANONYMOUS_USER_SELECT = { publicId: true, exchangePublicKey: true } as const;
 
 function otherSender(viewer: SenderType): SenderType {
   return viewer === "ADMIN" ? "USER" : "ADMIN";
@@ -19,17 +22,18 @@ export async function countUnread(conversationId: string, forViewer: SenderType)
 
 export function toConversationDto(
   conversation: Conversation,
-  publicId: string,
+  anonymousUser: { publicId: string; exchangePublicKey: Uint8Array },
   unreadCount: number,
 ): ConversationDto {
   return {
     id: conversation.id,
-    publicId,
+    publicId: anonymousUser.publicId,
     status: conversation.status,
     createdAt: conversation.createdAt.toISOString(),
     updatedAt: conversation.updatedAt.toISOString(),
     lastMessageAt: conversation.lastMessageAt ? conversation.lastMessageAt.toISOString() : null,
     unreadCount,
+    anonymousExchangePublicKey: bytesToBase64url(anonymousUser.exchangePublicKey),
   };
 }
 
@@ -113,7 +117,7 @@ export async function listConversationsForAdmin(query: {
     orderBy: [{ lastMessageAt: "desc" }, { createdAt: "desc" }],
     take: limit + 1,
     ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
-    include: { anonymousUser: { select: { publicId: true } } },
+    include: { anonymousUser: { select: ANONYMOUS_USER_SELECT } },
   });
   const hasMore = rows.length > limit;
   const page = hasMore ? rows.slice(0, limit) : rows;
@@ -127,6 +131,7 @@ export async function listConversationsForAdmin(query: {
       unreadCount: unreadCounts[i]!,
       createdAt: c.createdAt.toISOString(),
       lastMessageAt: c.lastMessageAt ? c.lastMessageAt.toISOString() : null,
+      anonymousExchangePublicKey: bytesToBase64url(c.anonymousUser.exchangePublicKey),
     })),
     nextCursor: hasMore ? page[page.length - 1]!.id : null,
   };
@@ -135,21 +140,21 @@ export async function listConversationsForAdmin(query: {
 export async function getConversationForAdmin(conversationId: string): Promise<ConversationDto> {
   const conversation = await prisma.conversation.findFirst({
     where: { id: conversationId, deletedAt: null },
-    include: { anonymousUser: { select: { publicId: true } } },
+    include: { anonymousUser: { select: ANONYMOUS_USER_SELECT } },
   });
   if (!conversation) throw Errors.notFound();
   const unreadCount = await countUnread(conversation.id, "ADMIN");
-  return toConversationDto(conversation, conversation.anonymousUser.publicId, unreadCount);
+  return toConversationDto(conversation, conversation.anonymousUser, unreadCount);
 }
 
 export async function setConversationStatus(conversationId: string, status: ConversationStatus): Promise<ConversationDto> {
   const conversation = await prisma.conversation.update({
     where: { id: conversationId },
     data: { status },
-    include: { anonymousUser: { select: { publicId: true } } },
+    include: { anonymousUser: { select: ANONYMOUS_USER_SELECT } },
   });
   const unreadCount = await countUnread(conversationId, "ADMIN");
-  const dto = toConversationDto(conversation, conversation.anonymousUser.publicId, unreadCount);
+  const dto = toConversationDto(conversation, conversation.anonymousUser, unreadCount);
   publishToConversation(conversationId, { type: "conversation.updated", conversation: dto });
   return dto;
 }
@@ -162,10 +167,10 @@ export async function restoreConversation(conversationId: string): Promise<Conve
   const conversation = await prisma.conversation.update({
     where: { id: conversationId },
     data: { deletedAt: null },
-    include: { anonymousUser: { select: { publicId: true } } },
+    include: { anonymousUser: { select: ANONYMOUS_USER_SELECT } },
   });
   const unreadCount = await countUnread(conversationId, "ADMIN");
-  return toConversationDto(conversation, conversation.anonymousUser.publicId, unreadCount);
+  return toConversationDto(conversation, conversation.anonymousUser, unreadCount);
 }
 
 export async function hardDeleteConversation(conversationId: string): Promise<void> {
