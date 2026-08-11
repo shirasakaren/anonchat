@@ -61,7 +61,8 @@ async function call(
     url: `/api${url}`,
     headers: {
       cookie: cookieHeader(jar),
-      ...(payload !== undefined ? { "content-type": "application/json", "x-termine-csrf": jar.csrf() } : {}),
+      ...(method !== "GET" ? { "x-termine-csrf": jar.csrf() } : {}),
+      ...(payload !== undefined ? { "content-type": "application/json" } : {}),
     },
     payload: payload !== undefined ? JSON.stringify(payload) : undefined,
   });
