@@ -9,6 +9,7 @@ import SettingsPage from "./SettingsPage.js";
 import SessionsPage from "./SessionsPage.js";
 import CannedRepliesPage from "./CannedRepliesPage.js";
 import AuditLogPage from "./AuditLogPage.js";
+import { GlobalNotifications } from "./GlobalNotifications.js";
 
 function AdminAppInner() {
   const { status, needsKeyUnlock } = useAdminSession();
@@ -19,6 +20,7 @@ function AdminAppInner() {
 
   return (
     <DashboardLayout>
+      <GlobalNotifications />
       <Routes>
         <Route path="/" element={<Inbox />} />
         <Route path="/c/:conversationId" element={<Inbox />} />

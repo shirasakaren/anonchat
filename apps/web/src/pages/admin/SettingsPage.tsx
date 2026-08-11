@@ -2,10 +2,14 @@ import { useEffect, useState } from "react";
 import type { SiteSettingsDto } from "@termine/shared";
 import { getSettings, updateSettings, uploadAvatar, beginTotpSetup, verifyTotpSetup, disableTotp } from "../../api/admin.js";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
+import { useAdminNotifications } from "../../hooks/useAdminNotifications.js";
 import { FullScreenLoader } from "../../components/common/Loader.js";
 
 export default function SettingsPage() {
   const { admin, refreshAdmin } = useAdminSession();
+  const { isSoundEnabled, setSoundEnabled, requestPermission } = useAdminNotifications();
+  const [soundOn, setSoundOn] = useState(true);
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">("default");
   const [settings, setSettings] = useState<SiteSettingsDto | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
@@ -27,9 +31,22 @@ export default function SettingsPage() {
       setPgpPublicKey(s.pgpPublicKey ?? "");
       setPresenceEnabled(s.presenceEnabled);
     });
-  }, []);
+    setSoundOn(isSoundEnabled());
+    if ("Notification" in window) setNotifPermission(Notification.permission);
+    else setNotifPermission("unsupported");
+  }, [isSoundEnabled]);
 
   if (!settings) return <FullScreenLoader />;
+
+  async function handleEnableNotifications() {
+    const result = await requestPermission();
+    setNotifPermission(result);
+  }
+
+  function handleSoundToggle(enabled: boolean) {
+    setSoundOn(enabled);
+    setSoundEnabled(enabled);
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -131,6 +148,28 @@ export default function SettingsPage() {
         <button type="button" onClick={handleSave} disabled={saving} className="rounded-lg bg-[var(--color-accent-600)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
           {saving ? "Saving…" : saved ? "Saved!" : "Save changes"}
         </button>
+      </section>
+
+      <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
+        <h2 className="mb-3 text-sm font-semibold">Notifications</h2>
+        <label className="mb-3 flex items-center gap-2 text-sm font-medium">
+          <input type="checkbox" checked={soundOn} onChange={(e) => handleSoundToggle(e.target.checked)} />
+          Play a sound for new messages
+        </label>
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-[var(--text-muted)]">Browser notifications</span>
+          {notifPermission === "granted" ? (
+            <span className="text-[var(--text-muted)]">Enabled</span>
+          ) : notifPermission === "unsupported" ? (
+            <span className="text-[var(--text-muted)]">Not supported in this browser</span>
+          ) : notifPermission === "denied" ? (
+            <span className="text-[var(--text-muted)]">Blocked - enable in browser settings</span>
+          ) : (
+            <button type="button" onClick={handleEnableNotifications} className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs">
+              Enable
+            </button>
+          )}
+        </div>
       </section>
 
       <section className="rounded-xl border border-[var(--border)] p-4">
