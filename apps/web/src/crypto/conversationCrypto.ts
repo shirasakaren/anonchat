@@ -64,3 +64,8 @@ export function decryptReaction(key: Uint8Array, payload: EncryptedPayload): str
     return null;
   }
 }
+
+/** Copies into a plain ArrayBuffer-backed Uint8Array so it satisfies BlobPart - noble's Uint8Array<ArrayBufferLike> return type isn't directly assignable. */
+export function toBlobPart(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
+  return new Uint8Array(bytes);
+}

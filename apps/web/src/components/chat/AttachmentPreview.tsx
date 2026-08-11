@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { decryptBlob } from "@termine/crypto";
 import type { AttachmentDto } from "@termine/shared";
-import { decryptAttachmentMeta, type AttachmentMetaEnvelope } from "../../crypto/conversationCrypto.js";
+import { decryptAttachmentMeta, toBlobPart, type AttachmentMetaEnvelope } from "../../crypto/conversationCrypto.js";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -47,7 +47,7 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
       const res = await fetch(downloadUrl, { credentials: "include" });
       if (!res.ok) throw new Error("download failed");
       const raw = new Uint8Array(await res.arrayBuffer());
-      const plaintext = decryptBlob(conversationKey, raw);
+      const plaintext = toBlobPart(decryptBlob(conversationKey, raw));
       const blob = new Blob([plaintext], { type: meta.mimetype });
       setState({ kind: "loaded", url: URL.createObjectURL(blob), mimetype: meta.mimetype });
     } catch {

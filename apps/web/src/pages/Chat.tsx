@@ -17,6 +17,7 @@ import {
   encryptMessageText,
   encryptReaction,
   getConversationKey,
+  toBlobPart,
 } from "../crypto/conversationCrypto.js";
 import type { DisplayMessage } from "../components/chat/types.js";
 
@@ -36,7 +37,7 @@ export default function Chat() {
   const [adminOnline, setAdminOnline] = useState<boolean | null>(null);
   const [adminTyping, setAdminTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pendingFilesRef = useRef<Map<string, { text: string; files: File[]; replyToId: string | null }>>(new Map());
 
   const conversationKey = useMemo(
@@ -169,7 +170,7 @@ export default function Chat() {
             mimetype: file.type || "application/octet-stream",
             size: file.size,
           });
-          return { meta, blob: new Blob([encryptedBlob]) };
+          return { meta, blob: new Blob([toBlobPart(encryptedBlob)]) };
         }),
       );
       const payload = encryptMessageText(conversationKey, text);

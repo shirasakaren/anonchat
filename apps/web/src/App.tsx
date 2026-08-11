@@ -3,7 +3,7 @@ import { SiteProvider, useSite } from "./context/SiteContext.js";
 import { FullScreenError, FullScreenLoader } from "./components/common/Loader.js";
 import Setup from "./pages/Setup.js";
 import PublicApp from "./pages/PublicApp.js";
-import AdminApp from "./pages/AdminApp.js";
+import AdminApp from "./pages/admin/AdminApp.js";
 
 function RootRouter() {
   const { site, loading, error } = useSite();
