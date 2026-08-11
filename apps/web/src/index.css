@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --color-accent-50: #eef4ff;
+  --color-accent-100: #dfe9ff;
+  --color-accent-300: #a3bfff;
+  --color-accent-500: #4f6df5;
+  --color-accent-600: #3c56db;
+  --color-accent-700: #2f44ad;
+}
+
+:root {
+  color-scheme: light dark;
+  --surface: #ffffff;
+  --surface-muted: #f4f5f7;
+  --surface-raised: #ffffff;
+  --border: #e2e4e9;
+  --text: #14161a;
+  --text-muted: #6b7280;
+  --bubble-user: #4f6df5;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #f0f1f4;
+  --bubble-admin-text: #14161a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #14161a;
+    --surface-muted: #1b1e24;
+    --surface-raised: #20242c;
+    --border: #2c303a;
+    --text: #f4f5f7;
+    --text-muted: #9aa0ac;
+    --bubble-user: #4f6df5;
+    --bubble-user-text: #ffffff;
+    --bubble-admin: #262a33;
+    --bubble-admin-text: #f4f5f7;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--surface-muted);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--color-accent-500);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.prose-message a {
+  color: var(--color-accent-600);
+  text-decoration: underline;
+}
+
+.prose-message pre {
+  background: var(--surface-muted);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  overflow-x: auto;
+}
+
+.prose-message code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.875em;
+}
+
+.prose-message p {
+  margin: 0;
+}
+
+.prose-message p + p {
+  margin-top: 0.5rem;
+}

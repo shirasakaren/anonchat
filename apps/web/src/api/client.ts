@@ -1,0 +1,65 @@
+const CSRF_COOKIE = "termine_csrf";
+const CSRF_HEADER = "x-termine-csrf";
+
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public code: string,
+    message: string,
+    public fields?: { path: string; message: string }[],
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+function readCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]!) : null;
+}
+
+export interface RequestOptions {
+  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  body?: unknown;
+  isFormData?: boolean;
+}
+
+export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const method = options.method ?? "GET";
+  const headers: Record<string, string> = {};
+  if (method !== "GET") {
+    const csrf = readCookie(CSRF_COOKIE);
+    if (csrf) headers[CSRF_HEADER] = csrf;
+  }
+
+  let body: BodyInit | undefined;
+  if (options.body instanceof FormData) {
+    body = options.body;
+  } else if (options.body !== undefined) {
+    headers["content-type"] = "application/json";
+    body = JSON.stringify(options.body);
+  }
+
+  const res = await fetch(`/api${path}`, { method, headers, body, credentials: "include" });
+
+  if (res.status === 204) {
+    return undefined as T;
+  }
+
+  const text = await res.text();
+  const json = text ? JSON.parse(text) : null;
+
+  if (!res.ok) {
+    const errorBody = json?.error ?? { code: "UNKNOWN", message: "Something went wrong." };
+    throw new ApiError(res.status, errorBody.code, errorBody.message, errorBody.fields);
+  }
+
+  return json as T;
+}
+
+export const api = {
+  get: <T>(path: string) => apiFetch<T>(path),
+  post: <T>(path: string, body?: unknown) => apiFetch<T>(path, { method: "POST", body }),
+  patch: <T>(path: string, body?: unknown) => apiFetch<T>(path, { method: "PATCH", body }),
+  delete: <T>(path: string) => apiFetch<T>(path, { method: "DELETE" }),
+};
