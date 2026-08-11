@@ -175,7 +175,14 @@ export default function Chat() {
       );
       const payload = encryptMessageText(conversationKey, text);
       const dto = await sendMessage({ content: payload, replyToId, attachments });
-      setMessages((prev) => prev.map((m) => (m.id === localId ? decryptDto(dto) : m)));
+      setMessages((prev) => {
+        const withoutOptimistic = prev.filter((m) => m.id !== localId);
+        // The WebSocket push for this same message can arrive before this
+        // REST response does - if it already landed, just drop the
+        // optimistic placeholder instead of adding a second copy.
+        if (withoutOptimistic.some((m) => m.id === dto.id)) return withoutOptimistic;
+        return [...withoutOptimistic, decryptDto(dto)].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      });
       pendingFilesRef.current.delete(localId);
     } catch (err) {
       setMessages((prev) =>
