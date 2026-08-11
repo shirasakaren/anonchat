@@ -1,14 +1,30 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { onboardAdmin } from "../api/admin.js";
+import { getSiteInfo } from "../api/site.js";
 import { ApiError } from "../api/client.js";
 import { createAndCacheAdminIdentity } from "../crypto/adminKeyStore.js";
+import { useSite } from "../context/SiteContext.js";
+import { FullScreenLoader } from "../components/common/Loader.js";
 import { RecoveryPhraseDisplay } from "../components/common/RecoveryPhraseDisplay.js";
 
 type Step = "welcome" | "profile" | "credentials" | "recovery" | "done";
 
+/**
+ * Module-level, not React state, so it survives this component remounting
+ * mid-transition (observed: the surrounding router re-renders once
+ * onboarding flips the shared site info, which can remount whichever route
+ * is currently active). Sets true the moment onboarding succeeds; the
+ * mount-check effect below reads it to avoid re-deciding "already
+ * onboarded -> redirect to /" out from under a navigation already in
+ * flight to /admin.
+ */
+let setupCompletionInFlight = false;
+
 export default function Setup() {
   const navigate = useNavigate();
+  const { refresh: refreshSite } = useSite();
+  const [checkingExisting, setCheckingExisting] = useState(true);
   const [step, setStep] = useState<Step>("welcome");
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
@@ -19,6 +35,31 @@ export default function Setup() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingIdentity, setPendingIdentity] = useState<Awaited<ReturnType<typeof createAndCacheAdminIdentity>>["identity"] | null>(null);
+
+  // One-time, independent check on mount - deliberately NOT tied to the
+  // shared SiteContext value, since this component's own completion flow
+  // is what flips that value true. Reacting to it here would redirect this
+  // page out from under itself mid-navigation. See App.tsx for the full
+  // explanation.
+  useEffect(() => {
+    if (setupCompletionInFlight) {
+      setCheckingExisting(false);
+      return;
+    }
+    let cancelled = false;
+    getSiteInfo()
+      .then((info) => {
+        if (cancelled) return;
+        if (info.onboardingComplete) navigate("/", { replace: true });
+        else setCheckingExisting(false);
+      })
+      .catch(() => {
+        if (!cancelled) setCheckingExisting(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
 
   async function handleCredentialsSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,13 +84,21 @@ export default function Setup() {
     setError(null);
     try {
       await onboardAdmin({ username, password, displayName, identity: pendingIdentity });
+      setupCompletionInFlight = true;
       setStep("done");
+      // Refreshes the shared site info for this tab's future navigations
+      // (e.g. later visiting "/"). Deliberately not awaited before
+      // navigating - /admin doesn't depend on it, and awaiting it here
+      // would re-render this route with the new value while still on it.
+      void refreshSite();
       setTimeout(() => navigate("/admin", { replace: true }), 1200);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Setup failed. Please try again.");
       setSubmitting(false);
     }
   }
+
+  if (checkingExisting) return <FullScreenLoader />;
 
   return (
     <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-12">
