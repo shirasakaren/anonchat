@@ -1,0 +1,32 @@
+import { z } from "zod";
+import type { ConversationDto, MessageDto, ReactionDto } from "./schemas/conversation.js";
+import type { SenderType } from "./enums.js";
+
+// ---- Client -> Server -------------------------------------------------
+
+export const ClientWsMessageSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("typing.start"), conversationId: z.string().max(64).optional() }),
+  z.object({ type: z.literal("typing.stop"), conversationId: z.string().max(64).optional() }),
+  z.object({ type: z.literal("ping") }),
+]);
+export type ClientWsMessage = z.infer<typeof ClientWsMessageSchema>;
+
+// ---- Server -> Client ---------------------------------------------------
+
+export type ServerWsEvent =
+  | { type: "connected" }
+  | { type: "message.created"; conversationId: string; message: MessageDto }
+  | { type: "message.updated"; conversationId: string; message: MessageDto }
+  | { type: "message.deleted"; conversationId: string; messageId: string }
+  | { type: "reaction.updated"; conversationId: string; messageId: string; reactions: ReactionDto[] }
+  | { type: "conversation.updated"; conversation: ConversationDto }
+  | {
+      type: "conversation.read";
+      conversationId: string;
+      senderType: SenderType;
+      upToMessageId: string;
+      readAt: string;
+    }
+  | { type: "typing"; conversationId: string; from: SenderType; isTyping: boolean }
+  | { type: "presence"; who: "ADMIN"; online: boolean }
+  | { type: "error"; message: string; code?: string };
