@@ -1,0 +1,230 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Anonymous side
+// ---------------------------------------------------------------------------
+
+enum AnonymousUserStatus {
+  ACTIVE
+  BLOCKED
+  DELETED
+}
+
+model AnonymousUser {
+  id                 String              @id @default(cuid())
+  publicId           String              @unique
+  signingPublicKey   Bytes
+  exchangePublicKey  Bytes
+  status             AnonymousUserStatus @default(ACTIVE)
+  /// Only populated when STORE_IP_ADDRESSES=true. Used purely for abuse
+  /// mitigation (e.g. blocking a device creating many identities).
+  registrationIp     String?
+  createdAt          DateTime            @default(now())
+  lastSeenAt         DateTime            @default(now())
+
+  conversation Conversation?
+  sessions     AnonymousSession[]
+
+  @@map("anonymous_users")
+}
+
+model AnonymousSession {
+  id              String        @id @default(cuid())
+  anonymousUserId String
+  anonymousUser   AnonymousUser @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+  tokenHash       String        @unique
+  ipAddress       String?
+  createdAt       DateTime      @default(now())
+  lastSeenAt      DateTime      @default(now())
+  revokedAt       DateTime?
+
+  @@index([anonymousUserId])
+  @@map("anonymous_sessions")
+}
+
+// ---------------------------------------------------------------------------
+// Conversation / messages
+//
+// Message/attachment/reaction content columns hold ciphertext only - this
+// server can never read them. See docs/SECURITY.md.
+// ---------------------------------------------------------------------------
+
+enum ConversationStatus {
+  ACTIVE
+  ARCHIVED
+  BLOCKED
+}
+
+enum SenderType {
+  USER
+  ADMIN
+}
+
+model Conversation {
+  id              String             @id @default(cuid())
+  anonymousUserId String             @unique
+  anonymousUser   AnonymousUser      @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+  status          ConversationStatus @default(ACTIVE)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  lastMessageAt   DateTime?
+  deletedAt       DateTime?
+
+  messages Message[]
+
+  @@index([status, lastMessageAt])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderType     SenderType
+
+  contentCiphertext Bytes?
+  contentNonce      Bytes?
+
+  replyToId String?
+  replyTo   Message?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   Message[] @relation("MessageReplies")
+
+  edited    Boolean   @default(false)
+  deletedAt DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  readAt    DateTime?
+
+  attachments Attachment[]
+  reactions   MessageReaction[]
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+model Attachment {
+  id         String  @id @default(cuid())
+  messageId  String
+  message    Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  storageKey String  @unique
+
+  /// Encrypted envelope carrying filename/mimetype/size - opaque to the server.
+  metaCiphertext Bytes
+  metaNonce      Bytes
+
+  sizeBytes Int
+  createdAt DateTime @default(now())
+
+  @@index([messageId])
+  @@map("attachments")
+}
+
+model MessageReaction {
+  id         String     @id @default(cuid())
+  messageId  String
+  message    Message    @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  senderType SenderType
+
+  emojiCiphertext Bytes
+  emojiNonce      Bytes
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([messageId, senderType])
+  @@map("message_reactions")
+}
+
+// ---------------------------------------------------------------------------
+// Admin (site owner) side
+// ---------------------------------------------------------------------------
+
+model Admin {
+  id           String  @id @default(cuid())
+  username     String  @unique
+  passwordHash String
+  displayName  String
+  avatarUrl    String?
+
+  totpEnabled       Boolean @default(false)
+  /// AES/XChaCha-encrypted at rest with a key derived from SESSION_SECRET.
+  totpSecretCiphertext Bytes?
+  totpSecretNonce      Bytes?
+
+  signingPublicKey  Bytes
+  exchangePublicKey Bytes
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions      AdminSession[]
+  cannedReplies CannedReply[]
+  auditLogs     AuditLog[]
+
+  @@map("admins")
+}
+
+model AdminSession {
+  id         String   @id @default(cuid())
+  adminId    String
+  admin      Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+
+  @@index([adminId])
+  @@map("admin_sessions")
+}
+
+model SiteSettings {
+  /// Singleton row - always id = 1.
+  id               Int     @id @default(1)
+  displayName      String  @default("Site Owner")
+  bio              String  @default("")
+  avatarUrl        String?
+  contactLinksJson Json    @default("[]")
+  pgpPublicKey     String?
+  presenceEnabled  Boolean @default(true)
+  updatedAt        DateTime @updatedAt
+
+  @@map("site_settings")
+}
+
+model CannedReply {
+  id        String   @id @default(cuid())
+  adminId   String
+  admin     Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([adminId])
+  @@map("canned_replies")
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  adminId      String?
+  admin        Admin?   @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  action       String
+  targetType   String?
+  targetId     String?
+  metadataJson Json?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("audit_logs")
+}
