@@ -218,18 +218,6 @@ jobs:
             echo "\`\`\`"
           } > CHANGELOG.md
 
-      - name: Update VERSION file
-        run: |
-          echo "${{ needs.version.outputs.version }}" > VERSION
-
-      - name: Commit version bump
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add VERSION
-          git commit -m "chore: bump version to v${{ needs.version.outputs.version }}" || true
-          git push || true
-
       - name: Create tag and GitHub Release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
