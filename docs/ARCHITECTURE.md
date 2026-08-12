@@ -8,7 +8,7 @@ Termine is a self-hosted, end-to-end encrypted, anonymous 1:1 messaging inbox. A
 - **`packages/crypto`**: isomorphic (browser + Node) cryptographic core - identity derivation, key agreement, authenticated encryption. No I/O, no framework dependency.
 - **`packages/shared`**: zod schemas, DTOs, WebSocket event contract, and constants shared by both apps.
 - **`apps/server`**: Fastify + PostgreSQL (via Prisma) + native WebSocket. REST API, real-time hub, file storage abstraction.
-- **`apps/web`**: React + Vite SPA. Serves both the public chat and the admin dashboard from one build, code-split by route.
+- **`apps/web`**: React + Vite SPA. Serves both the public chat and the admin dashboard from one build. Currently a single bundle (~230KB gzipped) - route-based code-splitting (`React.lazy` on the admin tree) is a straightforward follow-up, not yet done.
 - **Database**: PostgreSQL is the sole source of truth. No Redis, no message queue - see "Why no Redis" below.
 - **Storage**: pluggable adapter - local disk by default, or any S3-compatible endpoint (AWS S3, Cloudflare R2, Backblaze B2, self-hosted MinIO) via one implementation.
 
