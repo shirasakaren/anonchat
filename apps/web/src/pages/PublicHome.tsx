@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 import { useSite } from "../context/SiteContext.js";
 import { useAnonymousSession } from "../context/AnonymousSessionContext.js";
 import { listIdentities, type IdentitySummary } from "../crypto/identityStore.js";
@@ -65,6 +65,10 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
         )}
         <h1 className="text-2xl font-semibold">Message {ownerName} anonymously</h1>
         <p className="mt-2 text-sm text-[var(--text-muted)]">No email. No account. No name required. {site?.bio}</p>
+        <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-[var(--text-muted)]">
+          <ShieldCheck size={14} className="shrink-0 text-[var(--color-accent-600)]" aria-hidden />
+          End-to-end encrypted — only you and {ownerName} can read these messages.
+        </p>
       </div>
 
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-raised)] p-6 shadow-sm">
