@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import type { Identity } from "@anonchat/crypto";
 import type { AdminSummaryDto } from "@anonchat/shared";
 import { getAdminMe, loginAdmin, logoutAdmin } from "../api/admin.js";
-import { ApiError } from "../api/client.js";
+import { ApiError, setAdminUnauthorizedHandler } from "../api/client.js";
 import {
   getUnlockedAdminIdentity,
   hasCachedAdminKey,
@@ -81,6 +81,21 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
     const unlocked = await importAdminIdentityFromRecoveryPhrase(phrase, password);
     setIdentity(unlocked);
     setNeedsKeyUnlock(false);
+  }, []);
+
+  // Drop straight to the sign-in screen the moment any /admin/* request
+  // comes back 401 - e.g. another device revoked this session from the
+  // Sessions page. Deliberately doesn't call the logoutAdmin() API (that's
+  // what `logout` below does): the session is already invalid server-side,
+  // so that call would just 401 again.
+  useEffect(() => {
+    setAdminUnauthorizedHandler(() => {
+      lockAdminIdentity();
+      setIdentity(null);
+      setAdmin(null);
+      setStatus("signed-out");
+    });
+    return () => setAdminUnauthorizedHandler(null);
   }, []);
 
   const logout = useCallback(async () => {

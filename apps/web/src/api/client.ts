@@ -18,6 +18,20 @@ function readCookie(name: string): string | null {
   return match ? decodeURIComponent(match[1]!) : null;
 }
 
+/**
+ * Fires when an /admin/* request comes back 401 - e.g. because another
+ * browser revoked this session from the admin Sessions page. There was
+ * previously no handling for this anywhere: the admin's tab would just sit
+ * on stale UI with every subsequent action silently failing. AdminSession
+ * context registers itself here so it can drop straight to the sign-in
+ * screen instead. Excludes /admin/login itself, since a failed login
+ * attempt (wrong password) is an expected 401, not a dead session.
+ */
+let onAdminUnauthorized: (() => void) | null = null;
+export function setAdminUnauthorizedHandler(handler: (() => void) | null): void {
+  onAdminUnauthorized = handler;
+}
+
 export interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
@@ -51,6 +65,9 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
 
   if (!res.ok) {
     const errorBody = json?.error ?? { code: "UNKNOWN", message: "Something went wrong." };
+    if (res.status === 401 && path.startsWith("/admin") && path !== "/admin/login") {
+      onAdminUnauthorized?.();
+    }
     throw new ApiError(res.status, errorBody.code, errorBody.message, errorBody.fields);
   }
 
