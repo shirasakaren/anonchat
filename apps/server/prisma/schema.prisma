@@ -197,6 +197,8 @@ model SiteSettings {
   contactLinksJson Json    @default("[]")
   pgpPublicKey     String?
   presenceEnabled  Boolean @default(true)
+  /// Theme identifier, e.g. "monochrome-dark", "paper", "forest-dark".
+  theme            String  @default("monochrome-dark")
   updatedAt        DateTime @updatedAt
 
   @@map("site_settings")

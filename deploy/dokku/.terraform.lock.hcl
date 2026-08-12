@@ -1,0 +1,25 @@
+# This file is maintained automatically by "terraform init".
+# Manual edits may be lost in future updates.
+
+provider "registry.terraform.io/aliksend/dokku" {
+  version     = "1.0.24"
+  constraints = "~> 1.0"
+  hashes = [
+    "h1:Nv8lvFcBqQUY1kr6jgnhcRN7IRuJxQHGwS89R77QnHo=",
+    "zh:0e6806d11ed794644c6ef90c2d129c6f3975da3837fd73d97dfdec7f1788febb",
+    "zh:221de82fa584205d0068f8b76332237060b5f5dc5f597b7658033220cd03866f",
+    "zh:396b7ff82b63d48f6cfb18a2791c489831f7c00799b5b1a0c2a1beb586c0c562",
+    "zh:4027d15d15d29e908f94c9cf71d1800a378af3c947d0f74e3a4654fb9f4f73b2",
+    "zh:5a475f6422acf4369d457fb0bb7e9afb636d17c64e39622d635c6ed15eabb32b",
+    "zh:63a4e2663865dfb4760e6e220e956e7ae14be71c338b3f57b86e74976dc363e3",
+    "zh:8317c520c9a5ed0ef61b2f0289946694d497052abb7d1e572fa4618b2e724da6",
+    "zh:890df766e9b839623b1f0437355032a3c006226a6c200cd911e15ee1a9014e9f",
+    "zh:91d41563a1dc02c35b08fb4723afd33652605e59692fecb6cd82e3d014b03fb7",
+    "zh:a09706b324fcba5d8e609d6fc07981c58ff9683b90d3b6a1481f288b1d33360f",
+    "zh:a7a6b80d10f1ef5adbec88f00d498c7ba8ccfc0cf170165ae19b8db5e12459dd",
+    "zh:ab2613494189e1488541d1b112903e26409c41ddf899d1a1371aec05f64389c7",
+    "zh:be706246ee4b673f27729b90239d531dd517dbd9142e931dbdfe1cbe4ac0b1ca",
+    "zh:ca8ba8e07e20954d9ae054c99b35a068c8f7c751fe076c251ca00943b8ae6f68",
+    "zh:f7293d7ebb2a88170c5af87fa516e90f16ffa686b27dfd35d8ea501705139e24",
+  ]
+}
