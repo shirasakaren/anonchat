@@ -1,12 +1,25 @@
 import { useCallback, useEffect, useRef } from "react";
 
 const SOUND_PREF_KEY = "anonchat.admin.soundEnabled";
+const NOTIFICATION_SOUND_BASE64 = "UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+
+/** The server's CSP only allows `media-src 'self' blob:` (no `data:`), so a
+ *  data: URL playing directly gets silently blocked. Decode it to a Blob and
+ *  use an object URL instead - that's already permitted. */
+function base64WavToBlobUrl(base64: string): string {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
+}
 
 export function useAdminNotifications() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    audioRef.current = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=");
+    const url = base64WavToBlobUrl(NOTIFICATION_SOUND_BASE64);
+    audioRef.current = new Audio(url);
+    return () => URL.revokeObjectURL(url);
   }, []);
 
   const isSoundEnabled = useCallback(() => localStorage.getItem(SOUND_PREF_KEY) !== "false", []);
