@@ -3,11 +3,14 @@ import type { SiteSettingsDto } from "@anonchat/shared";
 import { getSettings, updateSettings, uploadAvatar, beginTotpSetup, verifyTotpSetup, disableTotp } from "../../api/admin.js";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
 import { useAdminNotifications } from "../../hooks/useAdminNotifications.js";
+import { useTheme } from "../../context/ThemeContext.js";
 import { FullScreenLoader } from "../../components/common/Loader.js";
+import { ThemePicker } from "../../components/common/ThemePicker.js";
 
 export default function SettingsPage() {
   const { admin, refreshAdmin } = useAdminSession();
   const { isSoundEnabled, setSoundEnabled, requestPermission } = useAdminNotifications();
+  const { theme: currentTheme, setTheme: applyTheme } = useTheme();
   const [soundOn, setSoundOn] = useState(true);
   const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">("default");
   const [settings, setSettings] = useState<SiteSettingsDto | null>(null);
@@ -16,6 +19,9 @@ export default function SettingsPage() {
   const [contactLinks, setContactLinks] = useState<{ label: string; url: string }[]>([]);
   const [pgpPublicKey, setPgpPublicKey] = useState("");
   const [presenceEnabled, setPresenceEnabled] = useState(true);
+  const [theme, setThemeState] = useState(currentTheme);
+  const [themeSaving, setThemeSaving] = useState(false);
+  const [themeSaved, setThemeSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [totpSetup, setTotpSetup] = useState<{ secret: string; uri: string } | null>(null);
@@ -30,6 +36,7 @@ export default function SettingsPage() {
       setContactLinks(s.contactLinks);
       setPgpPublicKey(s.pgpPublicKey ?? "");
       setPresenceEnabled(s.presenceEnabled);
+      setThemeState(s.theme);
     });
     setSoundOn(isSoundEnabled());
     if ("Notification" in window) setNotifPermission(Notification.permission);
@@ -37,6 +44,27 @@ export default function SettingsPage() {
   }, [isSoundEnabled]);
 
   if (!settings) return <FullScreenLoader />;
+
+  async function handleThemeChange(id: string) {
+    setThemeState(id);
+    setThemeSaving(true);
+    setThemeSaved(false);
+    try {
+      // Apply locally immediately for instant feedback.
+      applyTheme(id);
+      // Persist to the server.
+      const updated = await updateSettings({ theme: id });
+      setSettings(updated);
+      setThemeSaved(true);
+      setTimeout(() => setThemeSaved(false), 2000);
+    } catch {
+      // Revert on failure.
+      applyTheme(currentTheme);
+      setThemeState(currentTheme);
+    } finally {
+      setThemeSaving(false);
+    }
+  }
 
   async function handleEnableNotifications() {
     const result = await requestPermission();
@@ -148,6 +176,17 @@ export default function SettingsPage() {
         <button type="button" onClick={handleSave} disabled={saving} className="rounded-lg bg-[var(--color-accent-600)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
           {saving ? "Saving…" : saved ? "Saved!" : "Save changes"}
         </button>
+      </section>
+
+      <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
+        <h2 className="mb-3 text-sm font-semibold">Theme</h2>
+        <p className="mb-3 text-xs text-[var(--text-muted)]">
+          Changes apply instantly for both you and your visitors.
+        </p>
+        <ThemePicker value={theme} onChange={handleThemeChange} />
+        <p className="mt-3 text-xs text-[var(--text-muted)]">
+          {themeSaving ? "Saving…" : themeSaved ? "Theme saved!" : ""}
+        </p>
       </section>
 
       <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
