@@ -204,19 +204,21 @@ export default function SettingsPage() {
         <button
           type="button"
           onClick={() => setContactLinks((prev) => [...prev, { label: "", url: "" }])}
-          className="mb-4 text-xs text-[var(--color-accent-600)]"
+          className="block text-xs text-[var(--color-accent-600)]"
         >
           + Add link
         </button>
 
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving}
-          className="rounded-lg bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
-        >
-          {saving ? "Saving…" : saved ? "Saved!" : "Save changes"}
-        </button>
+        <div className="mt-6 border-t border-[var(--border)] pt-4">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="rounded-lg bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
+          >
+            {saving ? "Saving…" : saved ? "Saved!" : "Save changes"}
+          </button>
+        </div>
       </section>
 
       <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
