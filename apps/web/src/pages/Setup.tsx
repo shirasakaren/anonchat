@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import clsx from "clsx";
 import { useNavigate } from "react-router-dom";
 import { onboardAdmin } from "../api/admin.js";
 import { getSiteInfo } from "../api/site.js";
@@ -119,7 +120,12 @@ export default function Setup() {
   if (checkingExisting) return <FullScreenLoader />;
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-12">
+    <div
+      className={clsx(
+        "mx-auto flex min-h-screen flex-col justify-center px-6 py-12 transition-[max-width]",
+        step === "theme" ? "max-w-3xl" : "max-w-lg",
+      )}
+    >
       <div className="mb-8 text-center">
         <p className="text-sm font-medium uppercase tracking-wide text-[var(--color-accent-600)]">First-time setup</p>
         <h1 className="mt-1 text-2xl font-semibold">Welcome to Anonchat</h1>
