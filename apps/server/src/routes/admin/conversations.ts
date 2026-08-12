@@ -63,6 +63,10 @@ export function registerAdminConversationRoutes(app: FastifyInstance): void {
 
   app.patch("/admin/conversations/:id/messages/:messageId", { preHandler: requireAdmin }, async (request, reply) => {
     const env = loadEnv();
+    const { admin } = request.adminAuth!;
+    if (!checkRateLimit(`message:ADMIN:${admin.id}`, env.RATE_LIMIT_MESSAGES_PER_MINUTE, 60_000)) {
+      throw Errors.rateLimited();
+    }
     const params = ConversationMessageParamsSchema.parse(request.params);
     const body = EditMessageRequestSchema.parse(request.body);
     const dto = await editMessage({
@@ -72,25 +76,44 @@ export function registerAdminConversationRoutes(app: FastifyInstance): void {
       content: body.content,
       editWindowMinutes: env.MESSAGE_EDIT_WINDOW_MINUTES,
     });
+    await recordAudit(admin.id, "message.edited", { type: "Message", id: params.messageId });
     reply.send(dto);
   });
 
   app.delete("/admin/conversations/:id/messages/:messageId", { preHandler: requireAdmin }, async (request, reply) => {
+    const env = loadEnv();
+    const { admin } = request.adminAuth!;
+    if (!checkRateLimit(`message:ADMIN:${admin.id}`, env.RATE_LIMIT_MESSAGES_PER_MINUTE, 60_000)) {
+      throw Errors.rateLimited();
+    }
     const params = ConversationMessageParamsSchema.parse(request.params);
     await deleteMessage({ conversationId: params.id, messageId: params.messageId, senderType: "ADMIN" });
+    await recordAudit(admin.id, "message.deleted", { type: "Message", id: params.messageId });
     reply.status(204).send();
   });
 
   app.post("/admin/conversations/:id/messages/:messageId/reactions", { preHandler: requireAdmin }, async (request, reply) => {
+    const env = loadEnv();
+    const { admin } = request.adminAuth!;
+    if (!checkRateLimit(`message:ADMIN:${admin.id}`, env.RATE_LIMIT_MESSAGES_PER_MINUTE, 60_000)) {
+      throw Errors.rateLimited();
+    }
     const params = ConversationMessageParamsSchema.parse(request.params);
     const body = ReactionRequestSchema.parse(request.body);
     await setReaction({ conversationId: params.id, messageId: params.messageId, senderType: "ADMIN", emoji: body.emoji });
+    await recordAudit(admin.id, "message.reaction.set", { type: "Message", id: params.messageId });
     reply.status(204).send();
   });
 
   app.delete("/admin/conversations/:id/messages/:messageId/reactions", { preHandler: requireAdmin }, async (request, reply) => {
+    const env = loadEnv();
+    const { admin } = request.adminAuth!;
+    if (!checkRateLimit(`message:ADMIN:${admin.id}`, env.RATE_LIMIT_MESSAGES_PER_MINUTE, 60_000)) {
+      throw Errors.rateLimited();
+    }
     const params = ConversationMessageParamsSchema.parse(request.params);
     await setReaction({ conversationId: params.id, messageId: params.messageId, senderType: "ADMIN", emoji: null });
+    await recordAudit(admin.id, "message.reaction.cleared", { type: "Message", id: params.messageId });
     reply.status(204).send();
   });
 
@@ -103,6 +126,10 @@ export function registerAdminConversationRoutes(app: FastifyInstance): void {
   });
 
   app.get("/admin/conversations/:id/attachments/:attachmentId", { preHandler: requireAdmin }, async (request, reply) => {
+    const { admin } = request.adminAuth!;
+    if (!checkRateLimit(`attachment-download:ADMIN:${admin.id}`, 60, 60_000)) {
+      throw Errors.rateLimited();
+    }
     const params = ConversationAttachmentParamsSchema.parse(request.params);
     const attachment = await prisma.attachment.findFirst({
       where: { id: params.attachmentId, message: { conversationId: params.id } },
@@ -113,7 +140,7 @@ export function registerAdminConversationRoutes(app: FastifyInstance): void {
     reply
       .header("Content-Type", "application/octet-stream")
       .header("Content-Disposition", "attachment")
-      .header("Cache-Control", "private, max-age=31536000, immutable")
+      .header("Cache-Control", "private, no-store")
       .send(buffer);
   });
 

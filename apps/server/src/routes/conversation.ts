@@ -43,6 +43,9 @@ export function registerConversationRoutes(app: FastifyInstance): void {
   app.patch("/conversation/messages/:id", { preHandler: requireAnon }, async (request, reply) => {
     const env = loadEnv();
     const conversation = request.anonUser!.conversation!;
+    if (!checkRateLimit(`message:USER:${request.anonUser!.id}`, env.RATE_LIMIT_MESSAGES_PER_MINUTE, 60_000)) {
+      throw Errors.rateLimited();
+    }
     const params = IdParamSchema.parse(request.params);
     const body = EditMessageRequestSchema.parse(request.body);
     const dto = await editMessage({
@@ -56,14 +59,22 @@ export function registerConversationRoutes(app: FastifyInstance): void {
   });
 
   app.delete("/conversation/messages/:id", { preHandler: requireAnon }, async (request, reply) => {
+    const env = loadEnv();
     const conversation = request.anonUser!.conversation!;
+    if (!checkRateLimit(`message:USER:${request.anonUser!.id}`, env.RATE_LIMIT_MESSAGES_PER_MINUTE, 60_000)) {
+      throw Errors.rateLimited();
+    }
     const params = IdParamSchema.parse(request.params);
     await deleteMessage({ conversationId: conversation.id, messageId: params.id, senderType: "USER" });
     reply.status(204).send();
   });
 
   app.post("/conversation/messages/:id/reactions", { preHandler: requireAnon }, async (request, reply) => {
+    const env = loadEnv();
     const conversation = request.anonUser!.conversation!;
+    if (!checkRateLimit(`message:USER:${request.anonUser!.id}`, env.RATE_LIMIT_MESSAGES_PER_MINUTE, 60_000)) {
+      throw Errors.rateLimited();
+    }
     const params = IdParamSchema.parse(request.params);
     const body = ReactionRequestSchema.parse(request.body);
     await setReaction({ conversationId: conversation.id, messageId: params.id, senderType: "USER", emoji: body.emoji });
@@ -71,7 +82,11 @@ export function registerConversationRoutes(app: FastifyInstance): void {
   });
 
   app.delete("/conversation/messages/:id/reactions", { preHandler: requireAnon }, async (request, reply) => {
+    const env = loadEnv();
     const conversation = request.anonUser!.conversation!;
+    if (!checkRateLimit(`message:USER:${request.anonUser!.id}`, env.RATE_LIMIT_MESSAGES_PER_MINUTE, 60_000)) {
+      throw Errors.rateLimited();
+    }
     const params = IdParamSchema.parse(request.params);
     await setReaction({ conversationId: conversation.id, messageId: params.id, senderType: "USER", emoji: null });
     reply.status(204).send();
@@ -87,6 +102,9 @@ export function registerConversationRoutes(app: FastifyInstance): void {
 
   app.get("/conversation/attachments/:id", { preHandler: requireAnon }, async (request, reply) => {
     const conversation = request.anonUser!.conversation!;
+    if (!checkRateLimit(`attachment-download:USER:${request.anonUser!.id}`, 60, 60_000)) {
+      throw Errors.rateLimited();
+    }
     const params = IdParamSchema.parse(request.params);
     const attachment = await prisma.attachment.findFirst({
       where: { id: params.id, message: { conversationId: conversation.id } },
@@ -97,7 +115,7 @@ export function registerConversationRoutes(app: FastifyInstance): void {
     reply
       .header("Content-Type", "application/octet-stream")
       .header("Content-Disposition", "attachment")
-      .header("Cache-Control", "private, max-age=31536000, immutable")
+      .header("Cache-Control", "private, no-store")
       .send(buffer);
   });
 }
