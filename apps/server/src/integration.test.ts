@@ -248,6 +248,52 @@ describe("termine integration", () => {
     expect(secondSendRes.status).toBe(403);
   });
 
+  it("rejects edit/delete/react on a blocked conversation, not just new sends", async () => {
+    const userJar = newJar();
+    await primeCsrf(app, userJar);
+    const user = makeIdentity();
+    const registerRes = await call(app, userJar, "POST", "/anonymous/register", {
+      signingPublicKey: bytesToBase64url(user.identity.signingPublicKey),
+      exchangePublicKey: bytesToBase64url(user.identity.exchangePublicKey),
+      proof: bytesToBase64url(user.proof),
+    });
+    const { conversationId, adminPublicKeys } = registerRes.body;
+    const userKey = deriveConversationKey(
+      user.identity.exchangeSecretKey,
+      base64urlToBytes(adminPublicKeys.exchangePublicKey),
+      conversationId,
+    );
+
+    const sendRes = await call(app, userJar, "POST", "/conversation/messages", {
+      content: encryptJSON(userKey, { text: "before the block" }),
+    });
+    const messageId = sendRes.body.id;
+
+    const blockRes = await call(app, adminJar, "POST", `/admin/conversations/${conversationId}/block`);
+    expect(blockRes.status).toBe(200);
+
+    const editRes = await call(app, userJar, "PATCH", `/conversation/messages/${messageId}`, {
+      content: encryptJSON(userKey, { text: "edited after block" }),
+    });
+    expect(editRes.status).toBe(403);
+
+    const reactRes = await call(app, userJar, "POST", `/conversation/messages/${messageId}/reactions`, {
+      emoji: encryptJSON(userKey, { emoji: "👍" }),
+    });
+    expect(reactRes.status).toBe(403);
+
+    const deleteRes = await call(app, userJar, "DELETE", `/conversation/messages/${messageId}`);
+    expect(deleteRes.status).toBe(403);
+
+    // The message must survive untouched - none of the rejected calls above
+    // should have mutated it.
+    const adminKey = deriveConversationKey(adminIdentity.exchangeSecretKey, user.identity.exchangePublicKey, conversationId);
+    const adminMessagesRes = await call(app, adminJar, "GET", `/admin/conversations/${conversationId}/messages`);
+    const stored = adminMessagesRes.body.messages.find((m: { id: string }) => m.id === messageId);
+    expect(stored.deleted).toBe(false);
+    expect(decryptJSON<{ text: string }>(adminKey, stored.content).text).toBe("before the block");
+  });
+
   it("never lets one anonymous identity see another's conversation or messages", async () => {
     const jarA = newJar();
     await primeCsrf(app, jarA);

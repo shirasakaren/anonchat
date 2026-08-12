@@ -16,6 +16,19 @@ function toBuffer(payload: EncryptedPayloadInput) {
   return { ciphertext: Buffer.from(payload.ciphertext, "base64url"), nonce: Buffer.from(payload.nonce, "base64url") };
 }
 
+/**
+ * Blocking/soft-deleting a conversation only has teeth if every write path
+ * checks it, not just "send" - a blocked user must not be able to edit,
+ * delete, or react their way around a block.
+ */
+async function assertUserCanMutate(conversationId: string, senderType: SenderType): Promise<void> {
+  if (senderType !== "USER") return;
+  const conversation = await prisma.conversation.findUnique({ where: { id: conversationId } });
+  if (!conversation || conversation.status === "BLOCKED" || conversation.deletedAt) {
+    throw Errors.blocked();
+  }
+}
+
 export async function createMessage(params: {
   conversationId: string;
   senderType: SenderType;
@@ -98,6 +111,7 @@ export async function editMessage(params: {
   content: EncryptedPayloadInput;
   editWindowMinutes: number;
 }) {
+  await assertUserCanMutate(params.conversationId, params.senderType);
   const message = await prisma.message.findFirst({
     where: { id: params.messageId, conversationId: params.conversationId, senderType: params.senderType },
   });
@@ -118,6 +132,7 @@ export async function editMessage(params: {
 }
 
 export async function deleteMessage(params: { conversationId: string; messageId: string; senderType: SenderType }) {
+  await assertUserCanMutate(params.conversationId, params.senderType);
   const message = await prisma.message.findFirst({
     where: { id: params.messageId, conversationId: params.conversationId, senderType: params.senderType },
     include: { attachments: true },
@@ -148,6 +163,7 @@ export async function setReaction(params: {
   senderType: SenderType;
   emoji: EncryptedPayloadInput | null;
 }) {
+  await assertUserCanMutate(params.conversationId, params.senderType);
   const message = await prisma.message.findFirst({ where: { id: params.messageId, conversationId: params.conversationId } });
   if (!message || message.deletedAt) throw Errors.notFound();
 
