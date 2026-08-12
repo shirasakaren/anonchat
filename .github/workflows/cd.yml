@@ -21,21 +21,12 @@ env:
 
 jobs:
   # ─────────────────────────────────────────────────────────────
-  # Run the full CI suite first (reuse, not re-define)
-  # ─────────────────────────────────────────────────────────────
-  ci:
-    name: "Pre-flight CI"
-    uses: ./.github/workflows/ci.yml
-    secrets: inherit
-
-  # ─────────────────────────────────────────────────────────────
   # Determine next semantic version from conventional commits
   # ─────────────────────────────────────────────────────────────
   version:
     name: "Determine version"
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: ci
     outputs:
       version: ${{ steps.version.outputs.version }}
       previous_version: ${{ steps.version.outputs.previous_version }}

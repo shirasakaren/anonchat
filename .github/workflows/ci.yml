@@ -23,53 +23,12 @@ env:
 
 jobs:
   # ─────────────────────────────────────────────────────────────
-  # Build @anonchat/crypto and @anonchat/shared first — almost
-  # every downstream job needs their compiled output.
-  # ─────────────────────────────────────────────────────────────
-  build-deps:
-    name: "Build deps"
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Build crypto and shared packages
-        run: |
-          pnpm --filter @anonchat/crypto run build
-          pnpm --filter @anonchat/shared run build
-
-      - name: Generate Prisma client
-        run: pnpm --filter @anonchat/server run db:generate
-
-      # Cache the built dist so downstream jobs can use it
-      - name: Upload built packages
-        uses: actions/upload-artifact@v4
-        with:
-          name: built-packages
-          path: |
-            packages/crypto/dist/
-            packages/shared/dist/
-          retention-days: 1
-
-  # ─────────────────────────────────────────────────────────────
-  # TypeScript type-checking (depends on crypto+shared dist)
+  # TypeScript type-checking across all workspace packages
   # ─────────────────────────────────────────────────────────────
   typecheck:
     name: "Type-check"
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: build-deps
     steps:
       - uses: actions/checkout@v4
 
@@ -84,26 +43,22 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Download built packages
-        uses: actions/download-artifact@v4
-        with:
-          name: built-packages
-
-      - name: Generate Prisma client
-        run: pnpm --filter @anonchat/server run db:generate
+      - name: Build dependencies and generate Prisma client
+        run: |
+          pnpm --filter @anonchat/crypto run build
+          pnpm --filter @anonchat/shared run build
+          pnpm --filter @anonchat/server run db:generate
 
       - name: Type-check all packages
         run: pnpm run typecheck
 
   # ─────────────────────────────────────────────────────────────
-  # ESLint static analysis (depends on crypto+shared dist for
-  # type-checked rules)
+  # ESLint static analysis
   # ─────────────────────────────────────────────────────────────
   lint:
     name: "Lint"
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: build-deps
     steps:
       - uses: actions/checkout@v4
 
@@ -118,19 +73,17 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Download built packages
-        uses: actions/download-artifact@v4
-        with:
-          name: built-packages
-
-      - name: Generate Prisma client
-        run: pnpm --filter @anonchat/server run db:generate
+      - name: Build dependencies and generate Prisma client
+        run: |
+          pnpm --filter @anonchat/crypto run build
+          pnpm --filter @anonchat/shared run build
+          pnpm --filter @anonchat/server run db:generate
 
       - name: Run ESLint
         run: pnpm run lint
 
   # ─────────────────────────────────────────────────────────────
-  # Prettier format check (no deps needed)
+  # Prettier format check
   # ─────────────────────────────────────────────────────────────
   format:
     name: "Format check"
@@ -154,14 +107,12 @@ jobs:
         run: pnpm run format:check
 
   # ─────────────────────────────────────────────────────────────
-  # Unit tests — crypto + shared packages (no database needed,
-  # but needs built dist for shared tests)
+  # Unit tests — crypto + shared packages (no database needed)
   # ─────────────────────────────────────────────────────────────
   unit-tests:
     name: "Unit tests"
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: build-deps
     steps:
       - uses: actions/checkout@v4
 
@@ -176,10 +127,10 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Download built packages
-        uses: actions/download-artifact@v4
-        with:
-          name: built-packages
+      - name: Build dependencies
+        run: |
+          pnpm --filter @anonchat/crypto run build
+          pnpm --filter @anonchat/shared run build
 
       - name: Run unit tests with coverage
         run: |
@@ -202,7 +153,6 @@ jobs:
     name: "Integration tests"
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: build-deps
     services:
       postgres:
         image: postgres:17-alpine
@@ -231,13 +181,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Download built packages
-        uses: actions/download-artifact@v4
-        with:
-          name: built-packages
-
-      - name: Rebuild Prisma client (runner arch may differ)
-        run: pnpm --filter @anonchat/server run db:generate
+      - name: Build dependencies and generate Prisma client
+        run: |
+          pnpm --filter @anonchat/crypto run build
+          pnpm --filter @anonchat/shared run build
+          pnpm --filter @anonchat/server run db:generate
 
       - name: Run database migrations
         run: pnpm --filter @anonchat/server run db:migrate
@@ -267,7 +215,6 @@ jobs:
     name: "Build"
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: build-deps
     steps:
       - uses: actions/checkout@v4
 
@@ -282,18 +229,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Download built packages
-        uses: actions/download-artifact@v4
-        with:
-          name: built-packages
-
-      - name: Rebuild Prisma client
-        run: pnpm --filter @anonchat/server run db:generate
-
       - name: Build all packages
         run: pnpm run build
 
-      # Verify the server entry point is loadable
       - name: Smoke-test server startup
         run: timeout 5 node apps/server/dist/main.js 2>&1 || true
         env:
