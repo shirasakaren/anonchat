@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { ClientWsMessageSchema } from "@termine/shared";
+import { ClientWsMessageSchema } from "@anonchat/shared";
 import { corsOrigins, loadEnv } from "../env.js";
 import { getSiteSettings } from "../services/siteSettings.service.js";
 import {

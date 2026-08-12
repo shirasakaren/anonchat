@@ -1,5 +1,5 @@
-import type { EncryptedPayload } from "@termine/crypto";
-import type { ConversationDto, MessageDto, MessagePage } from "@termine/shared";
+import type { EncryptedPayload } from "@anonchat/crypto";
+import type { ConversationDto, MessageDto, MessagePage } from "@anonchat/shared";
 import { api, apiFetch } from "./client.js";
 
 export function getConversation(): Promise<ConversationDto> {

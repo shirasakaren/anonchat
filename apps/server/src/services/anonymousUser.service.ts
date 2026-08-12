@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
-import { derivePublicId, verifyChallenge } from "@termine/crypto";
-import { buildLoginChallengeMessage, buildRegistrationProofMessage } from "@termine/shared";
+import { derivePublicId, verifyChallenge } from "@anonchat/crypto";
+import { buildLoginChallengeMessage, buildRegistrationProofMessage } from "@anonchat/shared";
 import { prisma } from "../db.js";
 import { consumeChallenge, issueChallenge } from "../security/challengeStore.js";
 import { Errors } from "../utils/errors.js";

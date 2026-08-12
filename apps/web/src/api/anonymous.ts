@@ -1,6 +1,6 @@
-import { bytesToBase64url, signChallenge, type Identity } from "@termine/crypto";
-import { buildLoginChallengeMessage, buildRegistrationProofMessage } from "@termine/shared";
-import type { ChallengeResponse, MeResponse, RegisterResponse } from "@termine/shared";
+import { bytesToBase64url, signChallenge, type Identity } from "@anonchat/crypto";
+import { buildLoginChallengeMessage, buildRegistrationProofMessage } from "@anonchat/shared";
+import type { ChallengeResponse, MeResponse, RegisterResponse } from "@anonchat/shared";
 import { api } from "./client.js";
 
 export function registerAnonymousIdentity(identity: Identity): Promise<RegisterResponse> {

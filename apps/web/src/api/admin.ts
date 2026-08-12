@@ -1,5 +1,5 @@
-import { bytesToBase64url, signChallenge, type EncryptedPayload, type Identity } from "@termine/crypto";
-import { buildRegistrationProofMessage } from "@termine/shared";
+import { bytesToBase64url, signChallenge, type EncryptedPayload, type Identity } from "@anonchat/crypto";
+import { buildRegistrationProofMessage } from "@anonchat/shared";
 import type {
   AdminConversationSummaryDto,
   AdminSessionDto,
@@ -10,7 +10,7 @@ import type {
   MessageDto,
   MessagePage,
   SiteSettingsDto,
-} from "@termine/shared";
+} from "@anonchat/shared";
 import { api, apiFetch } from "./client.js";
 import type { OutgoingAttachment } from "./conversation.js";
 

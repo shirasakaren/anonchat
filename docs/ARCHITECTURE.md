@@ -1,6 +1,6 @@
 # Architecture
 
-Termine is a self-hosted, end-to-end encrypted, anonymous 1:1 messaging inbox. Anyone can create an anonymous identity with no email/phone/OAuth and get a persistent private conversation with the site owner (the "admin").
+Anonchat is a self-hosted, end-to-end encrypted, anonymous 1:1 messaging inbox. Anyone can create an anonymous identity with no email/phone/OAuth and get a persistent private conversation with the site owner (the "admin").
 
 ## Stack
 
@@ -48,7 +48,7 @@ Every anonymous user has exactly one conversation with the admin. Both sides der
 
 ```
 sharedSecret = X25519(myExchangeSecretKey, theirExchangePublicKey)
-conversationKey = HKDF-SHA256(sharedSecret, info = "termine-conversation-v1:" + conversationId)
+conversationKey = HKDF-SHA256(sharedSecret, info = "anonchat-conversation-v1:" + conversationId)
 ```
 
 Neither side ever transmits this key. Messages, reaction emoji, and attachment metadata are encrypted with XChaCha20-Poly1305 under this key before they ever leave the browser.

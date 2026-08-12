@@ -1,4 +1,4 @@
-# Deploying Termine on Render
+# Deploying Anonchat on Render
 
 Render builds directly from this repo's root `Dockerfile` using the Blueprint
 defined in [`render.yaml`](../../render.yaml) at the repo root, which also
@@ -13,9 +13,9 @@ provisions a managed PostgreSQL database.
 
 1. Push this repo (including `render.yaml`) to GitHub/GitLab.
 2. In the Render dashboard, go to **Blueprints -> New Blueprint Instance** and select the repo.
-3. Render reads `render.yaml` and shows a preview: one Postgres database (`termine-db`) and one web service (`termine`) with a 5GB persistent disk for attachments. Review it, then click **Apply**.
+3. Render reads `render.yaml` and shows a preview: one Postgres database (`anonchat-db`) and one web service (`anonchat`) with a 5GB persistent disk for attachments. Review it, then click **Apply**.
 4. `SESSION_SECRET` is generated automatically and `DATABASE_URL` is wired to the database automatically. You'll be prompted for `PUBLIC_URL` - leave it blank for now.
-5. Once the first deploy finishes, copy the assigned `https://termine-<id>.onrender.com` URL (or attach a custom domain under the service's **Settings -> Custom Domains**).
+5. Once the first deploy finishes, copy the assigned `https://anonchat-<id>.onrender.com` URL (or attach a custom domain under the service's **Settings -> Custom Domains**).
 6. Go to the service's **Environment** tab, set `PUBLIC_URL` to that URL, and save - this triggers a redeploy.
 7. Visit your URL - you'll land on the first-run admin setup wizard.
 

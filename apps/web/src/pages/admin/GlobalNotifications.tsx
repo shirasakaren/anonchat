@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import type { ServerWsEvent } from "@termine/shared";
+import type { ServerWsEvent } from "@anonchat/shared";
 import { useRealtimeSocket } from "../../hooks/useRealtimeSocket.js";
 import { useAdminNotifications } from "../../hooks/useAdminNotifications.js";
 

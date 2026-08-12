@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
 import { formatDistanceToNowStrict } from "date-fns";
-import type { AdminConversationSummaryDto, ServerWsEvent } from "@termine/shared";
+import type { AdminConversationSummaryDto, ServerWsEvent } from "@anonchat/shared";
 import { listConversations } from "../../api/admin.js";
 import { decryptMessageText, getConversationKey } from "../../crypto/conversationCrypto.js";
 import { getAdminMessages } from "../../api/admin.js";

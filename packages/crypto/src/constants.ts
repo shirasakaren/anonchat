@@ -8,5 +8,5 @@ export const SYMMETRIC_KEY_BYTES = 32;
 export const XCHACHA_NONCE_BYTES = 24;
 export const CHALLENGE_BYTES = 32;
 
-export const IDENTITY_HKDF_SALT = "termine-identity-v1";
-export const CONVERSATION_HKDF_INFO_PREFIX = "termine-conversation-v1:";
+export const IDENTITY_HKDF_SALT = "anonchat-identity-v1";
+export const CONVERSATION_HKDF_INFO_PREFIX = "anonchat-conversation-v1:";

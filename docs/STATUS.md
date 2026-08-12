@@ -18,7 +18,7 @@ a deliberately deferred follow-up (see "Known gaps").
 
 - **`packages/crypto`** - identity derivation, ECDH conversation keys, AEAD
   encryption, password-wrapped key caching. 21 unit tests passing
-  (`pnpm --filter @termine/crypto run test`).
+  (`pnpm --filter @anonchat/crypto run test`).
 - **`packages/shared`** - zod schemas, DTOs, WS event contract. Builds clean.
 - **Database** - Prisma schema + one migration, applied and tested against
   real Postgres (17-alpine) multiple times, including through Docker Compose
@@ -26,9 +26,9 @@ a deliberately deferred follow-up (see "Known gaps").
 - **`apps/server`** - Fastify REST API, WebSocket hub, auth (anonymous
   challenge-response + admin password/TOTP), storage abstraction
   (local/S3), rate limiting, CSRF, security headers. 7 integration tests
-  passing against real Postgres (`pnpm --filter @termine/server run test`).
+  passing against real Postgres (`pnpm --filter @anonchat/server run test`).
 - **`apps/web`** - public chat UI and admin dashboard, both typecheck clean
-  (`pnpm --filter @termine/web run typecheck`).
+  (`pnpm --filter @anonchat/web run typecheck`).
 - **End-to-end browser verification** (Playwright, headless Chromium, real
   Postgres in Docker) confirmed:
   - Full onboarding wizard -> admin dashboard, no manual steps stuck
@@ -216,8 +216,8 @@ reasonable follow-ups in rough priority order:
 
 ```bash
 # Unit + integration tests (spins up nothing itself - point DATABASE_URL at a real Postgres)
-docker run -d --name termine-dev-postgres -e POSTGRES_USER=termine -e POSTGRES_PASSWORD=termine -e POSTGRES_DB=termine -p 55432:5432 postgres:17-alpine
-cd apps/server && DATABASE_URL=postgresql://termine:termine@localhost:55432/termine npx prisma migrate deploy
+docker run -d --name anonchat-dev-postgres -e POSTGRES_USER=anonchat -e POSTGRES_PASSWORD=anonchat -e POSTGRES_DB=anonchat -p 55432:5432 postgres:17-alpine
+cd apps/server && DATABASE_URL=postgresql://anonchat:anonchat@localhost:55432/anonchat npx prisma migrate deploy
 pnpm run test          # from repo root: crypto unit tests + server integration tests
 pnpm run typecheck     # all packages/apps
 

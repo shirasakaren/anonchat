@@ -2,7 +2,7 @@
 
 ## Threat model
 
-Termine is marketed as **"anonymous to the owner and the public," not "impossible to identify"** (spec section 67). Concretely:
+Anonchat is marketed as **"anonymous to the owner and the public," not "impossible to identify"** (spec section 67). Concretely:
 
 - Other anonymous users can never read, enumerate, or infer the existence of anyone else's conversation. Every API call and WebSocket subscription is authorized against the caller's own session server-side - never against a client-supplied id (spec sections 27-29).
 - Message content, attachment bytes, and reaction emoji are end-to-end encrypted (see below). Someone with read access to the database, backups, or the host - but without the admin's browser/device or an anonymous user's recovery secret - sees only ciphertext and metadata (timestamps, sender type, message sizes).

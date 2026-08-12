@@ -1,5 +1,5 @@
 import type { FastifyRequest } from "fastify";
-import { EncryptedPayloadSchema, SendMessageRequestSchema, type EncryptedPayloadInput } from "@termine/shared";
+import { EncryptedPayloadSchema, SendMessageRequestSchema, type EncryptedPayloadInput } from "@anonchat/shared";
 import type { PendingAttachment } from "../services/message.service.js";
 import { Errors } from "./errors.js";
 

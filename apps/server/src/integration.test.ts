@@ -10,8 +10,8 @@ import {
   encryptJSON,
   generateRecoverySecret,
   signChallenge,
-} from "@termine/crypto";
-import { buildRegistrationProofMessage, buildLoginChallengeMessage } from "@termine/shared";
+} from "@anonchat/crypto";
+import { buildRegistrationProofMessage, buildLoginChallengeMessage } from "@anonchat/shared";
 import { buildApp } from "./app.js";
 import { prisma } from "./db.js";
 
@@ -32,7 +32,7 @@ function newJar(): Jar {
   const cookies = new Map<string, string>();
   return {
     cookies,
-    csrf: () => cookies.get("termine_csrf") ?? "",
+    csrf: () => cookies.get("anonchat_csrf") ?? "",
   };
 }
 
@@ -61,7 +61,7 @@ async function call(
     url: `/api${url}`,
     headers: {
       cookie: cookieHeader(jar),
-      ...(method !== "GET" ? { "x-termine-csrf": jar.csrf() } : {}),
+      ...(method !== "GET" ? { "x-anonchat-csrf": jar.csrf() } : {}),
       ...(payload !== undefined ? { "content-type": "application/json" } : {}),
     },
     payload: payload !== undefined ? JSON.stringify(payload) : undefined,
@@ -85,7 +85,7 @@ function makeIdentity() {
   return { secret, identity, proof };
 }
 
-describe("termine integration", () => {
+describe("anonchat integration", () => {
   let app: FastifyInstance;
   let adminJar: Jar;
   let adminIdentity: ReturnType<typeof makeIdentity>["identity"];

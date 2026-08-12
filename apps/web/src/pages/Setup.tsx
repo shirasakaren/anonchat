@@ -104,7 +104,7 @@ export default function Setup() {
     <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-12">
       <div className="mb-8 text-center">
         <p className="text-sm font-medium uppercase tracking-wide text-[var(--color-accent-600)]">First-time setup</p>
-        <h1 className="mt-1 text-2xl font-semibold">Welcome to Termine</h1>
+        <h1 className="mt-1 text-2xl font-semibold">Welcome to Anonchat</h1>
       </div>
 
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-raised)] p-6 shadow-sm">

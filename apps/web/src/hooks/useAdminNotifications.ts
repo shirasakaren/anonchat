@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 
-const SOUND_PREF_KEY = "termine.admin.soundEnabled";
+const SOUND_PREF_KEY = "anonchat.admin.soundEnabled";
 
 export function useAdminNotifications() {
   const audioRef = useRef<HTMLAudioElement | null>(null);

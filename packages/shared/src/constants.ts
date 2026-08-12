@@ -21,9 +21,9 @@ export const MAX_PAGE_SIZE = 200;
 
 export const CHALLENGE_TTL_SECONDS = 120;
 
-export const ANON_SESSION_COOKIE = "termine_session";
-export const ADMIN_SESSION_COOKIE = "termine_admin_session";
-export const CSRF_COOKIE = "termine_csrf";
-export const CSRF_HEADER = "x-termine-csrf";
+export const ANON_SESSION_COOKIE = "anonchat_session";
+export const ADMIN_SESSION_COOKIE = "anonchat_admin_session";
+export const CSRF_COOKIE = "anonchat_csrf";
+export const CSRF_HEADER = "x-anonchat-csrf";
 
 export const RECOVERY_ACK_TEXT = "I have saved my recovery key";

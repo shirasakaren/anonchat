@@ -1,7 +1,7 @@
 @description('Azure region for all resources.')
 param location string = resourceGroup().location
 
-@description('Full container image reference, e.g. myregistry.azurecr.io/termine:latest')
+@description('Full container image reference, e.g. myregistry.azurecr.io/anonchat:latest')
 param image string
 
 @secure()
@@ -17,13 +17,13 @@ param publicUrl string = ''
 
 param storeIpAddresses bool = false
 
-var namePrefix = 'termine'
+var namePrefix = 'anonchat'
 
 // ---------------------------------------------------------------------------
 // Container Apps environment (required host for the app)
 // ---------------------------------------------------------------------------
 module environment 'br/public:avm/res/app/managed-environment:0.11.2' = {
-  name: 'termine-environment'
+  name: 'anonchat-environment'
   params: {
     name: '${namePrefix}-env'
     location: location
@@ -35,20 +35,20 @@ module environment 'br/public:avm/res/app/managed-environment:0.11.2' = {
 // Database
 // ---------------------------------------------------------------------------
 module postgres 'br/public:avm/res/db-for-postgre-sql/flexible-server:0.11.0' = {
-  name: 'termine-postgres'
+  name: 'anonchat-postgres'
   params: {
     name: '${namePrefix}-db-${uniqueString(resourceGroup().id)}'
     location: location
     availabilityZone: ''
     skuName: 'Standard_B1ms'
     tier: 'Burstable'
-    administratorLogin: 'termine'
+    administratorLogin: 'anonchat'
     administratorLoginPassword: dbPassword
     version: '16'
     storageSizeGB: 32
     databases: [
       {
-        name: 'termine'
+        name: 'anonchat'
       }
     ]
     firewallRules: [
@@ -74,7 +74,7 @@ module postgres 'br/public:avm/res/db-for-postgre-sql/flexible-server:0.11.0' = 
 // everything on Azure.
 // ---------------------------------------------------------------------------
 module app 'br/public:avm/res/app/container-app:0.19.0' = {
-  name: 'termine-app'
+  name: 'anonchat-app'
   params: {
     name: namePrefix
     location: location
@@ -93,7 +93,7 @@ module app 'br/public:avm/res/app/container-app:0.19.0' = {
         env: [
           {
             name: 'DATABASE_URL'
-            value: 'postgresql://termine:${dbPassword}@${postgres.outputs.fqdn}:5432/termine?sslmode=require'
+            value: 'postgresql://anonchat:${dbPassword}@${postgres.outputs.fqdn}:5432/anonchat?sslmode=require'
           }
           {
             name: 'SESSION_SECRET'

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { base64urlToBytes } from "@termine/crypto";
-import { OnboardingRequestSchema } from "@termine/shared";
+import { base64urlToBytes } from "@anonchat/crypto";
+import { OnboardingRequestSchema } from "@anonchat/shared";
 import { createAdminSession, setAdminSessionCookie } from "../../auth/session.js";
 import { prisma } from "../../db.js";
 import { onboardAdmin } from "../../services/admin.service.js";

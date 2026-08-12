@@ -1,4 +1,4 @@
-import type { AttachmentDto, ReactionDto, SenderType } from "@termine/shared";
+import type { AttachmentDto, ReactionDto, SenderType } from "@anonchat/shared";
 
 export interface DisplayMessage {
   id: string;

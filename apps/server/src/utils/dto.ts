@@ -1,6 +1,6 @@
 import type { Attachment, Message, MessageReaction } from "@prisma/client";
-import { bytesToBase64url } from "@termine/crypto";
-import type { AttachmentDto, EncryptedPayloadInput, MessageDto, ReactionDto } from "@termine/shared";
+import { bytesToBase64url } from "@anonchat/crypto";
+import type { AttachmentDto, EncryptedPayloadInput, MessageDto, ReactionDto } from "@anonchat/shared";
 
 export function encryptedPayloadFromColumns(
   ciphertext: Buffer | Uint8Array | null,

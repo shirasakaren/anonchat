@@ -1,9 +1,9 @@
 import { randomBytes } from "@noble/hashes/utils.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
-import { bytesToBase64url } from "@termine/crypto";
+import { bytesToBase64url } from "@anonchat/crypto";
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { ANON_SESSION_COOKIE, ADMIN_SESSION_COOKIE } from "@termine/shared";
+import { ANON_SESSION_COOKIE, ADMIN_SESSION_COOKIE } from "@anonchat/shared";
 import { prisma } from "../db.js";
 import { loadEnv } from "../env.js";
 

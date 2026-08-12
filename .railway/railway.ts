@@ -1,7 +1,7 @@
 import { defineRailway, github, postgres, preserve, project, service, volume } from "railway/iac";
 
 /**
- * Railway infrastructure-as-code for Termine.
+ * Railway infrastructure-as-code for Anonchat.
  *
  * This declares the target state of a Railway project: a managed Postgres
  * database and one app service built from this repo's root Dockerfile
@@ -36,7 +36,7 @@ export default defineRailway(() => {
     },
   });
 
-  return project("termine", {
+  return project("anonchat", {
     resources: [db, app],
   });
 });

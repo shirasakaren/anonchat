@@ -3,8 +3,8 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { utf8ToBytes } from "@noble/hashes/utils.js";
 import { hash as argonHash, verify as argonVerify } from "@node-rs/argon2";
 import { generateSecret, generateURI, verify as verifyTotp } from "otplib";
-import { base64urlToBytes, bytesToBase64url, decryptBytes, encryptBytes, verifyChallenge } from "@termine/crypto";
-import { buildRegistrationProofMessage, type AdminSessionDto, type PublicKeysInput } from "@termine/shared";
+import { base64urlToBytes, bytesToBase64url, decryptBytes, encryptBytes, verifyChallenge } from "@anonchat/crypto";
+import { buildRegistrationProofMessage, type AdminSessionDto, type PublicKeysInput } from "@anonchat/shared";
 import type { Admin } from "@prisma/client";
 import { prisma } from "../db.js";
 import { loadEnv } from "../env.js";
@@ -69,7 +69,7 @@ export async function onboardAdmin(params: {
 
 function totpEncryptionKey(): Uint8Array {
   const env = loadEnv();
-  return hkdf(sha256, utf8ToBytes(env.SESSION_SECRET), undefined, utf8ToBytes("termine-totp-secret-v1"), 32);
+  return hkdf(sha256, utf8ToBytes(env.SESSION_SECRET), undefined, utf8ToBytes("anonchat-totp-secret-v1"), 32);
 }
 
 function encryptTotpSecret(secret: string): { ciphertext: Uint8Array<ArrayBuffer>; nonce: Uint8Array<ArrayBuffer> } {
@@ -122,7 +122,7 @@ export async function beginTotpSetup(adminId: string): Promise<{ secret: string;
     where: { id: adminId },
     data: { totpSecretCiphertext: encrypted.ciphertext, totpSecretNonce: encrypted.nonce, totpEnabled: false },
   });
-  const uri = generateURI({ issuer: "Termine", label: admin.username, secret });
+  const uri = generateURI({ issuer: "Anonchat", label: admin.username, secret });
   return { secret, uri };
 }
 

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { CannedReplyRequestSchema, IdParamSchema, type CannedReplyDto } from "@termine/shared";
+import { CannedReplyRequestSchema, IdParamSchema, type CannedReplyDto } from "@anonchat/shared";
 import { requireAdmin } from "../../auth/plugin.js";
 import { prisma } from "../../db.js";
 import { Errors } from "../../utils/errors.js";

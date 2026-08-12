@@ -1,6 +1,6 @@
-# Deploying Termine on Azure (Container Apps + PostgreSQL)
+# Deploying Anonchat on Azure (Container Apps + PostgreSQL)
 
-This Bicep template runs Termine on [Azure Container Apps](https://azure.microsoft.com/en-us/products/container-apps)
+This Bicep template runs Anonchat on [Azure Container Apps](https://azure.microsoft.com/en-us/products/container-apps)
 backed by [Azure Database for PostgreSQL Flexible Server](https://azure.microsoft.com/en-us/products/postgresql).
 
 Template: [`main.bicep`](./main.bicep) - validated with `az bicep build` (compiles cleanly, no Azure credentials required for that step).
@@ -15,13 +15,13 @@ Template: [`main.bicep`](./main.bicep) - validated with `az bicep build` (compil
 ## 1. Create a resource group and push the image to ACR
 
 ```bash
-az group create --name termine-rg --location eastus
+az group create --name anonchat-rg --location eastus
 
-az acr create --resource-group termine-rg --name <registryname> --sku Basic
+az acr create --resource-group anonchat-rg --name <registryname> --sku Basic
 az acr login --name <registryname>
 
-docker build -t <registryname>.azurecr.io/termine:latest .
-docker push <registryname>.azurecr.io/termine:latest
+docker build -t <registryname>.azurecr.io/anonchat:latest .
+docker push <registryname>.azurecr.io/anonchat:latest
 
 az acr update --name <registryname> --admin-enabled true
 ```
@@ -30,10 +30,10 @@ az acr update --name <registryname> --admin-enabled true
 
 ```bash
 az deployment group create \
-  --resource-group termine-rg \
+  --resource-group anonchat-rg \
   --template-file deploy/azure/main.bicep \
   --parameters \
-    image=<registryname>.azurecr.io/termine:latest \
+    image=<registryname>.azurecr.io/anonchat:latest \
     dbPassword="$(openssl rand -base64 24 | tr -d '=+/')" \
     sessionSecret="$(openssl rand -hex 32)"
 ```
@@ -47,7 +47,7 @@ deploy via the Azure Portal or:
 
 ```bash
 az containerapp registry set \
-  --name termine --resource-group termine-rg \
+  --name anonchat --resource-group anonchat-rg \
   --server <registryname>.azurecr.io \
   --username <registryname> \
   --password "$(az acr credential show --name <registryname> --query passwords[0].value -o tsv)"
@@ -60,7 +60,7 @@ Storage isn't S3-API-compatible, so this template targets an external
 S3-compatible provider instead:
 
 ```bash
-az containerapp update --name termine --resource-group termine-rg --set-env-vars \
+az containerapp update --name anonchat --resource-group anonchat-rg --set-env-vars \
   STORAGE_DRIVER=s3 \
   S3_ENDPOINT=<endpoint> \
   S3_BUCKET=<bucket> \
@@ -80,8 +80,8 @@ storage provider. See the [Azure Container Apps storage mounts docs](https://lea
 ## 4. Set PUBLIC_URL and redeploy
 
 ```bash
-az deployment group show --resource-group termine-rg --name main --query "properties.outputs.appUrl.value" -o tsv
-az containerapp update --name termine --resource-group termine-rg --set-env-vars PUBLIC_URL=<that-url>
+az deployment group show --resource-group anonchat-rg --name main --query "properties.outputs.appUrl.value" -o tsv
+az containerapp update --name anonchat --resource-group anonchat-rg --set-env-vars PUBLIC_URL=<that-url>
 ```
 
 Visit the URL - you'll land on the first-run admin setup wizard.
@@ -89,9 +89,9 @@ Visit the URL - you'll land on the first-run admin setup wizard.
 ## Updating after a code change
 
 ```bash
-docker build -t <registryname>.azurecr.io/termine:latest .
-docker push <registryname>.azurecr.io/termine:latest
-az containerapp update --name termine --resource-group termine-rg --image <registryname>.azurecr.io/termine:latest
+docker build -t <registryname>.azurecr.io/anonchat:latest .
+docker push <registryname>.azurecr.io/anonchat:latest
+az containerapp update --name anonchat --resource-group anonchat-rg --image <registryname>.azurecr.io/anonchat:latest
 ```
 
 `docker-entrypoint.sh` runs `prisma migrate deploy` automatically before the

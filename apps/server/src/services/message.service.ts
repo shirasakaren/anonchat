@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import type { SenderType } from "@prisma/client";
-import type { EncryptedPayloadInput } from "@termine/shared";
+import type { EncryptedPayloadInput } from "@anonchat/shared";
 import { prisma } from "../db.js";
 import { publishToConversation } from "../realtime/hub.js";
 import { getStorageAdapter } from "../storage/index.js";

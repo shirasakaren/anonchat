@@ -1,6 +1,6 @@
 {
-  "name": "Termine",
-  "short_name": "Termine",
+  "name": "Anonchat",
+  "short_name": "Anonchat",
   "description": "Message the site owner anonymously.",
   "start_url": "/",
   "display": "standalone",

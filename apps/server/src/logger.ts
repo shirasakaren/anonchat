@@ -13,7 +13,7 @@ export function buildLoggerOptions(): LoggerOptions {
       paths: [
         "req.headers.cookie",
         "req.headers.authorization",
-        "req.headers['x-termine-csrf']",
+        "req.headers['x-anonchat-csrf']",
         "res.headers['set-cookie']",
       ],
       censor: "[redacted]",

@@ -26,6 +26,12 @@ importers:
 
   apps/server:
     dependencies:
+      '@anonchat/crypto':
+        specifier: workspace:*
+        version: link:../../packages/crypto
+      '@anonchat/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@aws-sdk/client-s3':
         specifier: ^3.1107.0
         version: 3.1107.0
@@ -56,12 +62,6 @@ importers:
       '@prisma/client':
         specifier: ^6.19.3
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
-      '@termine/crypto':
-        specifier: workspace:*
-        version: link:../../packages/crypto
-      '@termine/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -117,10 +117,10 @@ importers:
 
   apps/web:
     dependencies:
-      '@termine/crypto':
+      '@anonchat/crypto':
         specifier: workspace:*
         version: link:../../packages/crypto
-      '@termine/shared':
+      '@anonchat/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       clsx:

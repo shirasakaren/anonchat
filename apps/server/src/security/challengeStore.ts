@@ -1,6 +1,6 @@
 import { randomBytes } from "@noble/hashes/utils.js";
-import { bytesToBase64url } from "@termine/crypto";
-import { CHALLENGE_TTL_SECONDS } from "@termine/shared";
+import { bytesToBase64url } from "@anonchat/crypto";
+import { CHALLENGE_TTL_SECONDS } from "@anonchat/shared";
 
 interface StoredChallenge {
   publicId: string;

@@ -1,4 +1,4 @@
-import type { ServerWsEvent } from "@termine/shared";
+import type { ServerWsEvent } from "@anonchat/shared";
 import type { WebSocket } from "ws";
 
 /**

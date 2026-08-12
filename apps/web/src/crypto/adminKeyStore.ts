@@ -6,7 +6,7 @@ import {
   unwrapSecretWithPassword,
   wrapSecretWithPassword,
   type Identity,
-} from "@termine/crypto";
+} from "@anonchat/crypto";
 import { getDb } from "./db.js";
 
 /**

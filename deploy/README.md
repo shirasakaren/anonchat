@@ -1,6 +1,6 @@
 # Cloud deployment templates
 
-The primary, recommended way to self-host Termine is `docker compose up -d`
+The primary, recommended way to self-host Anonchat is `docker compose up -d`
 on any VPS - see the root [README](../README.md) and
 [`scripts/setup.sh`](../scripts/setup.sh). Everything below is for deploying
 to a specific cloud platform instead.

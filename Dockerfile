@@ -25,20 +25,20 @@ FROM deps AS build
 COPY packages packages
 COPY apps apps
 COPY tsconfig.base.json ./
-RUN pnpm --filter @termine/crypto run build \
-  && pnpm --filter @termine/shared run build \
-  && pnpm --filter @termine/server run db:generate \
-  && pnpm --filter @termine/server run build \
-  && pnpm --filter @termine/web run build
+RUN pnpm --filter @anonchat/crypto run build \
+  && pnpm --filter @anonchat/shared run build \
+  && pnpm --filter @anonchat/server run db:generate \
+  && pnpm --filter @anonchat/server run build \
+  && pnpm --filter @anonchat/web run build
 
 # ---------------------------------------------------------------------------
 # deploy: produce a self-contained, production-only server directory
-# (pnpm deploy inlines the workspace: dependencies on @termine/crypto and
-# @termine/shared instead of leaving symlinks that wouldn't survive being
+# (pnpm deploy inlines the workspace: dependencies on @anonchat/crypto and
+# @anonchat/shared instead of leaving symlinks that wouldn't survive being
 # copied into a separate final image layer)
 # ---------------------------------------------------------------------------
 FROM build AS deploy
-RUN pnpm --filter @termine/server --prod deploy /deployed
+RUN pnpm --filter @anonchat/server --prod deploy /deployed
 # pnpm deploy re-resolves node_modules into a fresh virtual store, which
 # does not carry over the Prisma Client generated during the build stage -
 # regenerate it here so it lands in the deployed node_modules.
@@ -49,8 +49,8 @@ RUN cd /deployed && node_modules/.bin/prisma generate --schema=prisma/schema.pri
 # ---------------------------------------------------------------------------
 FROM node:24-alpine AS runtime
 RUN apk add --no-cache curl \
-  && addgroup -g 1001 termine \
-  && adduser -D -u 1001 -G termine termine
+  && addgroup -g 1001 anonchat \
+  && adduser -D -u 1001 -G anonchat anonchat
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -64,9 +64,9 @@ COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 
 RUN chmod +x /app/docker-entrypoint.sh \
   && mkdir -p /app/data/uploads \
-  && chown -R termine:termine /app
+  && chown -R anonchat:anonchat /app
 
-USER termine
+USER anonchat
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \

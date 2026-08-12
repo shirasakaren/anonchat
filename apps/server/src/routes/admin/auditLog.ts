@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { PaginationQuerySchema } from "@termine/shared";
+import { PaginationQuerySchema } from "@anonchat/shared";
 import { requireAdmin } from "../../auth/plugin.js";
 import { listAuditLog } from "../../services/auditLog.service.js";
 

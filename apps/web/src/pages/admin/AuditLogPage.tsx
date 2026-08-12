@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import type { AuditLogEntryDto } from "@termine/shared";
+import type { AuditLogEntryDto } from "@anonchat/shared";
 import { listAuditLog } from "../../api/admin.js";
 import { FullScreenLoader } from "../../components/common/Loader.js";
 

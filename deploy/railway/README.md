@@ -1,4 +1,4 @@
-# Deploying Termine on Railway
+# Deploying Anonchat on Railway
 
 Railway builds directly from this repo's root `Dockerfile` and provisions a
 managed PostgreSQL database alongside the app. The desired state is declared
@@ -17,7 +17,7 @@ in [`.railway/railway.ts`](../../.railway/railway.ts) at the repo root.
 2. From the repo root, link this directory to a Railway project:
    ```bash
    railway login
-   railway init --name termine
+   railway init --name anonchat
    ```
 3. Review what will be created:
    ```bash

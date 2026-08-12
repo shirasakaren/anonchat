@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { decryptBlob } from "@termine/crypto";
-import type { AttachmentDto } from "@termine/shared";
+import { decryptBlob } from "@anonchat/crypto";
+import type { AttachmentDto } from "@anonchat/shared";
 import { decryptAttachmentMeta, toBlobPart, type AttachmentMetaEnvelope } from "../../crypto/conversationCrypto.js";
 
 function formatBytes(bytes: number): string {

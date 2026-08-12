@@ -1,5 +1,5 @@
 {
-  "name": "termine",
+  "name": "anonchat",
   "private": true,
   "version": "0.1.0",
   "description": "Self-hosted anonymous persistent messaging inbox",
@@ -9,14 +9,14 @@
   },
   "scripts": {
     "dev": "pnpm --parallel --filter ./apps/* run dev",
-    "dev:server": "pnpm --filter @termine/server run dev",
-    "dev:web": "pnpm --filter @termine/web run dev",
-    "build": "pnpm --filter @termine/crypto run build && pnpm --filter @termine/shared run build && pnpm --filter @termine/server run build && pnpm --filter @termine/web run build",
+    "dev:server": "pnpm --filter @anonchat/server run dev",
+    "dev:web": "pnpm --filter @anonchat/web run dev",
+    "build": "pnpm --filter @anonchat/crypto run build && pnpm --filter @anonchat/shared run build && pnpm --filter @anonchat/server run build && pnpm --filter @anonchat/web run build",
     "test": "pnpm -r run test",
     "lint": "pnpm -r run lint",
     "typecheck": "pnpm -r run typecheck",
-    "db:migrate": "pnpm --filter @termine/server run db:migrate",
-    "db:generate": "pnpm --filter @termine/server run db:generate"
+    "db:migrate": "pnpm --filter @anonchat/server run db:migrate",
+    "db:generate": "pnpm --filter @anonchat/server run db:generate"
   },
   "devDependencies": {
     "typescript": "^5.7.3",

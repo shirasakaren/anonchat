@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { SiteSettingsRequestSchema, type SiteSettingsDto } from "@termine/shared";
+import { SiteSettingsRequestSchema, type SiteSettingsDto } from "@anonchat/shared";
 import { requireAdmin } from "../../auth/plugin.js";
 import { prisma } from "../../db.js";
 import { adminExists, getAdminPublicKeys } from "../../services/admin.service.js";

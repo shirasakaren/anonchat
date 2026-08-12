@@ -22,7 +22,7 @@ import AdminApp from "./pages/admin/AdminApp.js";
 function RootRouter() {
   const { site, loading, error } = useSite();
 
-  if (loading) return <FullScreenLoader label="Loading Termine…" />;
+  if (loading) return <FullScreenLoader label="Loading Anonchat…" />;
   if (error || !site) return <FullScreenError message={error ?? "The site could not be loaded."} />;
 
   return (

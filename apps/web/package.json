@@ -1,5 +1,5 @@
 {
-  "name": "@termine/web",
+  "name": "@anonchat/web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,8 +12,8 @@
     "lint": "echo skip"
   },
   "dependencies": {
-    "@termine/crypto": "workspace:*",
-    "@termine/shared": "workspace:*",
+    "@anonchat/crypto": "workspace:*",
+    "@anonchat/shared": "workspace:*",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "dompurify": "^3.4.13",

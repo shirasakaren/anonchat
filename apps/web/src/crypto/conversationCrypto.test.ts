@@ -1,4 +1,4 @@
-import { deriveIdentity, generateRecoverySecret } from "@termine/crypto";
+import { deriveIdentity, generateRecoverySecret } from "@anonchat/crypto";
 import { describe, expect, it } from "vitest";
 import {
   decryptAttachmentMeta,

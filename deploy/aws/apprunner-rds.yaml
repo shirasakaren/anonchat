@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >
-  Termine on AWS App Runner + RDS PostgreSQL. Deploys the Docker image you've
+  Anonchat on AWS App Runner + RDS PostgreSQL. Deploys the Docker image you've
   already pushed to ECR (see deploy/aws/README.md for the exact push
   commands) as an App Runner service, backed by a private RDS Postgres
   instance reachable only through a VPC connector - not exposed to the
@@ -9,7 +9,7 @@ Description: >
 Parameters:
   ImageUri:
     Type: String
-    Description: Full ECR image URI, e.g. 123456789012.dkr.ecr.us-east-1.amazonaws.com/termine:latest
+    Description: Full ECR image URI, e.g. 123456789012.dkr.ecr.us-east-1.amazonaws.com/anonchat:latest
   VpcId:
     Type: AWS::EC2::VPC::Id
     Description: VPC to deploy into (your account's default VPC works fine).
@@ -20,7 +20,7 @@ Parameters:
     Type: String
     NoEcho: true
     MinLength: 12
-    Description: Password for the termine Postgres user.
+    Description: Password for the anonchat Postgres user.
   SessionSecret:
     Type: String
     NoEcho: true
@@ -28,7 +28,7 @@ Parameters:
     Description: "Random session-signing secret. Generate with: openssl rand -hex 32"
   PublicUrl:
     Type: String
-    Description: Public URL this app will be served at, e.g. https://termine.example.com (or the App Runner default domain, filled in after first deploy).
+    Description: Public URL this app will be served at, e.g. https://anonchat.example.com (or the App Runner default domain, filled in after first deploy).
     Default: ""
   DBInstanceClass:
     Type: String
@@ -45,7 +45,7 @@ Resources:
   VpcConnectorSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Termine App Runner VPC connector
+      GroupDescription: Anonchat App Runner VPC connector
       VpcId: !Ref VpcId
       SecurityGroupEgress:
         - IpProtocol: "-1"
@@ -54,7 +54,7 @@ Resources:
   DBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Termine RDS - only reachable from the App Runner VPC connector
+      GroupDescription: Anonchat RDS - only reachable from the App Runner VPC connector
       VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -65,7 +65,7 @@ Resources:
   DBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
-      DBSubnetGroupDescription: Termine RDS subnet group
+      DBSubnetGroupDescription: Anonchat RDS subnet group
       SubnetIds: !Ref SubnetIds
 
   VpcConnector:
@@ -88,9 +88,9 @@ Resources:
       DBInstanceClass: !Ref DBInstanceClass
       AllocatedStorage: "20"
       StorageType: gp3
-      MasterUsername: termine
+      MasterUsername: anonchat
       MasterUserPassword: !Ref DBPassword
-      DBName: termine
+      DBName: anonchat
       DBSubnetGroupName: !Ref DBSubnetGroup
       VPCSecurityGroups:
         - !Ref DBSecurityGroup
@@ -117,7 +117,7 @@ Resources:
   Service:
     Type: AWS::AppRunner::Service
     Properties:
-      ServiceName: termine
+      ServiceName: anonchat
       SourceConfiguration:
         AuthenticationConfiguration:
           AccessRoleArn: !GetAtt EcrAccessRole.Arn
@@ -129,7 +129,7 @@ Resources:
             Port: "3000"
             RuntimeEnvironmentVariables:
               - Name: DATABASE_URL
-                Value: !Sub "postgresql://termine:${DBPassword}@${Database.Endpoint.Address}:${Database.Endpoint.Port}/termine"
+                Value: !Sub "postgresql://anonchat:${DBPassword}@${Database.Endpoint.Address}:${Database.Endpoint.Port}/anonchat"
               - Name: SESSION_SECRET
                 Value: !Ref SessionSecret
               - Name: PUBLIC_URL

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import type { Identity } from "@termine/crypto";
-import type { PublicKeysInput } from "@termine/shared";
+import type { Identity } from "@anonchat/crypto";
+import type { PublicKeysInput } from "@anonchat/shared";
 import { getAnonymousMe, logoutAnonymous, recoverAnonymousSession, registerAnonymousIdentity } from "../api/anonymous.js";
 import { ApiError } from "../api/client.js";
 import {

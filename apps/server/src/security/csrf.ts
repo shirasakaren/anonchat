@@ -1,5 +1,5 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { CSRF_COOKIE, CSRF_HEADER } from "@termine/shared";
+import { CSRF_COOKIE, CSRF_HEADER } from "@anonchat/shared";
 import { generateSessionToken, isSecureContext } from "../auth/session.js";
 import { Errors } from "../utils/errors.js";
 

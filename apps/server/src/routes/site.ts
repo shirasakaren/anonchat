@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import type { PublicSiteInfoDto } from "@termine/shared";
+import type { PublicSiteInfoDto } from "@anonchat/shared";
 import { loadEnv } from "../env.js";
 import { adminExists, getAdminPublicKeys } from "../services/admin.service.js";
 import { getSiteSettings } from "../services/siteSettings.service.js";

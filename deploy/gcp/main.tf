@@ -19,13 +19,13 @@ variable "region" {
 
 variable "image" {
   type        = string
-  description = "Full Artifact Registry image URI, e.g. us-central1-docker.pkg.dev/<project>/termine/termine:latest"
+  description = "Full Artifact Registry image URI, e.g. us-central1-docker.pkg.dev/<project>/anonchat/anonchat:latest"
 }
 
 variable "db_password" {
   type        = string
   sensitive   = true
-  description = "Password for the termine Postgres user."
+  description = "Password for the anonchat Postgres user."
 }
 
 variable "session_secret" {
@@ -71,7 +71,7 @@ resource "google_project_service" "sql" {
 # services connection.
 # ---------------------------------------------------------------------------
 resource "google_sql_database_instance" "postgres" {
-  name             = "termine"
+  name             = "anonchat"
   region           = var.region
   database_version = "POSTGRES_17"
   deletion_protection = true
@@ -87,12 +87,12 @@ resource "google_sql_database_instance" "postgres" {
 }
 
 resource "google_sql_database" "database" {
-  name     = "termine"
+  name     = "anonchat"
   instance = google_sql_database_instance.postgres.name
 }
 
 resource "google_sql_user" "user" {
-  name     = "termine"
+  name     = "anonchat"
   instance = google_sql_database_instance.postgres.name
   password = var.db_password
 }
@@ -101,8 +101,8 @@ resource "google_sql_user" "user" {
 # Cloud Run
 # ---------------------------------------------------------------------------
 resource "google_service_account" "app" {
-  account_id   = "termine-app"
-  display_name = "Termine Cloud Run runtime identity"
+  account_id   = "anonchat-app"
+  display_name = "Anonchat Cloud Run runtime identity"
 }
 
 resource "google_project_iam_member" "cloudsql_client" {
@@ -121,15 +121,15 @@ resource "google_project_iam_member" "cloudsql_client" {
 # of requiring a separate S3 provider account.
 # ---------------------------------------------------------------------------
 resource "google_storage_bucket" "uploads" {
-  name                        = "${var.project_id}-termine-uploads"
+  name                        = "${var.project_id}-anonchat-uploads"
   location                    = var.region
   uniform_bucket_level_access = true
   force_destroy               = false
 }
 
 resource "google_service_account" "storage" {
-  account_id   = "termine-storage"
-  display_name = "Termine GCS HMAC key holder"
+  account_id   = "anonchat-storage"
+  display_name = "Anonchat GCS HMAC key holder"
 }
 
 resource "google_storage_bucket_iam_member" "storage_access" {
@@ -143,7 +143,7 @@ resource "google_storage_hmac_key" "uploads" {
 }
 
 resource "google_cloud_run_v2_service" "app" {
-  name                = "termine"
+  name                = "anonchat"
   location            = var.region
   deletion_protection = false
   ingress             = "INGRESS_TRAFFIC_ALL"
@@ -177,7 +177,7 @@ resource "google_cloud_run_v2_service" "app" {
 
       env {
         name  = "DATABASE_URL"
-        value = "postgresql://termine:${var.db_password}@localhost/termine?host=/cloudsql/${google_sql_database_instance.postgres.connection_name}"
+        value = "postgresql://anonchat:${var.db_password}@localhost/anonchat?host=/cloudsql/${google_sql_database_instance.postgres.connection_name}"
       }
       env {
         name  = "SESSION_SECRET"

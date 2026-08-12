@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { CannedReplyDto } from "@termine/shared";
+import type { CannedReplyDto } from "@anonchat/shared";
 import { createCannedReply, deleteCannedReply, listCannedReplies, updateCannedReply } from "../../api/admin.js";
 import { FullScreenLoader } from "../../components/common/Loader.js";
 

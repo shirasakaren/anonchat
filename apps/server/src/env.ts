@@ -6,7 +6,7 @@ import {
   DEFAULT_MESSAGE_EDIT_WINDOW_MINUTES,
   DEFAULT_RATE_LIMIT_MESSAGES_PER_MINUTE,
   DEFAULT_RATE_LIMIT_REGISTRATIONS_PER_HOUR,
-} from "@termine/shared";
+} from "@anonchat/shared";
 
 const boolFromEnv = z
   .string()

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { ADMIN_SESSION_COOKIE, AdminLoginRequestSchema, IdParamSchema, TotpVerifyRequestSchema } from "@termine/shared";
-import type { AdminSummaryDto } from "@termine/shared";
+import { ADMIN_SESSION_COOKIE, AdminLoginRequestSchema, IdParamSchema, TotpVerifyRequestSchema } from "@anonchat/shared";
+import type { AdminSummaryDto } from "@anonchat/shared";
 import { requireAdmin } from "../../auth/plugin.js";
 import {
   clearAdminSessionCookie,

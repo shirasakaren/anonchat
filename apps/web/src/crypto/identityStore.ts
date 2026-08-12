@@ -1,7 +1,7 @@
-import { deriveIdentity, formatRecoverySecret, generateRecoverySecret, parseRecoverySecret, type Identity } from "@termine/crypto";
+import { deriveIdentity, formatRecoverySecret, generateRecoverySecret, parseRecoverySecret, type Identity } from "@anonchat/crypto";
 import { getDb, type StoredIdentityRecord } from "./db.js";
 
-const ACTIVE_IDENTITY_KEY = "termine.activeIdentity";
+const ACTIVE_IDENTITY_KEY = "anonchat.activeIdentity";
 
 export interface IdentitySummary {
   publicId: string;

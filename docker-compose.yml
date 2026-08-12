@@ -1,12 +1,12 @@
 services:
   app:
     build: .
-    image: termine:latest
+    image: anonchat:latest
     restart: unless-stopped
     ports:
       - "${PORT:-3000}:3000"
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-termine}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-termine}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-anonchat}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-anonchat}
       SESSION_SECRET: ${SESSION_SECRET}
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}
       NODE_ENV: production
@@ -45,20 +45,20 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-termine}
+      POSTGRES_USER: ${POSTGRES_USER:-anonchat}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB:-termine}
+      POSTGRES_DB: ${POSTGRES_DB:-anonchat}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-termine}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-anonchat}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   # Optional: self-hosted S3-compatible object storage. Enable with:
   #   docker compose --profile minio up -d
-  # and set STORAGE_DRIVER=s3, S3_ENDPOINT=http://minio:9000, S3_BUCKET=termine,
+  # and set STORAGE_DRIVER=s3, S3_ENDPOINT=http://minio:9000, S3_BUCKET=anonchat,
   # S3_ACCESS_KEY_ID/S3_SECRET_ACCESS_KEY matching the values below.
   minio:
     image: minio/minio:latest
@@ -66,7 +66,7 @@ services:
     profiles: ["minio"]
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-termine}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-anonchat}
       # No insecure fallback default here on purpose (unlike POSTGRES_PASSWORD,
       # which also has none) - MinIO's admin console is reachable on :9001,
       # so a well-known default would be a real credential exposure.

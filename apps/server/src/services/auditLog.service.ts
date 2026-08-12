@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, type AuditLogEntryDto } from "@termine/shared";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, type AuditLogEntryDto } from "@anonchat/shared";
 import { prisma } from "../db.js";
 
 export async function recordAudit(

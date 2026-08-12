@@ -15,7 +15,7 @@ interface StoredAdminKeyRecord {
   ciphertext: string;
 }
 
-interface TermineDB extends DBSchema {
+interface AnonchatDB extends DBSchema {
   identities: {
     key: string;
     value: StoredIdentityRecord;
@@ -26,10 +26,10 @@ interface TermineDB extends DBSchema {
   };
 }
 
-let dbPromise: Promise<IDBPDatabase<TermineDB>> | null = null;
+let dbPromise: Promise<IDBPDatabase<AnonchatDB>> | null = null;
 
-export function getDb(): Promise<IDBPDatabase<TermineDB>> {
-  dbPromise ??= openDB<TermineDB>("termine", 1, {
+export function getDb(): Promise<IDBPDatabase<AnonchatDB>> {
+  dbPromise ??= openDB<AnonchatDB>("anonchat", 1, {
     upgrade(db) {
       if (!db.objectStoreNames.contains("identities")) {
         db.createObjectStore("identities", { keyPath: "publicId" });

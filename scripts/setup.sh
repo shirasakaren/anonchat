@@ -1,11 +1,11 @@
 #!/bin/sh
-# Interactive setup for a fresh Termine deployment on a VPS.
+# Interactive setup for a fresh Anonchat deployment on a VPS.
 # Usage: curl -fsSL https://raw.githubusercontent.com/<org>/<repo>/main/scripts/setup.sh | sh
 #    or, from a checked-out clone: ./scripts/setup.sh
 set -eu
 
-REPO_URL="${TERMINE_REPO_URL:-}"
-INSTALL_DIR="${TERMINE_INSTALL_DIR:-termine}"
+REPO_URL="${ANONCHAT_REPO_URL:-}"
+INSTALL_DIR="${ANONCHAT_INSTALL_DIR:-anonchat}"
 
 bold() { printf '\033[1m%s\033[0m\n' "$1"; }
 info() { printf '\033[36m==>\033[0m %s\n' "$1"; }
@@ -99,7 +99,7 @@ prompt_yn() {
 }
 
 main() {
-  bold "Termine setup"
+  bold "Anonchat setup"
   echo "Self-hosted anonymous messaging inbox - one-time deployment setup."
   echo
 
@@ -136,7 +136,7 @@ main() {
       cd "$INSTALL_DIR"
     else
       err "No docker-compose.yml found in the current directory and no repo URL given."
-      err "Run this script from inside the cloned project, or set TERMINE_REPO_URL."
+      err "Run this script from inside the cloned project, or set ANONCHAT_REPO_URL."
       exit 1
     fi
   fi
@@ -180,7 +180,7 @@ main() {
       storage_driver="s3"
       s3_endpoint=$(prompt "S3 endpoint URL (leave blank for AWS S3)" "")
       s3_region=$(prompt "S3 region" "auto")
-      s3_bucket=$(prompt "S3 bucket name" "termine")
+      s3_bucket=$(prompt "S3 bucket name" "anonchat")
       s3_access_key=$(prompt "S3 access key ID" "")
       s3_secret_key=$(prompt "S3 secret access key" "")
       if [ -z "$s3_endpoint" ]; then s3_force_path_style="false"; fi
@@ -189,8 +189,8 @@ main() {
       storage_driver="s3"
       use_minio_profile="y"
       s3_endpoint="http://minio:9000"
-      s3_bucket="termine"
-      s3_access_key="termine"
+      s3_bucket="anonchat"
+      s3_access_key="anonchat"
       s3_secret_key=$(random_password)
       s3_force_path_style="true"
       info "MinIO will be started alongside the app with generated credentials."
@@ -217,8 +217,8 @@ main() {
   info "Generating .env..."
   cat > .env << EOF
 POSTGRES_PASSWORD=$postgres_password
-POSTGRES_USER=termine
-POSTGRES_DB=termine
+POSTGRES_USER=anonchat
+POSTGRES_DB=anonchat
 
 SESSION_SECRET=$session_secret
 PUBLIC_URL=$public_url
@@ -256,7 +256,7 @@ EOF
   info ".env written (permissions restricted to your user)."
 
   echo
-  bold "Starting Termine..."
+  bold "Starting Anonchat..."
   if [ "$use_minio_profile" = "y" ]; then
     docker compose --profile minio up -d --build
   else
@@ -276,7 +276,7 @@ EOF
   done
 
   echo
-  bold "Termine is up."
+  bold "Anonchat is up."
   echo "Open $public_url in your browser to finish setting up your admin account."
   echo
   echo "Useful commands:"

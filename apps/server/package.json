@@ -1,5 +1,5 @@
 {
-  "name": "@termine/server",
+  "name": "@anonchat/server",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -15,8 +15,8 @@
     "db:migrate:dev": "prisma migrate dev"
   },
   "dependencies": {
-    "@termine/crypto": "workspace:*",
-    "@termine/shared": "workspace:*",
+    "@anonchat/crypto": "workspace:*",
+    "@anonchat/shared": "workspace:*",
     "@aws-sdk/client-s3": "^3.1107.0",
     "@noble/hashes": "^2.3.0",
     "@fastify/cookie": "^11.1.2",

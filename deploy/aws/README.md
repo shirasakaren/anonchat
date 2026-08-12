@@ -1,6 +1,6 @@
-# Deploying Termine on AWS (App Runner + RDS)
+# Deploying Anonchat on AWS (App Runner + RDS)
 
-This template runs Termine on [App Runner](https://aws.amazon.com/apprunner/)
+This template runs Anonchat on [App Runner](https://aws.amazon.com/apprunner/)
 (a managed container platform - no EC2/ECS cluster to operate) backed by a
 private [RDS PostgreSQL](https://aws.amazon.com/rds/postgresql/) instance
 reachable only through a VPC connector, never exposed to the public internet.
@@ -23,12 +23,12 @@ aws ec2 describe-subnets --filters "Name=vpc-id,Values=<vpc-id-from-above>" --qu
 ## 1. Build and push the image to ECR
 
 ```bash
-aws ecr create-repository --repository-name termine
+aws ecr create-repository --repository-name anonchat
 aws ecr get-login-password --region <your-region> | docker login --username AWS --password-stdin <account-id>.dkr.ecr.<your-region>.amazonaws.com
 
-docker build -t termine .
-docker tag termine:latest <account-id>.dkr.ecr.<your-region>.amazonaws.com/termine:latest
-docker push <account-id>.dkr.ecr.<your-region>.amazonaws.com/termine:latest
+docker build -t anonchat .
+docker tag anonchat:latest <account-id>.dkr.ecr.<your-region>.amazonaws.com/anonchat:latest
+docker push <account-id>.dkr.ecr.<your-region>.amazonaws.com/anonchat:latest
 ```
 
 ## 2. Deploy the stack
@@ -36,10 +36,10 @@ docker push <account-id>.dkr.ecr.<your-region>.amazonaws.com/termine:latest
 ```bash
 aws cloudformation deploy \
   --template-file deploy/aws/apprunner-rds.yaml \
-  --stack-name termine \
+  --stack-name anonchat \
   --capabilities CAPABILITY_IAM \
   --parameter-overrides \
-    ImageUri=<account-id>.dkr.ecr.<your-region>.amazonaws.com/termine:latest \
+    ImageUri=<account-id>.dkr.ecr.<your-region>.amazonaws.com/anonchat:latest \
     VpcId=<vpc-id> \
     SubnetIds=<subnet-id-1>,<subnet-id-2> \
     DBPassword="$(openssl rand -base64 24 | tr -d '=+/')" \
@@ -52,7 +52,7 @@ This provisions real, billable AWS resources: an App Runner service, an RDS
 ## 3. Set PUBLIC_URL and redeploy
 
 ```bash
-aws cloudformation describe-stacks --stack-name termine --query "Stacks[0].Outputs[?OutputKey=='ServiceUrl'].OutputValue" --output text
+aws cloudformation describe-stacks --stack-name anonchat --query "Stacks[0].Outputs[?OutputKey=='ServiceUrl'].OutputValue" --output text
 ```
 
 Redeploy the stack with `PublicUrl=<that-url>` added to `--parameter-overrides`
@@ -63,9 +63,9 @@ Visit the URL - you'll land on the first-run admin setup wizard.
 ## Updating after a code change
 
 ```bash
-docker build -t termine .
-docker tag termine:latest <account-id>.dkr.ecr.<your-region>.amazonaws.com/termine:latest
-docker push <account-id>.dkr.ecr.<your-region>.amazonaws.com/termine:latest
+docker build -t anonchat .
+docker tag anonchat:latest <account-id>.dkr.ecr.<your-region>.amazonaws.com/anonchat:latest
+docker push <account-id>.dkr.ecr.<your-region>.amazonaws.com/anonchat:latest
 aws apprunner start-deployment --service-arn <service-arn-from-stack-outputs>
 ```
 

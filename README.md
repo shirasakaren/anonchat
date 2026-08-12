@@ -1,4 +1,4 @@
-# Termine
+# Anonchat
 
 A self-hosted, end-to-end encrypted, anonymous messaging inbox. Anyone can
 create an anonymous identity - no email, phone number, or account - and get
@@ -29,7 +29,7 @@ system fits together.
 
 ```bash
 git clone <this-repo>
-cd termine
+cd anonchat
 ./scripts/setup.sh
 ```
 
@@ -69,12 +69,12 @@ packages/
 ```
 
 Requirements: Node.js 20+, pnpm, and a local PostgreSQL instance (or run one
-via `docker run -p 5432:5432 -e POSTGRES_PASSWORD=termine postgres:17-alpine`).
+via `docker run -p 5432:5432 -e POSTGRES_PASSWORD=anonchat postgres:17-alpine`).
 
 ```bash
 pnpm install
 cp apps/server/.env.example apps/server/.env   # set DATABASE_URL, SESSION_SECRET
-pnpm --filter @termine/server run db:migrate:dev
+pnpm --filter @anonchat/server run db:migrate:dev
 pnpm run dev          # starts both the server (:3000) and web (:5173) dev servers
 ```
 
@@ -91,10 +91,10 @@ Conversations persist indefinitely by design - back up the Postgres volume
 regularly:
 
 ```bash
-docker compose exec postgres pg_dump -U termine termine > backup.sql
+docker compose exec postgres pg_dump -U anonchat anonchat > backup.sql
 ```
 
-Restore with `docker compose exec -T postgres psql -U termine termine < backup.sql`.
+Restore with `docker compose exec -T postgres psql -U anonchat anonchat < backup.sql`.
 If you're using local disk storage for attachments, also back up the
 `uploads` Docker volume (or your S3-compatible bucket, if you configured one).
 

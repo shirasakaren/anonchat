@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import type { PublicSiteInfoDto } from "@termine/shared";
+import type { PublicSiteInfoDto } from "@anonchat/shared";
 import { getSiteInfo } from "../api/site.js";
 
 interface SiteContextValue {

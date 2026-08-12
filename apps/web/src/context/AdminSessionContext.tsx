@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import type { Identity } from "@termine/crypto";
-import type { AdminSummaryDto } from "@termine/shared";
+import type { Identity } from "@anonchat/crypto";
+import type { AdminSummaryDto } from "@anonchat/shared";
 import { getAdminMe, loginAdmin, logoutAdmin } from "../api/admin.js";
 import { ApiError } from "../api/client.js";
 import { getUnlockedAdminIdentity, hasCachedAdminKey, importAdminIdentityFromRecoveryPhrase, lockAdminIdentity, unlockAdminIdentity } from "../crypto/adminKeyStore.js";

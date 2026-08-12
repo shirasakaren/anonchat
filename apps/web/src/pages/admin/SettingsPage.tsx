@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { SiteSettingsDto } from "@termine/shared";
+import type { SiteSettingsDto } from "@anonchat/shared";
 import { getSettings, updateSettings, uploadAvatar, beginTotpSetup, verifyTotpSetup, disableTotp } from "../../api/admin.js";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
 import { useAdminNotifications } from "../../hooks/useAdminNotifications.js";

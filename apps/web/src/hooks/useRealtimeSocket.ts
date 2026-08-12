@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ClientWsMessage, ServerWsEvent } from "@termine/shared";
+import type { ClientWsMessage, ServerWsEvent } from "@anonchat/shared";
 
 export type SocketStatus = "connecting" | "open" | "closed";
 

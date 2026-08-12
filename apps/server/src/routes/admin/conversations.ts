@@ -8,7 +8,7 @@ import {
   MessagesQuerySchema,
   ReactionRequestSchema,
   ReadReceiptRequestSchema,
-} from "@termine/shared";
+} from "@anonchat/shared";
 import { requireAdmin } from "../../auth/plugin.js";
 import { prisma } from "../../db.js";
 import { loadEnv } from "../../env.js";

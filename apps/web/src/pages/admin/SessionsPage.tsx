@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { formatDistanceToNowStrict } from "date-fns";
-import type { AdminSessionDto } from "@termine/shared";
+import type { AdminSessionDto } from "@anonchat/shared";
 import { listAdminSessions, revokeAdminSession } from "../../api/admin.js";
 import { FullScreenLoader } from "../../components/common/Loader.js";
 

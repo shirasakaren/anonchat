@@ -1,5 +1,5 @@
-const CSRF_COOKIE = "termine_csrf";
-const CSRF_HEADER = "x-termine-csrf";
+const CSRF_COOKIE = "anonchat_csrf";
+const CSRF_HEADER = "x-anonchat-csrf";
 
 export class ApiError extends Error {
   constructor(

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { CannedReplyDto } from "@termine/shared";
+import type { CannedReplyDto } from "@anonchat/shared";
 import { listCannedReplies } from "../../api/admin.js";
 
 export function CannedReplyPicker({ onPick }: { onPick: (body: string) => void }) {

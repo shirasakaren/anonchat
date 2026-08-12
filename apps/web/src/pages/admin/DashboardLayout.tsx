@@ -18,7 +18,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     <div className="flex h-screen">
       <nav className="flex w-56 flex-col border-r border-[var(--border)] bg-[var(--surface-raised)] p-3">
         <div className="mb-4 px-2">
-          <p className="text-sm font-semibold">Termine</p>
+          <p className="text-sm font-semibold">Anonchat</p>
           <p className="truncate text-xs text-[var(--text-muted)]">{admin?.displayName}</p>
         </div>
         <div className="flex-1 space-y-1">

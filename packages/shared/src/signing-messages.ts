@@ -7,9 +7,9 @@
  */
 
 export function buildRegistrationProofMessage(signingPublicKey: string, exchangePublicKey: string): Uint8Array {
-  return new TextEncoder().encode(`termine:register:v1:${signingPublicKey}:${exchangePublicKey}`);
+  return new TextEncoder().encode(`anonchat:register:v1:${signingPublicKey}:${exchangePublicKey}`);
 }
 
 export function buildLoginChallengeMessage(challenge: string): Uint8Array {
-  return new TextEncoder().encode(`termine:login:v1:${challenge}`);
+  return new TextEncoder().encode(`anonchat:login:v1:${challenge}`);
 }

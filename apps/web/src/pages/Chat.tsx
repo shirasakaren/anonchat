@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { encryptBlob } from "@termine/crypto";
-import type { MessageDto, ServerWsEvent } from "@termine/shared";
+import { encryptBlob } from "@anonchat/crypto";
+import type { MessageDto, ServerWsEvent } from "@anonchat/shared";
 import { attachmentUrl, deleteMessage, editMessage, getMessages, markRead, sendMessage, setReaction, clearReaction } from "../api/conversation.js";
 import { ApiError } from "../api/client.js";
 import { useAnonymousSession } from "../context/AnonymousSessionContext.js";

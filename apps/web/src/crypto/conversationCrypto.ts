@@ -5,7 +5,7 @@ import {
   encryptJSON,
   type EncryptedPayload,
   type Identity,
-} from "@termine/crypto";
+} from "@anonchat/crypto";
 
 export interface MessageEnvelope {
   text: string;

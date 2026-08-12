@@ -1,7 +1,7 @@
 import type { Conversation, ConversationStatus, Prisma, SenderType } from "@prisma/client";
-import { bytesToBase64url } from "@termine/crypto";
-import type { AdminConversationSummaryDto, ConversationDto, MessagePage } from "@termine/shared";
-import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@termine/shared";
+import { bytesToBase64url } from "@anonchat/crypto";
+import type { AdminConversationSummaryDto, ConversationDto, MessagePage } from "@anonchat/shared";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@anonchat/shared";
 import { prisma } from "../db.js";
 import { publishToConversation } from "../realtime/hub.js";
 import { getStorageAdapter } from "../storage/index.js";

@@ -1,6 +1,6 @@
-# Deploying Termine on Google Cloud (Cloud Run + Cloud SQL)
+# Deploying Anonchat on Google Cloud (Cloud Run + Cloud SQL)
 
-This Terraform config runs Termine on [Cloud Run](https://cloud.google.com/run)
+This Terraform config runs Anonchat on [Cloud Run](https://cloud.google.com/run)
 (fully managed, scales to zero) backed by a
 [Cloud SQL](https://cloud.google.com/sql) PostgreSQL instance, connected via
 Cloud Run's built-in Cloud SQL integration (an IAM-authenticated, encrypted
@@ -21,11 +21,11 @@ Config: [`main.tf`](./main.tf)
 ## 1. Build and push the image to Artifact Registry
 
 ```bash
-gcloud artifacts repositories create termine --repository-format=docker --location=us-central1
+gcloud artifacts repositories create anonchat --repository-format=docker --location=us-central1
 gcloud auth configure-docker us-central1-docker.pkg.dev
 
-docker build -t us-central1-docker.pkg.dev/<project-id>/termine/termine:latest .
-docker push us-central1-docker.pkg.dev/<project-id>/termine/termine:latest
+docker build -t us-central1-docker.pkg.dev/<project-id>/anonchat/anonchat:latest .
+docker push us-central1-docker.pkg.dev/<project-id>/anonchat/anonchat:latest
 ```
 
 ## 2. Deploy the infrastructure
@@ -35,7 +35,7 @@ cd deploy/gcp
 terraform init
 terraform plan \
   -var="project_id=<project-id>" \
-  -var="image=us-central1-docker.pkg.dev/<project-id>/termine/termine:latest" \
+  -var="image=us-central1-docker.pkg.dev/<project-id>/anonchat/anonchat:latest" \
   -var="db_password=$(openssl rand -base64 24 | tr -d '=+/')" \
   -var="session_secret=$(openssl rand -hex 32)"
 ```
@@ -65,9 +65,9 @@ Visit the URL - you'll land on the first-run admin setup wizard.
 ## Updating after a code change
 
 ```bash
-docker build -t us-central1-docker.pkg.dev/<project-id>/termine/termine:latest .
-docker push us-central1-docker.pkg.dev/<project-id>/termine/termine:latest
-gcloud run deploy termine --image us-central1-docker.pkg.dev/<project-id>/termine/termine:latest --region us-central1
+docker build -t us-central1-docker.pkg.dev/<project-id>/anonchat/anonchat:latest .
+docker push us-central1-docker.pkg.dev/<project-id>/anonchat/anonchat:latest
+gcloud run deploy anonchat --image us-central1-docker.pkg.dev/<project-id>/anonchat/anonchat:latest --region us-central1
 ```
 
 `docker-entrypoint.sh` runs `prisma migrate deploy` automatically before the
