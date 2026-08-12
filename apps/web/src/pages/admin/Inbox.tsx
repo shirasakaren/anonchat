@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { ConversationList } from "./ConversationList.js";
 import { ConversationView } from "./ConversationView.js";
 
@@ -25,9 +26,10 @@ export default function Inbox() {
             <button
               type="button"
               onClick={() => navigate("/admin")}
-              className="border-b border-[var(--border)] px-4 py-2 text-left text-xs text-[var(--color-accent-600)] md:hidden"
+              className="flex items-center gap-1 border-b border-[var(--border)] px-4 py-2 text-left text-xs text-[var(--color-accent-600)] md:hidden"
             >
-              ← Back to conversations
+              <ArrowLeft size={13} aria-hidden />
+              Back to conversations
             </button>
             <div className="flex-1 overflow-hidden">
               <ConversationView conversationId={conversationId} onChanged={bump} />

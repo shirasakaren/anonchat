@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
 import { formatDistanceToNowStrict } from "date-fns";
+import { Paperclip } from "lucide-react";
 import type { AdminConversationSummaryDto, ServerWsEvent } from "@anonchat/shared";
+
+/** Sentinel stored in `previews` for an attachment-only last message, so the
+ *  render can show a real Paperclip icon instead of baking one into the string. */
+const ATTACHMENT_PREVIEW = "__ATTACHMENT_PREVIEW__";
 import { listConversations } from "../../api/admin.js";
 import { decryptMessageText, getConversationKey } from "../../crypto/conversationCrypto.js";
 import { getAdminMessages } from "../../api/admin.js";
@@ -100,7 +105,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
           const last = page.messages[page.messages.length - 1];
           if (last?.content) updates[conv.id] = decryptMessageText(key, last.content);
           else if (last?.deleted) updates[conv.id] = "Message deleted";
-          else if (last) updates[conv.id] = "📎 Attachment";
+          else if (last) updates[conv.id] = ATTACHMENT_PREVIEW;
         } catch {
           updates[conv.id] = "";
         }
@@ -177,7 +182,16 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                   </span>
                 )}
               </div>
-              <p className="truncate text-xs text-[var(--text-muted)]">{previews[conv.id] ?? "…"}</p>
+              <p className="flex items-center gap-1 truncate text-xs text-[var(--text-muted)]">
+                {previews[conv.id] === ATTACHMENT_PREVIEW ? (
+                  <>
+                    <Paperclip size={11} className="shrink-0" aria-hidden />
+                    Attachment
+                  </>
+                ) : (
+                  (previews[conv.id] ?? "…")
+                )}
+              </p>
               <div className="flex items-center gap-1.5">
                 {conv.status === "ARCHIVED" && (
                   <span className="rounded bg-[var(--surface-muted)] px-1.5 py-0.5 text-[10px]">Archived</span>

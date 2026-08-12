@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import clsx from "clsx";
+import { X } from "lucide-react";
 import type { SiteSettingsDto } from "@anonchat/shared";
 import {
   getSettings,
@@ -228,9 +229,10 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => setContactLinks((prev) => prev.filter((_, idx) => idx !== i))}
+              aria-label="Remove link"
               className="px-2 text-red-500"
             >
-              ✕
+              <X size={16} aria-hidden />
             </button>
           </div>
         ))}

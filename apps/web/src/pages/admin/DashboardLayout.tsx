@@ -1,14 +1,15 @@
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import clsx from "clsx";
+import { MessageSquare, Settings, ShieldCheck, ClipboardList, ScrollText } from "lucide-react";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
 
 const NAV_ITEMS = [
-  { to: "/admin", label: "Inbox", icon: "💬", end: true },
-  { to: "/admin/settings", label: "Settings", icon: "⚙️" },
-  { to: "/admin/sessions", label: "Sessions", icon: "🔐" },
-  { to: "/admin/canned-replies", label: "Canned replies", icon: "📋" },
-  { to: "/admin/audit-log", label: "Audit log", icon: "📜" },
+  { to: "/admin", label: "Inbox", icon: MessageSquare, end: true },
+  { to: "/admin/settings", label: "Settings", icon: Settings },
+  { to: "/admin/sessions", label: "Sessions", icon: ShieldCheck },
+  { to: "/admin/canned-replies", label: "Canned replies", icon: ClipboardList },
+  { to: "/admin/audit-log", label: "Audit log", icon: ScrollText },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -36,7 +37,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 )
               }
             >
-              <span aria-hidden>{item.icon}</span>
+              <item.icon size={16} aria-hidden />
               {item.label}
             </NavLink>
           ))}

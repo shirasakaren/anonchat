@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ArrowRight } from "lucide-react";
 import { useSite } from "../context/SiteContext.js";
 import { useAnonymousSession } from "../context/AnonymousSessionContext.js";
 import { listIdentities, type IdentitySummary } from "../crypto/identityStore.js";
@@ -81,7 +82,7 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
                     className="flex w-full items-center justify-between rounded-lg border border-[var(--border)] px-3 py-2 text-sm hover:bg-[var(--surface-muted)] disabled:opacity-50"
                   >
                     <span>Anonymous #{identity.publicId}</span>
-                    <span aria-hidden>→</span>
+                    <ArrowRight size={16} aria-hidden />
                   </button>
                 ))}
               </div>

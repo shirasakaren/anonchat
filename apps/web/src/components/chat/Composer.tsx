@@ -8,6 +8,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import EmojiPicker from "emoji-picker-react";
+import { X, Paperclip, Smile, File as FileIcon } from "lucide-react";
 import { expandEmojiShortcuts } from "./emojiShortcuts.js";
 
 export interface PendingFile {
@@ -140,9 +141,10 @@ export function Composer({
           <button
             type="button"
             onClick={editingPreview ? onCancelEdit : onCancelReply}
+            aria-label={editingPreview ? "Cancel edit" : "Cancel reply"}
             className="ml-2 shrink-0 text-[var(--text-muted)]"
           >
-            ✕
+            <X size={14} aria-hidden />
           </button>
         </div>
       )}
@@ -155,7 +157,7 @@ export function Composer({
                 <img src={f.previewUrl} alt={f.file.name} className="h-16 w-16 rounded-lg object-cover" />
               ) : (
                 <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-[var(--border)] text-xs">
-                  📎
+                  <FileIcon size={20} className="text-[var(--text-muted)]" aria-hidden />
                 </div>
               )}
               <button
@@ -164,7 +166,7 @@ export function Composer({
                 aria-label={`Remove ${f.file.name}`}
                 className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-xs text-white"
               >
-                ✕
+                <X size={12} aria-hidden />
               </button>
             </div>
           ))}
@@ -178,7 +180,7 @@ export function Composer({
           className="cursor-pointer rounded-lg p-2 hover:bg-[var(--surface-muted)]"
           title="Attach file"
         >
-          📎
+          <Paperclip size={18} aria-hidden />
         </label>
 
         <div className="relative">
@@ -188,7 +190,7 @@ export function Composer({
             className="rounded-lg p-2 hover:bg-[var(--surface-muted)]"
             title="Emoji"
           >
-            🙂
+            <Smile size={18} aria-hidden />
           </button>
           {showEmoji && (
             <div className="absolute bottom-full left-0 mb-2 z-10">

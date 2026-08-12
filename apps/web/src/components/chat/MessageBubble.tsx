@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import clsx from "clsx";
 import { format } from "date-fns";
+import { SmilePlus, Reply, Pencil, Trash2 } from "lucide-react";
 import { decryptReaction } from "../../crypto/conversationCrypto.js";
 import { renderMessageMarkdown } from "./markdown.js";
 import { AttachmentPreview } from "./AttachmentPreview.js";
@@ -198,7 +199,7 @@ function MessageActions({
         onClick={() => setShowReactionPicker(!showReactionPicker)}
         className="rounded p-1 text-xs hover:bg-[var(--surface-muted)] disabled:pointer-events-none disabled:opacity-40"
       >
-        🙂
+        <SmilePlus size={14} aria-hidden />
       </button>
       <button
         type="button"
@@ -206,7 +207,7 @@ function MessageActions({
         onClick={onReply}
         className="rounded p-1 text-xs hover:bg-[var(--surface-muted)]"
       >
-        ↩︎
+        <Reply size={14} aria-hidden />
       </button>
       {isOwn && canEdit && (
         <button
@@ -216,7 +217,7 @@ function MessageActions({
           onClick={onEdit}
           className="rounded p-1 text-xs hover:bg-[var(--surface-muted)] disabled:pointer-events-none disabled:opacity-40"
         >
-          ✎
+          <Pencil size={14} aria-hidden />
         </button>
       )}
       {isOwn && (
@@ -227,7 +228,7 @@ function MessageActions({
           onClick={onDelete}
           className="rounded p-1 text-xs hover:bg-[var(--surface-muted)] disabled:pointer-events-none disabled:opacity-40"
         >
-          🗑
+          <Trash2 size={14} aria-hidden />
         </button>
       )}
     </div>

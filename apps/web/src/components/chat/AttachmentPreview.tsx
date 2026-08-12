@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Image as ImageIcon, Video, Music, FileText, Paperclip } from "lucide-react";
 import { decryptBlob } from "@anonchat/crypto";
 import type { AttachmentDto } from "@anonchat/shared";
 import { decryptAttachmentMeta, toBlobPart, type AttachmentMetaEnvelope } from "../../crypto/conversationCrypto.js";
@@ -9,12 +10,12 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function iconForMime(mimetype: string): string {
-  if (mimetype.startsWith("image/")) return "🖼️";
-  if (mimetype.startsWith("video/")) return "🎞️";
-  if (mimetype.startsWith("audio/")) return "🎵";
-  if (mimetype === "application/pdf") return "📄";
-  return "📎";
+function IconForMime({ mimetype }: { mimetype: string }) {
+  if (mimetype.startsWith("image/")) return <ImageIcon size={16} aria-hidden />;
+  if (mimetype.startsWith("video/")) return <Video size={16} aria-hidden />;
+  if (mimetype.startsWith("audio/")) return <Music size={16} aria-hidden />;
+  if (mimetype === "application/pdf") return <FileText size={16} aria-hidden />;
+  return <Paperclip size={16} aria-hidden />;
 }
 
 interface Props {
@@ -87,7 +88,7 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
         download={meta.filename}
         className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
       >
-        <span>{iconForMime(state.mimetype)}</span>
+        <IconForMime mimetype={state.mimetype} />
         <span className="truncate">{meta.filename}</span>
       </a>
     );
@@ -100,7 +101,7 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
       disabled={state.kind === "loading"}
       className="flex w-full items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-left text-sm hover:bg-[var(--surface-muted)] disabled:opacity-60"
     >
-      <span>{iconForMime(meta.mimetype)}</span>
+      <IconForMime mimetype={meta.mimetype} />
       <span className="min-w-0 flex-1 truncate">{meta.filename}</span>
       <span className="text-xs text-[var(--text-muted)]">{formatBytes(meta.size)}</span>
       <span className="text-xs text-[var(--color-accent-600)]">
