@@ -67,7 +67,12 @@ services:
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-termine}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-changeme12345}
+      # No insecure fallback default here on purpose (unlike POSTGRES_PASSWORD,
+      # which also has none) - MinIO's admin console is reachable on :9001,
+      # so a well-known default would be a real credential exposure.
+      # scripts/setup.sh generates a strong value for you; set it yourself in
+      # .env if you're enabling this profile manually.
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     ports:
       - "9000:9000"
       - "9001:9001"
