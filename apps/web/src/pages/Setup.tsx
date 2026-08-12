@@ -68,10 +68,14 @@ export default function Setup() {
     };
   }, [navigate]);
 
+  function handleThemeSelect(id: string) {
+    // Apply immediately so picking a theme previews it live across the
+    // whole onboarding wizard, not just once "Continue" is pressed.
+    setThemeState(id);
+    setTheme(id);
+  }
+
   function handleThemeContinue() {
-    // Apply the chosen theme immediately so the rest of the setup wizard
-    // looks the way the owner intended.
-    setTheme(theme);
     setStep("profile");
   }
 
@@ -132,7 +136,7 @@ export default function Setup() {
             <button
               type="button"
               onClick={() => setStep("theme")}
-              className="w-full rounded-lg bg-[var(--color-accent-600)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-700)]"
+              className="w-full rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)]"
             >
               Get started
             </button>
@@ -144,11 +148,11 @@ export default function Setup() {
             <p className="text-sm text-[var(--text-muted)]">
               Pick a theme for your site. You can change this anytime later in settings.
             </p>
-            <ThemePicker value={theme} onChange={setThemeState} />
+            <ThemePicker value={theme} onChange={handleThemeSelect} />
             <button
               type="button"
               onClick={handleThemeContinue}
-              className="w-full rounded-lg bg-[var(--color-accent-600)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-700)]"
+              className="w-full rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)]"
             >
               Continue
             </button>
@@ -177,7 +181,7 @@ export default function Setup() {
             <p className="text-xs text-[var(--text-muted)]">Shown to anonymous visitors as who they're talking to.</p>
             <button
               type="submit"
-              className="w-full rounded-lg bg-[var(--color-accent-600)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-700)]"
+              className="w-full rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)]"
             >
               Continue
             </button>
@@ -220,7 +224,7 @@ export default function Setup() {
             {error && <p className="text-sm text-red-500">{error}</p>}
             <button
               type="submit"
-              className="w-full rounded-lg bg-[var(--color-accent-600)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-700)]"
+              className="w-full rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)]"
             >
               Continue
             </button>
@@ -249,7 +253,7 @@ export default function Setup() {
               type="button"
               disabled={!acknowledged || submitting}
               onClick={handleFinish}
-              className="w-full rounded-lg bg-[var(--color-accent-600)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-700)] disabled:opacity-50"
+              className="w-full rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
             >
               {submitting ? "Finishing setup…" : "Finish setup"}
             </button>

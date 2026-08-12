@@ -7,9 +7,17 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
-/* ── Fallback defaults (monochrome-dark) before JS applies data-theme ─ */
+/* ── Fallback defaults (monochrome-dark) before JS applies data-theme ─
+   Scoped to :not([data-theme]) deliberately: this selector has the same
+   specificity as the per-theme `[data-theme="x"]` blocks in themes.css,
+   and (because of @import ordering) comes AFTER them in the cascade — so
+   a bare `:root` here would permanently win over every theme block and
+   the whole theme system would silently render as monochrome-dark no
+   matter what was selected. Excluding elements that already carry
+   data-theme (i.e. after the eager JS application below has run) lets
+   the real per-theme block take over. */
 
-:root {
+:root:not([data-theme]) {
   color-scheme: dark;
   --surface: #0a0a0a;
   --surface-muted: #14161a;
@@ -28,6 +36,12 @@
   --color-accent-500: #5a5f6a;
   --color-accent-600: #e2e4e9;
   --color-accent-700: #ffffff;
+  --btn-bg: #5a5f6a;
+  --btn-bg-hover: #454952;
+  --btn-fg: #ffffff;
+  --chip-bg: #5a5f6a;
+  --chip-fg: #ffffff;
+  --selected-bg: color-mix(in srgb, #5a5f6a 16%, #1a1d22);
 }
 
 /* ── Light-theme color-scheme overrides ────────────────────────────── */

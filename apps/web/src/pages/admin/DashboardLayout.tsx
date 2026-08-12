@@ -31,7 +31,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 clsx(
                   "flex items-center gap-2 rounded-lg px-3 py-2 text-sm",
                   isActive
-                    ? "bg-[var(--color-accent-100)] font-medium text-[var(--color-accent-700)]"
+                    ? "bg-[var(--chip-bg)] font-medium text-[var(--chip-fg)]"
                     : "hover:bg-[var(--surface-muted)]",
                 )
               }

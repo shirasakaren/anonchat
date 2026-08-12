@@ -66,7 +66,7 @@ export default function CannedRepliesPage() {
         <div className="flex gap-2">
           <button
             type="submit"
-            className="rounded-lg bg-[var(--color-accent-600)] px-4 py-2 text-sm font-semibold text-white"
+            className="rounded-lg bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)]"
           >
             {editingId ? "Update" : "Add"}
           </button>

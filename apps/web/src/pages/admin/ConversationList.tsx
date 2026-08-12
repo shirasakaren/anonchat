@@ -114,7 +114,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
               className={clsx(
                 "rounded-full px-2.5 py-1 text-xs",
                 filter === f.value
-                  ? "bg-[var(--color-accent-600)] text-white"
+                  ? "bg-[var(--btn-bg)] text-[var(--btn-fg)]"
                   : "bg-[var(--surface-muted)] text-[var(--text-muted)]",
               )}
             >
@@ -140,7 +140,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
               onClick={() => onSelect(conv.id)}
               className={clsx(
                 "flex w-full flex-col gap-0.5 border-b border-[var(--border)] px-4 py-3 text-left",
-                selectedId === conv.id ? "bg-[var(--color-accent-50)]" : "hover:bg-[var(--surface-muted)]",
+                selectedId === conv.id ? "bg-[var(--selected-bg)]" : "hover:bg-[var(--surface-muted)]",
               )}
             >
               <div className="flex items-center justify-between">
@@ -168,7 +168,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                   <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] text-red-500">Blocked</span>
                 )}
                 {conv.unreadCount > 0 && (
-                  <span className="rounded-full bg-[var(--color-accent-600)] px-1.5 py-0.5 text-[10px] text-white">
+                  <span className="rounded-full bg-[var(--btn-bg)] px-1.5 py-0.5 text-[10px] text-[var(--btn-fg)]">
                     {conv.unreadCount}
                   </span>
                 )}

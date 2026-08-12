@@ -38,7 +38,7 @@ export default function RecoveryConfirm({
           type="button"
           disabled={!acknowledged}
           onClick={onAcknowledge}
-          className="mt-4 w-full rounded-lg bg-[var(--color-accent-600)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-700)] disabled:opacity-50"
+          className="mt-4 w-full rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
         >
           Continue to chat
         </button>

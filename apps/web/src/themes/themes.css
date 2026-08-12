@@ -5,6 +5,27 @@
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
+   SEMANTIC TOKENS — derived once from the accent scale for every theme.
+   --color-accent-600/700 double as "bright accent for text on a dark
+   surface" in several themes (monochrome-dark, graphite-dark), which makes
+   them unsafe as a solid button/chip FILL color paired with fixed white
+   text. These tokens give buttons, chips, and selected rows their own
+   contrast-safe values; only the themes where the alias below would break
+   get an explicit override (see each theme block).
+   -------------------------------------------------------------------------- */
+:root {
+  --btn-bg: var(--color-accent-600);
+  --btn-bg-hover: var(--color-accent-700);
+  --btn-fg: #ffffff;
+  --chip-bg: var(--color-accent-100);
+  --chip-fg: var(--color-accent-700);
+  /* Works for all 25 themes without per-theme tuning: a faint tint of the
+     accent color mixed into the raised surface, always distinct from the
+     surface it's laid over and always compatible with --text. */
+  --selected-bg: color-mix(in srgb, var(--color-accent-500) 16%, var(--surface-raised));
+}
+
+/* --------------------------------------------------------------------------
    DARK THEMES (1–10)
    -------------------------------------------------------------------------- */
 
@@ -27,6 +48,13 @@
   --color-accent-500: #5a5f6a;
   --color-accent-600: #e2e4e9;
   --color-accent-700: #ffffff;
+  /* accent-600/700 are near-white here (by design, for text-on-dark use) —
+     override the button/chip fills so they don't disappear against white text. */
+  --btn-bg: #5a5f6a;
+  --btn-bg-hover: #454952;
+  --btn-fg: #ffffff;
+  --chip-bg: #5a5f6a;
+  --chip-fg: #ffffff;
 }
 
 /* 2. Forest Dark — Deep evergreen, green accents. */
@@ -153,6 +181,10 @@
   --color-accent-500: #c88a2a;
   --color-accent-600: #b07824;
   --color-accent-700: #8a5c1e;
+  /* accent-600 is only ~3.8:1 against white — fails AA for normal text.
+     Use the darker accent-700 gold as the button fill instead. */
+  --btn-bg: #8a5c1e;
+  --btn-bg-hover: #6f4a18;
 }
 
 /* 8. Slate Dark — Cool blue-gray. */
@@ -216,6 +248,14 @@
   --color-accent-500: #6a6a6a;
   --color-accent-600: #c0c0c0;
   --color-accent-700: #d5d5d5;
+  /* accent-600/700 are light grays meant for text-on-dark; accent-100 and
+     accent-700 are literally identical here, so the chip pattern is
+     invisible. Override both fills to a genuinely dark neutral. */
+  --btn-bg: #6a6a6a;
+  --btn-bg-hover: #545454;
+  --btn-fg: #ffffff;
+  --chip-bg: #6a6a6a;
+  --chip-fg: #ffffff;
 }
 
 /* --------------------------------------------------------------------------

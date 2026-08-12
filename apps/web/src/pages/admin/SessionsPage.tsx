@@ -34,7 +34,7 @@ export default function SessionsPage() {
             <div>
               <p className="text-sm font-medium">
                 {session.current && (
-                  <span className="mr-1.5 rounded bg-[var(--color-accent-100)] px-1.5 py-0.5 text-xs text-[var(--color-accent-700)]">
+                  <span className="mr-1.5 rounded bg-[var(--chip-bg)] px-1.5 py-0.5 text-xs text-[var(--chip-fg)]">
                     This device
                   </span>
                 )}
