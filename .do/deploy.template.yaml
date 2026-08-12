@@ -1,0 +1,38 @@
+spec:
+  name: anonchat
+  region: nyc
+  services:
+    - name: app
+      dockerfile_path: Dockerfile
+      instance_count: 1
+      instance_size_slug: basic-xxs
+      health_check:
+        http_path: /health
+        initial_delay_seconds: 30
+        period_seconds: 15
+        timeout_seconds: 5
+      envs:
+        - key: DATABASE_URL
+          scope: RUN_TIME
+          value: ${db.DATABASE_URL}
+        - key: SESSION_SECRET
+          type: SECRET
+          scope: RUN_TIME
+        - key: PUBLIC_URL
+          scope: RUN_TIME
+          value: ${APP_URL}
+        - key: NODE_ENV
+          scope: RUN_TIME
+          value: production
+        - key: TRUST_PROXY
+          scope: RUN_TIME
+          value: "true"
+        - key: STORAGE_DRIVER
+          scope: RUN_TIME
+          value: s3
+  databases:
+    - name: db
+      engine: PG
+      version: "17"
+      production: false
+      cluster_name: anonchat-db

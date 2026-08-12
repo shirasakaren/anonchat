@@ -1,0 +1,4 @@
+WAIT=60
+/health
+ATTEMPTS=30
+TIMEOUT=5

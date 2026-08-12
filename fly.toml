@@ -1,0 +1,49 @@
+# Fly.io app configuration for Anonchat.
+#
+# This file lives at the repo root because `flyctl deploy` (and `fly launch`)
+# auto-detect it there - same pattern as `render.yaml`.
+#
+# The WebSocket hub holds all connection/subscriber state in process-local
+# memory (no Redis, no pub/sub - see docs/ARCHITECTURE.md). A single Fly
+# Machine attached to a single Fly Volume is the right shape for this app,
+# so min_machines_running is pinned to 1 and auto_stop_machines is off.
+# Do not scale beyond one Machine.
+
+app = "anonchat"
+primary_region = "ord"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+  TRUST_PROXY = "true"
+  STORAGE_DRIVER = "local"
+  UPLOAD_DIR = "/app/data/uploads"
+
+[[mounts]]
+  source = "anonchat_uploads"
+  destination = "/app/data/uploads"
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 3000
+  auto_stop_machines = "off"
+  min_machines_running = 1
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+    force_https = true
+
+  [[services.checks]]
+    type = "http"
+    path = "/health"
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "60s"

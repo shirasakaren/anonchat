@@ -1,0 +1,23 @@
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: Anonchat
+spec:
+  description: >
+    Self-hosted, end-to-end encrypted anonymous messaging inbox.
+    Builds from this repo's root Dockerfile.
+  services:
+    - name: anonchat
+      template: DOCKERFILE
+      spec:
+        ports:
+          - id: web
+            port: 3000
+            type: HTTP
+        volumes:
+          - id: uploads
+            dir: /app/data/uploads
+    - name: postgresql
+      template: POSTGRESQL
+      spec:
+        version: "17"

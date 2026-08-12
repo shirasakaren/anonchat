@@ -1,0 +1,46 @@
+{{/*
+Anonchat Dokku nginx vhost template override.
+
+Dokku's default nginx config does NOT send WebSocket Upgrade/Connection
+headers or disable proxy_buffering, and its default proxy_read_timeout/
+proxy_connect_timeout/proxy_send_timeout are 60s — enough to drop idle
+WebSocket connections for an app with no ping/pong keepalive.
+
+This override is based on Dokku's own current default nginx.conf.sigil
+(https://github.com/dokku/dokku/blob/master/deb.mk/docker/etc/nginx.conf.sigil)
+with three additions:
+  1. proxy_http_version 1.1 (required for Upgrade to work)
+  2. proxy_set_header Upgrade + Connection (WebSocket handshake forwarding)
+  3. proxy_buffering off + raised proxy_read_timeout (keep connections alive)
+
+This file is INERT on every platform except Dokku — it's a Sigil template
+(Go-template syntax, served by Dokku's custom nginx at container start), not
+a valid standalone nginx config. You can safely ignore it in any other deploy
+context (Docker Compose, Fly.io, Render, etc.).
+*/}}
+
+server {
+  listen      {{ $.NGINX_LISTEN_PORT }};
+  server_name {{ $.NOSSL_SERVER_NAME }};
+  access_log  {{ $.NGINX_ACCESS_LOG_PATH }};
+  error_log   {{ $.NGINX_ERROR_LOG_PATH }};
+
+  include {{ $.DOKKU_ROOT }}/{{ $.APP }}/nginx.conf.d/*.conf;
+  include {{ $.NGINX_ROOT }}/conf.d/*.conf;
+
+  location    / {
+    proxy_pass  http://{{ $.APP }};
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Port $forwarded_port;
+    proxy_set_header X-Request-Start $msec;
+    proxy_buffering off;
+    proxy_read_timeout 3600s;
+    proxy_connect_timeout 3600s;
+    proxy_send_timeout 3600s;
+  }
+}

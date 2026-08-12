@@ -82,6 +82,16 @@ module app 'br/public:avm/res/app/container-app:0.19.0' = {
     ingressExternal: true
     ingressTargetPort: 3000
     ingressTransport: 'http'
+    // Pinned to exactly one instance: the WebSocket hub keeps all connection
+    // and subscriber state in process-local memory (no Redis, no pub/sub -
+    // see docs/ARCHITECTURE.md, "Why no Redis"). Container Apps' default
+    // scaling allows multiple concurrent replicas, which would silently
+    // split chat delivery between disjoint in-memory state. maxReplicas
+    // must never exceed 1.
+    scaleSettings: {
+      minReplicas: 0
+      maxReplicas: 1
+    }
     containers: [
       {
         name: 'app'

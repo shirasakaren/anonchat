@@ -1,0 +1,13 @@
+{
+  "name": "anonchat-dokku",
+  "description": "Anonchat on Dokku — provisions the app + Postgres addon against an existing Dokku host via bridged Terraform provider.",
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "outDir": "./bin"
+  }
+}

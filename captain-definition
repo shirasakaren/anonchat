@@ -1,0 +1,10 @@
+# CapRover captain-definition
+# Auto-detected by CapRover at the repo root. Points at the existing
+# root Dockerfile — all other configuration (persistent storage, WebSocket
+# support, environment variables, Postgres addon) is done inside CapRover's
+# dashboard, not in this file. See deploy/caprover/README.md.
+# This file is inert outside a CapRover deployment.
+{
+  "schemaVersion": 2,
+  "dockerfilePath": "./Dockerfile"
+}

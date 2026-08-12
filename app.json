@@ -1,0 +1,39 @@
+{
+  "name": "Anonchat",
+  "description": "Self-hosted, end-to-end encrypted anonymous messaging inbox.",
+  "stack": "container",
+  "env": {
+    "SESSION_SECRET": {
+      "description": "Random session-signing secret.",
+      "generator": "secret"
+    },
+    "PUBLIC_URL": {
+      "description": "Public URL this app is served at.",
+      "required": false
+    },
+    "NODE_ENV": {
+      "required": false,
+      "value": "production"
+    },
+    "TRUST_PROXY": {
+      "required": false,
+      "value": "true"
+    },
+    "STORAGE_DRIVER": {
+      "required": false,
+      "value": "s3"
+    }
+  },
+  "addons": [
+    {
+      "plan": "heroku-postgresql:mini"
+    }
+  ],
+  "buildpacks": [],
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  }
+}

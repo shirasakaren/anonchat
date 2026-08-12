@@ -1,0 +1,11 @@
+{
+  "name": "anonchat-dokku",
+  "main": "index.ts",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@pulumi/pulumi": "^3.256.0"
+  }
+}

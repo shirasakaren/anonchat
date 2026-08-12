@@ -1,0 +1,83 @@
+# Coolify Docker Compose variant for Anonchat.
+#
+# Coolify can consume a docker-compose file directly from a git repo as a
+# "Docker Compose" resource type. This variant adapts the root
+# docker-compose.yml for Coolify's Traefik reverse-proxy conventions and
+# works around the two known platform gaps noted below.
+#
+# This file lives at the repo root so Coolify can auto-detect it alongside
+# the original docker-compose.yml (which Coolify users should NOT use — it
+# does raw host-port binding instead of proxying through Coolify's Traefik).
+
+services:
+  app:
+    build: .
+    image: anonchat:latest
+    restart: unless-stopped
+    # Coolify wires its own Traefik reverse proxy in front of the app — use
+    # `expose` instead of `ports` and let Coolify fill in SERVICE_FQDN_APP_3000
+    # at deploy time (the empty value signals "auto-assign a domain").
+    expose:
+      - "3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-anonchat}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-anonchat}
+      # Coolify auto-generates and persists these — no need for a .env file or
+      # interactive setup script. Use Coolify's magic variable syntax.
+      SESSION_SECRET: ${SERVICE_BASE64_64_SESSION}
+      PUBLIC_URL: https://${SERVICE_FQDN_APP_3000}
+      NODE_ENV: production
+      PORT: "3000"
+      TRUST_PROXY: "true"
+      STORE_IP_ADDRESSES: "false"
+      STORAGE_DRIVER: local
+      UPLOAD_DIR: /app/data/uploads
+      MAX_MESSAGE_LENGTH: "8000"
+      MAX_ATTACHMENT_SIZE_MB: "25"
+      MAX_ATTACHMENTS_PER_MESSAGE: "5"
+      MESSAGE_EDIT_WINDOW_MINUTES: "15"
+      RATE_LIMIT_MESSAGES_PER_MINUTE: "20"
+      RATE_LIMIT_REGISTRATIONS_PER_HOUR: "10"
+      S3_ENDPOINT: ""
+      S3_REGION: auto
+      S3_BUCKET: ""
+      S3_ACCESS_KEY_ID: ""
+      S3_SECRET_ACCESS_KEY: ""
+      S3_FORCE_PATH_STYLE: "true"
+    volumes:
+      - uploads:/app/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-anonchat}
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+      POSTGRES_DB: ${POSTGRES_DB:-anonchat}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-anonchat}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # NOTE: The `minio` optional profile from the root docker-compose.yml is
+  # intentionally omitted here. Coolify's compose parser does not reliably
+  # respect Docker Compose profiles (confirmed upstream bug), so the `minio`
+  # service would be unconditionally started even when you don't want it.
+  # If you need S3-compatible attachment storage on Coolify, use an external
+  # S3-compatible provider (Cloudflare R2, AWS S3, Backblaze B2) and set the
+  # STORAGE_DRIVER=s3 env vars in the `app` service above instead.
+
+volumes:
+  postgres-data:
+  uploads:

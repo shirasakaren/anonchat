@@ -1,0 +1,83 @@
+{
+  "apiVersion": "v1.2",
+  "name": "Anonchat",
+  "spec": {
+    "kind": "Workflow",
+    "spec": {
+      "type": "sequential",
+      "steps": [
+        {
+          "kind": "Addon",
+          "ref": "database",
+          "spec": {
+            "type": "postgresql",
+            "name": "anonchat-db",
+            "version": "17",
+            "billing": {
+              "deploymentPlan": "nf-compute-50",
+              "storage": 6144,
+              "replicas": 1
+            }
+          }
+        },
+        {
+          "kind": "CombinedService",
+          "ref": "app",
+          "spec": {
+            "name": "anonchat",
+            "vcsData": {
+              "projectType": "github",
+              "projectUrl": "https://github.com/<owner>/<repo>",
+              "projectBranch": "main"
+            },
+            "buildSettings": {
+              "dockerfile": {
+                "buildEngine": "kaniko",
+                "dockerFilePath": "/Dockerfile"
+              }
+            },
+            "deployment": {
+              "instances": 1
+            },
+            "ports": [
+              {
+                "internalPort": 3000,
+                "protocol": "HTTP",
+                "public": true
+              }
+            ],
+            "healthCheck": {
+              "livenessProbe": {
+                "httpGet": {
+                  "path": "/health",
+                  "port": 3000
+                },
+                "initialDelaySeconds": 30,
+                "periodSeconds": 15,
+                "timeoutSeconds": 5
+              },
+              "startupProbe": {
+                "httpGet": {
+                  "path": "/health",
+                  "port": 3000
+                },
+                "initialDelaySeconds": 5,
+                "periodSeconds": 10,
+                "failureThreshold": 12
+              }
+            },
+            "storage": {
+              "persistentVolumes": [
+                {
+                  "name": "uploads",
+                  "mountPath": "/app/data/uploads",
+                  "size": 5120
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

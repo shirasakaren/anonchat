@@ -114,10 +114,24 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess
 
+  # Pinned to exactly one instance: the WebSocket hub keeps all connection
+  # and subscriber state in process-local memory (no Redis, no pub/sub - see
+  # docs/ARCHITECTURE.md, "Why no Redis"). App Runner's default
+  # AutoScalingConfiguration allows up to 25 concurrent instances, which
+  # would silently split chat delivery between disjoint in-memory state.
+  # MaxSize must never exceed 1.
+  AutoScalingConfiguration:
+    Type: AWS::AppRunner::AutoScalingConfiguration
+    Properties:
+      AutoScalingConfigurationName: !Sub "${AWS::StackName}-single-instance"
+      MinSize: 1
+      MaxSize: 1
+
   Service:
     Type: AWS::AppRunner::Service
     Properties:
       ServiceName: anonchat
+      AutoScalingConfigurationArn: !GetAtt AutoScalingConfiguration.AutoScalingConfigurationArn
       SourceConfiguration:
         AuthenticationConfiguration:
           AccessRoleArn: !GetAtt EcrAccessRole.Arn

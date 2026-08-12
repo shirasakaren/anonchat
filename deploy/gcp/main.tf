@@ -151,9 +151,14 @@ resource "google_cloud_run_v2_service" "app" {
   template {
     service_account = google_service_account.app.email
 
+    # Pinned to exactly one instance: the WebSocket hub keeps all connection
+    # and subscriber state in process-local memory (no Redis, no LISTEN/
+    # NOTIFY - see docs/ARCHITECTURE.md, "Why no Redis"). A second concurrent
+    # instance would silently split chat delivery between two disjoint sets
+    # of in-memory state. max_instance_count must never exceed 1.
     scaling {
       min_instance_count = 0
-      max_instance_count = 3
+      max_instance_count = 1
     }
 
     volumes {
