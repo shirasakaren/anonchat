@@ -49,6 +49,21 @@ docker compose up -d --build
 See [`.env.example`](.env.example) for every configuration option and its
 default.
 
+## Local development
+
+Two one-command launchers get you from a fresh clone to a running app.
+Both auto-start a dedicated Postgres container, install dependencies if
+needed, run migrations, and launch the stack. (Requires Docker and pnpm.)
+
+```bash
+./scripts/dev.sh       # hot-reload dev:  web :5173, API :3000
+./scripts/preview.sh   # single-port preview: everything on :3000
+```
+
+`preview.sh` builds the web app and serves it from the Fastify server —
+the same layout as the production Docker image, so `http://localhost:3000`
+shows exactly what a deployed instance would.
+
 ## Deploying to a specific cloud platform
 
 Templates for Railway, Render, AWS, GCP, and Azure live under
@@ -70,6 +85,9 @@ packages/
 
 Requirements: Node.js 20+, pnpm, and a local PostgreSQL instance (or run one
 via `docker run -p 5432:5432 -e POSTGRES_PASSWORD=anonchat postgres:17-alpine`).
+
+Fastest path — the launcher scripts above handle Postgres, deps, and
+migrations for you. To do it by hand:
 
 ```bash
 pnpm install

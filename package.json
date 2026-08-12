@@ -8,7 +8,7 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "dev": "pnpm --parallel --filter ./apps/* run dev",
+    "dev": "pnpm --parallel --filter @anonchat/server --filter @anonchat/web run dev",
     "dev:server": "pnpm --filter @anonchat/server run dev",
     "dev:web": "pnpm --filter @anonchat/web run dev",
     "build": "pnpm --filter @anonchat/crypto run build && pnpm --filter @anonchat/shared run build && pnpm --filter @anonchat/server run build && pnpm --filter @anonchat/web run build",
