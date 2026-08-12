@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import clsx from "clsx";
 import { encryptBlob } from "@anonchat/crypto";
 import type { ConversationDto, MessageDto, ServerWsEvent } from "@anonchat/shared";
 import {
@@ -335,10 +336,23 @@ export function ConversationView({ conversationId, onChanged }: Props) {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2.5">
-        <div>
-          <p className="text-sm font-semibold">Anonymous #{conversation.publicId}</p>
-          <p className="text-xs text-[var(--text-muted)]">{conversation.status}</p>
+      <header className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b border-[var(--border)] px-4 py-2.5">
+        <div className="flex min-w-0 items-center gap-2">
+          <p className="truncate text-sm font-semibold">Anonymous #{conversation.publicId}</p>
+          <span
+            className={clsx(
+              "shrink-0 rounded-full px-2 py-0.5 text-xs",
+              conversation.status === "BLOCKED"
+                ? "bg-[var(--danger-bg)] text-[var(--danger-fg)]"
+                : "bg-[var(--surface-muted)] text-[var(--text-muted)]",
+            )}
+          >
+            {conversation.status === "ACTIVE"
+              ? "Active"
+              : conversation.status === "ARCHIVED"
+                ? "Archived"
+                : "Blocked"}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -355,6 +369,11 @@ export function ConversationView({ conversationId, onChanged }: Props) {
           >
             {conversation.status === "BLOCKED" ? "Unblock" : "Block"}
           </button>
+          {/* Divider: destructive actions are deliberately set apart from the
+              routine Archive/Block toggles, and the irreversible one is the
+              heaviest - a filled danger button rather than another bordered
+              row-mate one misclick away. */}
+          <span className="mx-1 h-4 w-px bg-[var(--border)]" aria-hidden />
           <button
             type="button"
             onClick={handleSoftDelete}
@@ -365,7 +384,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
           <button
             type="button"
             onClick={handlePermanentDelete}
-            className="rounded-md border border-[var(--danger-fg)]/40 px-2.5 py-1 text-xs text-[var(--danger-fg)]"
+            className="rounded-md bg-[var(--danger-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--danger-fg)]"
           >
             Delete permanently
           </button>
