@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { Navigate, Route, BrowserRouter, Routes } from "react-router-dom";
 import { SiteProvider, useSite } from "./context/SiteContext.js";
+import { useTheme } from "./context/ThemeContext.js";
 import { FullScreenError, FullScreenLoader } from "./components/common/Loader.js";
 import Setup from "./pages/Setup.js";
 import PublicApp from "./pages/PublicApp.js";
@@ -21,6 +23,13 @@ import AdminApp from "./pages/admin/AdminApp.js";
  */
 function RootRouter() {
   const { site, loading, error } = useSite();
+  const { syncFromServer } = useTheme();
+
+  // Adopt the server-side theme on first load (only if the user hasn't
+  // already set a local preference).
+  useEffect(() => {
+    if (site?.theme) syncFromServer(site.theme);
+  }, [site?.theme, syncFromServer]);
 
   if (loading) return <FullScreenLoader label="Loading Anonchat…" />;
   if (error || !site) return <FullScreenError message={error ?? "The site could not be loaded."} />;
