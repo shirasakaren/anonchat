@@ -49,7 +49,7 @@ export default function SessionsPage() {
               <button
                 type="button"
                 onClick={() => handleRevoke(session.id)}
-                className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-red-500"
+                className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--danger-fg)]"
               >
                 Revoke
               </button>

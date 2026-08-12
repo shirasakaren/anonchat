@@ -23,6 +23,42 @@
      accent color mixed into the raised surface, always distinct from the
      surface it's laid over and always compatible with --text. */
   --selected-bg: color-mix(in srgb, var(--color-accent-500) 16%, var(--surface-raised));
+  /* Danger and warning are deliberate fixed hues (not derived from the
+     accent scale) so an error or destructive action reads as a danger
+     signal in every theme. Defaults target dark surfaces; the light
+     themes below override them with darker, higher-contrast variants. */
+  --danger-fg: #f87171;
+  --danger-bg: color-mix(in srgb, #f87171 14%, var(--surface-raised));
+  --warning-fg: #fbbf24;
+  --warning-bg: color-mix(in srgb, #fbbf24 14%, var(--surface-raised));
+}
+
+/* Light themes: darker, higher-contrast danger/warning foregrounds and
+   lighter tint backgrounds (the defaults above target dark surfaces). */
+[data-theme="paper"],
+[data-theme="forest-light"],
+[data-theme="ocean-light"],
+[data-theme="rose-light"],
+[data-theme="lavender-light"],
+[data-theme="mint-light"],
+[data-theme="honey-light"],
+[data-theme="cloud-light"],
+[data-theme="matcha"],
+[data-theme="sepia"],
+[data-theme="glacier"] {
+  --danger-fg: #dc2626;
+  --danger-bg: color-mix(in srgb, #dc2626 10%, var(--surface-raised));
+  --warning-fg: #b45309;
+  --warning-bg: color-mix(in srgb, #b45309 12%, var(--surface-raised));
+}
+
+/* crimson-dark and cherry: the theme accent itself is red/rose, so the
+   standard red danger color would read as "normal accent" rather than a
+   warning — shift it towards orange to stay unmistakably a danger signal. */
+[data-theme="crimson-dark"],
+[data-theme="cherry"] {
+  --danger-fg: #ff9a76;
+  --danger-bg: color-mix(in srgb, #ff9a76 14%, var(--surface-raised));
 }
 
 /* --------------------------------------------------------------------------

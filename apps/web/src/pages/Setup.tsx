@@ -227,7 +227,7 @@ export default function Setup() {
                 className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
               />
             </label>
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
             <button
               type="submit"
               className="w-full rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)]"
@@ -254,7 +254,7 @@ export default function Setup() {
               />
               I've saved my recovery key
             </label>
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
             <button
               type="button"
               disabled={!acknowledged || submitting}

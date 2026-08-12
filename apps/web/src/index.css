@@ -42,6 +42,10 @@
   --chip-bg: #5a5f6a;
   --chip-fg: #ffffff;
   --selected-bg: color-mix(in srgb, #5a5f6a 16%, #1a1d22);
+  --danger-fg: #f87171;
+  --danger-bg: color-mix(in srgb, #f87171 14%, #1a1d22);
+  --warning-fg: #fbbf24;
+  --warning-bg: color-mix(in srgb, #fbbf24 14%, #1a1d22);
 }
 
 /* ── Light-theme color-scheme overrides ────────────────────────────── */

@@ -230,7 +230,7 @@ export default function SettingsPage() {
               type="button"
               onClick={() => setContactLinks((prev) => prev.filter((_, idx) => idx !== i))}
               aria-label="Remove link"
-              className="px-2 text-red-500"
+              className="px-2 text-[var(--danger-fg)]"
             >
               <X size={16} aria-hidden />
             </button>
@@ -319,7 +319,7 @@ export default function SettingsPage() {
               maxLength={6}
               className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
             />
-            {totpError && <p className="text-sm text-red-500">{totpError}</p>}
+            {totpError && <p className="text-sm text-[var(--danger-fg)]">{totpError}</p>}
             <button
               type="button"
               onClick={handleVerifyTotp}

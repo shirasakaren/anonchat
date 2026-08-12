@@ -56,7 +56,7 @@ export default function UnlockKey() {
                 className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
               />
             </label>
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
             <button
               type="submit"
               disabled={busy}
@@ -95,7 +95,7 @@ export default function UnlockKey() {
                 className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
               />
             </label>
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
             <div className="flex gap-2">
               <button
                 type="button"

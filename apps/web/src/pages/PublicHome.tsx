@@ -102,7 +102,7 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
             >
               Have a recovery key from another device?
             </button>
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
           </div>
         )}
 
@@ -119,7 +119,7 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
                 className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 font-mono text-sm"
               />
             </label>
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
             <div className="flex gap-2">
               <button
                 type="button"

@@ -70,7 +70,7 @@ export default function AdminLogin() {
             />
           </label>
         )}
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
         <button
           type="submit"
           disabled={busy}

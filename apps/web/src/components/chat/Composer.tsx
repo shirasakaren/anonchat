@@ -130,7 +130,7 @@ export function Composer({
       onDrop={handleDrop}
     >
       {disabled && disabledReason && (
-        <p className="mb-2 rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-500">{disabledReason}</p>
+        <p className="mb-2 rounded-md bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger-fg)]">{disabledReason}</p>
       )}
 
       {(replyPreview || editingPreview) && (
@@ -232,7 +232,7 @@ export function Composer({
         </button>
       </div>
       <div className="mt-1 text-right text-xs text-[var(--text-muted)]">
-        {overLimit && <span className="text-red-500">Message is too long. </span>}
+        {overLimit && <span className="text-[var(--danger-fg)]">Message is too long. </span>}
         {text.length}/{maxLength}
       </div>
     </div>

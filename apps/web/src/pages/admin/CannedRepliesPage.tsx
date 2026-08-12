@@ -98,7 +98,7 @@ export default function CannedRepliesPage() {
                 <button type="button" onClick={() => startEdit(reply)} className="text-[var(--color-accent-600)]">
                   Edit
                 </button>
-                <button type="button" onClick={() => handleDelete(reply.id)} className="text-red-500">
+                <button type="button" onClick={() => handleDelete(reply.id)} className="text-[var(--danger-fg)]">
                   Delete
                 </button>
               </div>

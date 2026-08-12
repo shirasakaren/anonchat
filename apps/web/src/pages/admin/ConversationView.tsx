@@ -358,14 +358,14 @@ export function ConversationView({ conversationId, onChanged }: Props) {
           <button
             type="button"
             onClick={handleSoftDelete}
-            className="rounded-md border border-[var(--border)] px-2.5 py-1 text-xs text-red-500"
+            className="rounded-md border border-[var(--border)] px-2.5 py-1 text-xs text-[var(--danger-fg)]"
           >
             Delete
           </button>
           <button
             type="button"
             onClick={handlePermanentDelete}
-            className="rounded-md border border-red-500/40 px-2.5 py-1 text-xs text-red-500"
+            className="rounded-md border border-[var(--danger-fg)]/40 px-2.5 py-1 text-xs text-[var(--danger-fg)]"
           >
             Delete permanently
           </button>

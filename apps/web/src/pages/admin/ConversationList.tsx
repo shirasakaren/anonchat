@@ -197,7 +197,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                   <span className="rounded bg-[var(--surface-muted)] px-1.5 py-0.5 text-[10px]">Archived</span>
                 )}
                 {conv.status === "BLOCKED" && (
-                  <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] text-red-500">Blocked</span>
+                  <span className="rounded bg-[var(--danger-bg)] px-1.5 py-0.5 text-[10px] text-[var(--danger-fg)]">Blocked</span>
                 )}
                 {conv.unreadCount > 0 && (
                   <span className="rounded-full bg-[var(--btn-bg)] px-1.5 py-0.5 text-[10px] text-[var(--btn-fg)]">
