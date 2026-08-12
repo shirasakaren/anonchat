@@ -5,10 +5,13 @@ import { getSiteInfo } from "../api/site.js";
 import { ApiError } from "../api/client.js";
 import { createAndCacheAdminIdentity } from "../crypto/adminKeyStore.js";
 import { useSite } from "../context/SiteContext.js";
+import { useTheme } from "../context/ThemeContext.js";
+import { DEFAULT_THEME } from "../themes/index.js";
 import { FullScreenLoader } from "../components/common/Loader.js";
 import { RecoveryPhraseDisplay } from "../components/common/RecoveryPhraseDisplay.js";
+import { ThemePicker } from "../components/common/ThemePicker.js";
 
-type Step = "welcome" | "profile" | "credentials" | "recovery" | "done";
+type Step = "welcome" | "theme" | "profile" | "credentials" | "recovery" | "done";
 
 /**
  * Module-level, not React state, so it survives this component remounting
@@ -24,8 +27,10 @@ let setupCompletionInFlight = false;
 export default function Setup() {
   const navigate = useNavigate();
   const { refresh: refreshSite } = useSite();
+  const { setTheme } = useTheme();
   const [checkingExisting, setCheckingExisting] = useState(true);
   const [step, setStep] = useState<Step>("welcome");
+  const [theme, setThemeState] = useState(DEFAULT_THEME);
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -61,6 +66,13 @@ export default function Setup() {
     };
   }, [navigate]);
 
+  function handleThemeContinue() {
+    // Apply the chosen theme immediately so the rest of the setup wizard
+    // looks the way the owner intended.
+    setTheme(theme);
+    setStep("profile");
+  }
+
   async function handleCredentialsSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -83,7 +95,7 @@ export default function Setup() {
     setSubmitting(true);
     setError(null);
     try {
-      await onboardAdmin({ username, password, displayName, identity: pendingIdentity });
+      await onboardAdmin({ username, password, displayName, identity: pendingIdentity, theme });
       setupCompletionInFlight = true;
       setStep("done");
       // Refreshes the shared site info for this tab's future navigations
@@ -117,10 +129,26 @@ export default function Setup() {
             </p>
             <button
               type="button"
-              onClick={() => setStep("profile")}
+              onClick={() => setStep("theme")}
               className="w-full rounded-lg bg-[var(--color-accent-600)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-700)]"
             >
               Get started
+            </button>
+          </div>
+        )}
+
+        {step === "theme" && (
+          <div className="space-y-4">
+            <p className="text-sm text-[var(--text-muted)]">
+              Pick a theme for your site. You can change this anytime later in settings.
+            </p>
+            <ThemePicker value={theme} onChange={setThemeState} />
+            <button
+              type="button"
+              onClick={handleThemeContinue}
+              className="w-full rounded-lg bg-[var(--color-accent-600)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-700)]"
+            >
+              Continue
             </button>
           </div>
         )}

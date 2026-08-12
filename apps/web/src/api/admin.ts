@@ -19,6 +19,7 @@ export function onboardAdmin(params: {
   password: string;
   displayName: string;
   identity: Identity;
+  theme?: string;
 }): Promise<{ id: string; username: string; displayName: string }> {
   const signingPublicKey = bytesToBase64url(params.identity.signingPublicKey);
   const exchangePublicKey = bytesToBase64url(params.identity.exchangePublicKey);
@@ -30,6 +31,7 @@ export function onboardAdmin(params: {
     signingPublicKey,
     exchangePublicKey,
     proof: bytesToBase64url(proof),
+    ...(params.theme ? { theme: params.theme } : {}),
   });
 }
 
@@ -81,6 +83,7 @@ export function updateSettings(patch: Partial<{
   contactLinks: { label: string; url: string }[];
   pgpPublicKey: string;
   presenceEnabled: boolean;
+  theme: string;
 }>): Promise<SiteSettingsDto> {
   return api.patch<SiteSettingsDto>("/admin/settings", patch);
 }
