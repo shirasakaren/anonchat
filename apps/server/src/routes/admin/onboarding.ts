@@ -23,7 +23,13 @@ export function registerOnboardingRoutes(app: FastifyInstance): void {
     });
 
     const settings = await getSiteSettings();
-    await prisma.siteSettings.update({ where: { id: settings.id }, data: { displayName: body.displayName } });
+    await prisma.siteSettings.update({
+      where: { id: settings.id },
+      data: {
+        displayName: body.displayName,
+        ...(body.theme ? { theme: body.theme } : {}),
+      },
+    });
 
     const { token } = await createAdminSession(admin.id, getClientIp(request), request.headers["user-agent"] ?? null);
     setAdminSessionCookie(reply, token);

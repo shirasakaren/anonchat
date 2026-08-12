@@ -24,6 +24,7 @@ async function toSettingsDto(): Promise<SiteSettingsDto> {
     contactLinks: (settings.contactLinksJson as { label: string; url: string }[]) ?? [],
     pgpPublicKey: settings.pgpPublicKey,
     presenceEnabled: settings.presenceEnabled,
+    theme: settings.theme,
     adminPublicKeys,
   };
 }
@@ -43,6 +44,7 @@ export function registerAdminSettingsRoutes(app: FastifyInstance): void {
         ...(body.contactLinks !== undefined ? { contactLinksJson: body.contactLinks } : {}),
         ...(body.pgpPublicKey !== undefined ? { pgpPublicKey: body.pgpPublicKey || null } : {}),
         ...(body.presenceEnabled !== undefined ? { presenceEnabled: body.presenceEnabled } : {}),
+        ...(body.theme !== undefined ? { theme: body.theme } : {}),
       },
     });
     await recordAudit(admin.id, "settings.updated");

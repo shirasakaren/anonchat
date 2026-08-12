@@ -22,6 +22,7 @@ export function registerSiteRoutes(app: FastifyInstance): void {
       pgpPublicKey: settings.pgpPublicKey,
       adminPublicKeys,
       presenceEnabled: settings.presenceEnabled,
+      theme: settings.theme,
       limits: {
         maxMessageLength: env.MAX_MESSAGE_LENGTH,
         maxAttachmentSizeMb: env.MAX_ATTACHMENT_SIZE_MB,
