@@ -25,7 +25,13 @@ variable "domain" {
 variable "session_secret" {
   type        = string
   sensitive   = true
-  description = "Random session-signing secret. Generate with: openssl rand -hex 32"
+  description = "Random session-signing secret."
+}
+
+variable "db_password" {
+  type        = string
+  sensitive   = true
+  description = "PostgreSQL database password (separate from SESSION_SECRET — different secrets, different threat models)."
 }
 
 provider "dokku" {
@@ -38,33 +44,29 @@ resource "dokku_plugin" "postgres" {
 }
 
 resource "dokku_app" "app" {
-  name = var.app_name
+  app_name = var.app_name
 }
 
-# The WebSocket hub holds all connection/subscriber state in process-local
-# memory (no Redis, no pub/sub — see docs/ARCHITECTURE.md). Dokku defaults
-# web to 1 instance, and the storage:mount below further locks the container
-# to a single host directory — but pinning explicitly removes any ambiguity.
 resource "dokku_postgres" "db" {
-  app      = dokku_app.app.name
-  name     = "anonchat-db"
-  password = var.session_secret
+  service_name = "anonchat-db"
 
   depends_on = [dokku_plugin.postgres]
 }
 
 resource "dokku_postgres_link" "db_link" {
-  app      = dokku_app.app.name
-  postgres = dokku_postgres.db.name
+  app_name     = dokku_app.app.app_name
+  service_name = dokku_postgres.db.service_name
 
   depends_on = [dokku_postgres.db]
 }
 
-resource "dokku_domain" "domain" {
-  app    = dokku_app.app.name
-  domain = var.domain
-}
+# NOTE: The dokku_domain resource's current schema in aliksend/dokku
+# doesn't match the published docs — fields that the registry docs list
+# as accepted are rejected by the provider at plan time. Until the
+# provider stabilizes, set the domain via the CLI instead:
+#   dokku domains:set anonchat anonchat.example.com
+# Docs: https://dokku.com/docs/configuration/domains/
 
 output "app_name" {
-  value = dokku_app.app.name
+  value = dokku_app.app.app_name
 }
