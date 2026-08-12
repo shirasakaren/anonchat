@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { ZoomIn, ZoomOut } from "lucide-react";
 
 const VIEWPORT = 288;
@@ -84,6 +91,28 @@ export function AvatarCropper({ file, onCancel, onCropped }: AvatarCropperProps)
     dragRef.current = null;
   }
 
+  function handleKeyDown(e: ReactKeyboardEvent<HTMLDivElement>) {
+    const step = 16;
+    switch (e.key) {
+      case "ArrowLeft":
+        e.preventDefault();
+        setOffset((prev) => ({ ...prev, x: clampOffset(prev.x - step, displayedW) }));
+        break;
+      case "ArrowRight":
+        e.preventDefault();
+        setOffset((prev) => ({ ...prev, x: clampOffset(prev.x + step, displayedW) }));
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setOffset((prev) => ({ ...prev, y: clampOffset(prev.y - step, displayedH) }));
+        break;
+      case "ArrowDown":
+        e.preventDefault();
+        setOffset((prev) => ({ ...prev, y: clampOffset(prev.y + step, displayedH) }));
+        break;
+    }
+  }
+
   const handleConfirm = useCallback(() => {
     const el = imgRef.current;
     if (!el || !natural) return;
@@ -111,10 +140,14 @@ export function AvatarCropper({ file, onCancel, onCropped }: AvatarCropperProps)
         <div
           className="relative mx-auto touch-none select-none overflow-hidden rounded-full border border-[var(--border)]"
           style={{ width: VIEWPORT, height: VIEWPORT, cursor: dragRef.current ? "grabbing" : "grab" }}
+          role="group"
+          aria-label="Crop preview. Drag with the mouse or use the arrow keys to reposition the image."
+          tabIndex={0}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
+          onKeyDown={handleKeyDown}
         >
           {imgSrc && (
             <img
