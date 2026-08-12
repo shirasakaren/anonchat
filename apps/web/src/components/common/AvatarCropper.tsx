@@ -194,7 +194,7 @@ export function AvatarCropper({ file, onCancel, onCropped }: AvatarCropperProps)
             type="button"
             onClick={handleConfirm}
             disabled={!natural}
-            className="flex-1 rounded-lg bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
+            className="flex-1 rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
           >
             Save
           </button>

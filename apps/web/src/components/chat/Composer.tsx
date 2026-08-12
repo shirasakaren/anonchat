@@ -226,7 +226,7 @@ export function Composer({
           type="button"
           onClick={handleSend}
           disabled={disabled || overLimit || (!text.trim() && files.length === 0)}
-          className="rounded-lg bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-40"
+          className="rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-40"
         >
           Send
         </button>
