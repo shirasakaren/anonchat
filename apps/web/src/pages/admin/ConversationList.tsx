@@ -33,6 +33,8 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
   const [loading, setLoading] = useState(true);
   const [liveToken, setLiveToken] = useState(0);
 
+  // Filter/search changes are the only case where there's genuinely nothing
+  // to show yet, so only they show the "Loading…" placeholder.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -47,7 +49,23 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
     return () => {
       cancelled = true;
     };
-  }, [filter, search, refreshToken, liveToken]);
+  }, [filter, search]);
+
+  // A new/updated message just needs the list refreshed in the background -
+  // blanking it to "Loading…" on every send/receive is what produced the
+  // flicker. Skip the initial mount (the effect above already covers it):
+  // refreshToken/liveToken are monotonically-increasing counters that start
+  // at 0, so this only does real work once either has actually bumped.
+  useEffect(() => {
+    if (refreshToken === 0 && liveToken === 0) return;
+    let cancelled = false;
+    listConversations({ status: filter, q: search || undefined }).then((res) => {
+      if (!cancelled) setConversations(res.conversations);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshToken, liveToken]);
 
   // The list otherwise only learns about a brand-new conversation or an
   // out-of-view conversation's new message on the next manual filter/search

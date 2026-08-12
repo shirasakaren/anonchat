@@ -78,40 +78,51 @@ export function ConversationView({ conversationId, onChanged }: Props) {
     [conversationKey],
   );
 
+  const fetchConversation = useCallback(async () => {
+    const conv = await getAdminConversation(conversationId);
+    setConversation(conv);
+    const all: MessageDto[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await getAdminMessages(conversationId, cursor);
+      all.push(...page.messages);
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
+    const key = identity ? getConversationKey(identity, conv.anonymousExchangePublicKey, conv.id) : null;
+    setMessages(
+      all.map((dto) => ({
+        id: dto.id,
+        senderType: dto.senderType,
+        text: dto.content && key ? decryptMessageText(key, dto.content) : "",
+        replyToId: dto.replyToId,
+        attachments: dto.attachments,
+        reactions: dto.reactions,
+        edited: dto.edited,
+        deleted: dto.deleted,
+        createdAt: dto.createdAt,
+        readAt: dto.readAt,
+        status: "sent" as const,
+      })),
+    );
+    const lastUser = [...all].reverse().find((m) => m.senderType === "USER");
+    if (lastUser && !lastUser.readAt) markAdminRead(conversationId, lastUser.id).catch(() => {});
+  }, [conversationId, identity]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const conv = await getAdminConversation(conversationId);
-      setConversation(conv);
-      const all: MessageDto[] = [];
-      let cursor: string | undefined;
-      do {
-        const page = await getAdminMessages(conversationId, cursor);
-        all.push(...page.messages);
-        cursor = page.nextCursor ?? undefined;
-      } while (cursor);
-      const key = identity ? getConversationKey(identity, conv.anonymousExchangePublicKey, conv.id) : null;
-      setMessages(
-        all.map((dto) => ({
-          id: dto.id,
-          senderType: dto.senderType,
-          text: dto.content && key ? decryptMessageText(key, dto.content) : "",
-          replyToId: dto.replyToId,
-          attachments: dto.attachments,
-          reactions: dto.reactions,
-          edited: dto.edited,
-          deleted: dto.deleted,
-          createdAt: dto.createdAt,
-          readAt: dto.readAt,
-          status: "sent" as const,
-        })),
-      );
-      const lastUser = [...all].reverse().find((m) => m.senderType === "USER");
-      if (lastUser && !lastUser.readAt) markAdminRead(conversationId, lastUser.id).catch(() => {});
+      await fetchConversation();
     } finally {
       setLoading(false);
     }
-  }, [conversationId, identity]);
+  }, [fetchConversation]);
+
+  // Used for socket-reconnect catch-up: re-fetches in the background without
+  // flipping `loading`, so a brief network blip doesn't blank the already-
+  // rendered conversation back to a full-screen loader.
+  const reloadSilently = useCallback(() => {
+    fetchConversation().catch(() => {});
+  }, [fetchConversation]);
 
   useEffect(() => {
     load();
@@ -132,8 +143,14 @@ export function ConversationView({ conversationId, onChanged }: Props) {
             if (prev.some((m) => m.id === dto.id)) return prev;
             return [...prev, dto].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
           });
-          if (event.message.senderType === "USER") markAdminRead(conversationId, event.message.id).catch(() => {});
-          onChanged();
+          // Only bump the sidebar for genuinely new inbound messages - the
+          // admin's own message already triggers onChanged() once the REST
+          // send completes (performSend below), so doing it again here for
+          // the socket echo of that same message just double-fires it.
+          if (event.message.senderType === "USER") {
+            markAdminRead(conversationId, event.message.id).catch(() => {});
+            onChanged();
+          }
           break;
         case "message.updated":
           if (!belongsHere(event.conversationId)) return;
@@ -158,7 +175,10 @@ export function ConversationView({ conversationId, onChanged }: Props) {
           );
           break;
         case "conversation.updated":
-          if (event.conversation.id === conversationId) setConversation(event.conversation);
+          // Was unconditionally bumping the sidebar for ANY conversation's
+          // update, even ones this admin wasn't currently viewing.
+          if (event.conversation.id !== conversationId) return;
+          setConversation(event.conversation);
           onChanged();
           break;
         case "typing":
@@ -173,7 +193,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
     [conversationId, decryptDto, onChanged],
   );
 
-  const { status: wsStatus, send: wsSend } = useRealtimeSocket(handleWsEvent, true, load);
+  const { status: wsStatus, send: wsSend } = useRealtimeSocket(handleWsEvent, true, reloadSilently);
 
   if (loading || !conversation) return <FullScreenLoader label="Loading conversation…" />;
   if (!conversationKey) return <FullScreenLoader label="Unlocking…" />;
