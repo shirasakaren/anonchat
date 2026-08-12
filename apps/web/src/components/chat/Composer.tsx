@@ -1,4 +1,12 @@
-import { useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ClipboardEvent,
+  type DragEvent,
+  type KeyboardEvent,
+} from "react";
 import EmojiPicker from "emoji-picker-react";
 import { expandEmojiShortcuts } from "./emojiShortcuts.js";
 
@@ -53,7 +61,13 @@ export function Composer({
 
   function addFiles(newFiles: File[]) {
     setFiles((prev) => {
-      const combined = [...prev, ...newFiles.map((file) => ({ file, previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : null }))];
+      const combined = [
+        ...prev,
+        ...newFiles.map((file) => ({
+          file,
+          previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
+        })),
+      ];
       return combined.slice(0, maxAttachments);
     });
   }
@@ -69,7 +83,10 @@ export function Composer({
   function handleSend() {
     const expanded = expandEmojiShortcuts(text).trim();
     if (!expanded && files.length === 0) return;
-    onSend(expanded, files.map((f) => f.file));
+    onSend(
+      expanded,
+      files.map((f) => f.file),
+    );
     setText("");
     setFiles([]);
     onTypingChange?.(false);
@@ -106,15 +123,25 @@ export function Composer({
   const overLimit = text.length > maxLength;
 
   return (
-    <div className="border-t border-[var(--border)] bg-[var(--surface-raised)] p-3" onDragOver={(e) => e.preventDefault()} onDrop={handleDrop}>
+    <div
+      className="border-t border-[var(--border)] bg-[var(--surface-raised)] p-3"
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={handleDrop}
+    >
       {disabled && disabledReason && (
         <p className="mb-2 rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-500">{disabledReason}</p>
       )}
 
       {(replyPreview || editingPreview) && (
         <div className="mb-2 flex items-center justify-between rounded-md bg-[var(--surface-muted)] px-3 py-1.5 text-xs">
-          <span className="truncate">{editingPreview ? `Editing: ${editingPreview}` : `Replying to: ${replyPreview}`}</span>
-          <button type="button" onClick={editingPreview ? onCancelEdit : onCancelReply} className="ml-2 shrink-0 text-[var(--text-muted)]">
+          <span className="truncate">
+            {editingPreview ? `Editing: ${editingPreview}` : `Replying to: ${replyPreview}`}
+          </span>
+          <button
+            type="button"
+            onClick={editingPreview ? onCancelEdit : onCancelReply}
+            className="ml-2 shrink-0 text-[var(--text-muted)]"
+          >
             ✕
           </button>
         </div>
@@ -127,7 +154,9 @@ export function Composer({
               {f.previewUrl ? (
                 <img src={f.previewUrl} alt={f.file.name} className="h-16 w-16 rounded-lg object-cover" />
               ) : (
-                <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-[var(--border)] text-xs">📎</div>
+                <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-[var(--border)] text-xs">
+                  📎
+                </div>
               )}
               <button
                 type="button"
@@ -144,12 +173,21 @@ export function Composer({
 
       <div className="flex items-end gap-2">
         <input id="attachment-input" type="file" multiple className="hidden" onChange={handleFilePick} />
-        <label htmlFor="attachment-input" className="cursor-pointer rounded-lg p-2 hover:bg-[var(--surface-muted)]" title="Attach file">
+        <label
+          htmlFor="attachment-input"
+          className="cursor-pointer rounded-lg p-2 hover:bg-[var(--surface-muted)]"
+          title="Attach file"
+        >
           📎
         </label>
 
         <div className="relative">
-          <button type="button" onClick={() => setShowEmoji((v) => !v)} className="rounded-lg p-2 hover:bg-[var(--surface-muted)]" title="Emoji">
+          <button
+            type="button"
+            onClick={() => setShowEmoji((v) => !v)}
+            className="rounded-lg p-2 hover:bg-[var(--surface-muted)]"
+            title="Emoji"
+          >
             🙂
           </button>
           {showEmoji && (

@@ -31,6 +31,7 @@ Visit `http://<reserved-ip>` — you'll land on the first-run admin setup wizard
 ## Updating after a code change
 
 SSH into the VM:
+
 ```bash
 cd /opt/anonchat/src && git pull && docker compose up -d --build
 ```

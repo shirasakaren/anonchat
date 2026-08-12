@@ -94,7 +94,9 @@ function decryptTotpSecret(admin: Pick<Admin, "totpSecretCiphertext" | "totpSecr
 export async function verifyAdminLogin(username: string, password: string, totpCode?: string): Promise<Admin> {
   const admin = await prisma.admin.findUnique({ where: { username } });
   if (!admin) {
-    await getDummyHash().then((h) => argonVerify(h, password)).catch(() => false);
+    await getDummyHash()
+      .then((h) => argonVerify(h, password))
+      .catch(() => false);
     throw Errors.unauthorized("Invalid username or password.");
   }
   const passwordOk = await argonVerify(admin.passwordHash, password);

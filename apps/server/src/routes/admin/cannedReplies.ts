@@ -24,7 +24,9 @@ export function registerCannedReplyRoutes(app: FastifyInstance): void {
   app.post("/admin/canned-replies", { preHandler: requireAdmin }, async (request, reply) => {
     const { admin } = request.adminAuth!;
     const body = CannedReplyRequestSchema.parse(request.body);
-    const created = await prisma.cannedReply.create({ data: { adminId: admin.id, title: body.title, body: body.body } });
+    const created = await prisma.cannedReply.create({
+      data: { adminId: admin.id, title: body.title, body: body.body },
+    });
     reply.status(201).send(toDto(created));
   });
 
@@ -34,7 +36,10 @@ export function registerCannedReplyRoutes(app: FastifyInstance): void {
     const body = CannedReplyRequestSchema.parse(request.body);
     const existing = await prisma.cannedReply.findFirst({ where: { id: params.id, adminId: admin.id } });
     if (!existing) throw Errors.notFound();
-    const updated = await prisma.cannedReply.update({ where: { id: params.id }, data: { title: body.title, body: body.body } });
+    const updated = await prisma.cannedReply.update({
+      where: { id: params.id },
+      data: { title: body.title, body: body.body },
+    });
     reply.send(toDto(updated));
   });
 

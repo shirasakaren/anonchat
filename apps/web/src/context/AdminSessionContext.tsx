@@ -3,7 +3,13 @@ import type { Identity } from "@anonchat/crypto";
 import type { AdminSummaryDto } from "@anonchat/shared";
 import { getAdminMe, loginAdmin, logoutAdmin } from "../api/admin.js";
 import { ApiError } from "../api/client.js";
-import { getUnlockedAdminIdentity, hasCachedAdminKey, importAdminIdentityFromRecoveryPhrase, lockAdminIdentity, unlockAdminIdentity } from "../crypto/adminKeyStore.js";
+import {
+  getUnlockedAdminIdentity,
+  hasCachedAdminKey,
+  importAdminIdentityFromRecoveryPhrase,
+  lockAdminIdentity,
+  unlockAdminIdentity,
+} from "../crypto/adminKeyStore.js";
 
 interface AdminSessionContextValue {
   status: "loading" | "signed-out" | "signed-in";
@@ -88,7 +94,9 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <Ctx.Provider value={{ status, admin, identity, needsKeyUnlock, login, unlockKey, importKey, logout, refreshAdmin }}>
+    <Ctx.Provider
+      value={{ status, admin, identity, needsKeyUnlock, login, unlockKey, importKey, logout, refreshAdmin }}
+    >
       {children}
     </Ctx.Provider>
   );

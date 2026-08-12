@@ -23,7 +23,10 @@ export function onboardAdmin(params: {
 }): Promise<{ id: string; username: string; displayName: string }> {
   const signingPublicKey = bytesToBase64url(params.identity.signingPublicKey);
   const exchangePublicKey = bytesToBase64url(params.identity.exchangePublicKey);
-  const proof = signChallenge(params.identity.signingSecretKey, buildRegistrationProofMessage(signingPublicKey, exchangePublicKey));
+  const proof = signChallenge(
+    params.identity.signingSecretKey,
+    buildRegistrationProofMessage(signingPublicKey, exchangePublicKey),
+  );
   return api.post("/admin/onboarding", {
     username: params.username,
     password: params.password,
@@ -77,14 +80,16 @@ export function getSettings(): Promise<SiteSettingsDto> {
   return api.get<SiteSettingsDto>("/admin/settings");
 }
 
-export function updateSettings(patch: Partial<{
-  displayName: string;
-  bio: string;
-  contactLinks: { label: string; url: string }[];
-  pgpPublicKey: string;
-  presenceEnabled: boolean;
-  theme: string;
-}>): Promise<SiteSettingsDto> {
+export function updateSettings(
+  patch: Partial<{
+    displayName: string;
+    bio: string;
+    contactLinks: { label: string; url: string }[];
+    pgpPublicKey: string;
+    presenceEnabled: boolean;
+    theme: string;
+  }>,
+): Promise<SiteSettingsDto> {
   return api.patch<SiteSettingsDto>("/admin/settings", patch);
 }
 
@@ -112,7 +117,9 @@ export function getAdminConversation(id: string): Promise<ConversationDto> {
 }
 
 export function getAdminMessages(conversationId: string, cursor?: string): Promise<MessagePage> {
-  return api.get<MessagePage>(`/admin/conversations/${conversationId}/messages${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`);
+  return api.get<MessagePage>(
+    `/admin/conversations/${conversationId}/messages${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`,
+  );
 }
 
 export async function sendAdminMessage(
@@ -135,7 +142,11 @@ export async function sendAdminMessage(
   return apiFetch<MessageDto>(`/admin/conversations/${conversationId}/messages`, { method: "POST", body: form });
 }
 
-export function editAdminMessage(conversationId: string, messageId: string, content: EncryptedPayload): Promise<MessageDto> {
+export function editAdminMessage(
+  conversationId: string,
+  messageId: string,
+  content: EncryptedPayload,
+): Promise<MessageDto> {
   return api.patch<MessageDto>(`/admin/conversations/${conversationId}/messages/${messageId}`, { content });
 }
 
@@ -151,7 +162,10 @@ export function clearAdminReaction(conversationId: string, messageId: string): P
   return api.delete<void>(`/admin/conversations/${conversationId}/messages/${messageId}/reactions`);
 }
 
-export function markAdminRead(conversationId: string, upToMessageId: string): Promise<{ upToMessageId: string; readAt: string }> {
+export function markAdminRead(
+  conversationId: string,
+  upToMessageId: string,
+): Promise<{ upToMessageId: string; readAt: string }> {
   return api.post(`/admin/conversations/${conversationId}/read`, { upToMessageId });
 }
 

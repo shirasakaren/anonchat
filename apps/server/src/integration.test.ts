@@ -80,7 +80,10 @@ function makeIdentity() {
   const identity = deriveIdentity(secret);
   const proof = signChallenge(
     identity.signingSecretKey,
-    buildRegistrationProofMessage(bytesToBase64url(identity.signingPublicKey), bytesToBase64url(identity.exchangePublicKey)),
+    buildRegistrationProofMessage(
+      bytesToBase64url(identity.signingPublicKey),
+      bytesToBase64url(identity.exchangePublicKey),
+    ),
   );
   return { secret, identity, proof };
 }
@@ -140,7 +143,11 @@ describe("anonchat integration", () => {
     });
     expect(sendRes.status).toBe(201);
 
-    const adminKey = deriveConversationKey(adminIdentity.exchangeSecretKey, user.identity.exchangePublicKey, conversationId);
+    const adminKey = deriveConversationKey(
+      adminIdentity.exchangeSecretKey,
+      user.identity.exchangePublicKey,
+      conversationId,
+    );
     const adminMessagesRes = await call(app, adminJar, "GET", `/admin/conversations/${conversationId}/messages`);
     expect(adminMessagesRes.status).toBe(200);
     const decrypted = decryptJSON<{ text: string }>(adminKey, adminMessagesRes.body.messages[0].content);
@@ -173,7 +180,10 @@ describe("anonchat integration", () => {
     const rederived = deriveIdentity(user.secret);
     const challengeRes = await call(app, freshJar, "POST", "/anonymous/challenge", { publicId: rederived.publicId });
     expect(challengeRes.status).toBe(200);
-    const signature = signChallenge(rederived.signingSecretKey, buildLoginChallengeMessage(challengeRes.body.challenge));
+    const signature = signChallenge(
+      rederived.signingSecretKey,
+      buildLoginChallengeMessage(challengeRes.body.challenge),
+    );
     const recoverRes = await call(app, freshJar, "POST", "/anonymous/recover", {
       publicId: rederived.publicId,
       challengeId: challengeRes.body.challengeId,
@@ -196,8 +206,13 @@ describe("anonchat integration", () => {
     const attackerJar = newJar();
     await primeCsrf(app, attackerJar);
     const attacker = makeIdentity();
-    const challengeRes = await call(app, attackerJar, "POST", "/anonymous/challenge", { publicId: user.identity.publicId });
-    const wrongSignature = signChallenge(attacker.identity.signingSecretKey, buildLoginChallengeMessage(challengeRes.body.challenge));
+    const challengeRes = await call(app, attackerJar, "POST", "/anonymous/challenge", {
+      publicId: user.identity.publicId,
+    });
+    const wrongSignature = signChallenge(
+      attacker.identity.signingSecretKey,
+      buildLoginChallengeMessage(challengeRes.body.challenge),
+    );
     const recoverRes = await call(app, attackerJar, "POST", "/anonymous/recover", {
       publicId: user.identity.publicId,
       challengeId: challengeRes.body.challengeId,
@@ -235,8 +250,13 @@ describe("anonchat integration", () => {
     const secondSessionJar = newJar();
     await primeCsrf(app, secondSessionJar);
     const rederived = deriveIdentity(user.secret);
-    const challengeRes = await call(app, secondSessionJar, "POST", "/anonymous/challenge", { publicId: rederived.publicId });
-    const signature = signChallenge(rederived.signingSecretKey, buildLoginChallengeMessage(challengeRes.body.challenge));
+    const challengeRes = await call(app, secondSessionJar, "POST", "/anonymous/challenge", {
+      publicId: rederived.publicId,
+    });
+    const signature = signChallenge(
+      rederived.signingSecretKey,
+      buildLoginChallengeMessage(challengeRes.body.challenge),
+    );
     await call(app, secondSessionJar, "POST", "/anonymous/recover", {
       publicId: rederived.publicId,
       challengeId: challengeRes.body.challengeId,
@@ -287,7 +307,11 @@ describe("anonchat integration", () => {
 
     // The message must survive untouched - none of the rejected calls above
     // should have mutated it.
-    const adminKey = deriveConversationKey(adminIdentity.exchangeSecretKey, user.identity.exchangePublicKey, conversationId);
+    const adminKey = deriveConversationKey(
+      adminIdentity.exchangeSecretKey,
+      user.identity.exchangePublicKey,
+      conversationId,
+    );
     const adminMessagesRes = await call(app, adminJar, "GET", `/admin/conversations/${conversationId}/messages`);
     const stored = adminMessagesRes.body.messages.find((m: { id: string }) => m.id === messageId);
     expect(stored.deleted).toBe(false);

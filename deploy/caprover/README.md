@@ -7,8 +7,8 @@ directory support that automatically pins the app to a single Swarm node —
 matching Anonchat's single-instance architecture perfectly.
 
 No Terraform or Pulumi provider exists for CapRover itself (the only
-Terraform-adjacent project found provisions a VPS *running* CapRover, not
-apps *inside* an existing instance). The [`captain-definition`](../../captain-definition)
+Terraform-adjacent project found provisions a VPS _running_ CapRover, not
+apps _inside_ an existing instance). The [`captain-definition`](../../captain-definition)
 file at the repo root is CapRover's only required in-repo config.
 
 ## Prerequisites

@@ -9,8 +9,8 @@ WebSocket Upgrade/Connection headers out of the box, and its default 60s
 timeouts can drop idle connections; this override fixes both).
 
 Terraform support exists via the community provider `aliksend/dokku`
-(provisions the app + Postgres addon declaratively *against an existing Dokku
-host* — it does not provision the host itself). No Pulumi provider exists;
+(provisions the app + Postgres addon declaratively _against an existing Dokku
+host_ — it does not provision the host itself). No Pulumi provider exists;
 the Pulumi program bridges the same Terraform provider.
 
 ## Prerequisites

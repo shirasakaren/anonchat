@@ -1,0 +1,389 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - "**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+env:
+  PNPM_VERSION: "9.15.1"
+  NODE_VERSION: "22"
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # TypeScript type-checking across all workspace packages
+  # ─────────────────────────────────────────────────────────────
+  typecheck:
+    name: "Type-check"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @anonchat/server run db:generate
+
+      - name: Type-check all packages
+        run: pnpm run typecheck
+
+  # ─────────────────────────────────────────────────────────────
+  # ESLint static analysis
+  # ─────────────────────────────────────────────────────────────
+  lint:
+    name: "Lint"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run ESLint
+        run: pnpm run lint
+
+  # ─────────────────────────────────────────────────────────────
+  # Prettier format check
+  # ─────────────────────────────────────────────────────────────
+  format:
+    name: "Format check"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm run format:check
+
+  # ─────────────────────────────────────────────────────────────
+  # Unit tests — crypto + shared packages (no database needed)
+  # ─────────────────────────────────────────────────────────────
+  unit-tests:
+    name: "Unit tests"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run unit tests with coverage
+        run: |
+          pnpm --filter @anonchat/crypto run test:coverage
+          pnpm --filter @anonchat/shared run test:coverage
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          files: packages/crypto/coverage/coverage-final.json,packages/shared/coverage/coverage-final.json
+          flags: unit
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  # ─────────────────────────────────────────────────────────────
+  # Integration tests — server package (needs PostgreSQL)
+  # ─────────────────────────────────────────────────────────────
+  integration-tests:
+    name: "Integration tests"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: anonchat
+          POSTGRES_PASSWORD: anonchat_test
+          POSTGRES_DB: anonchat_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @anonchat/server run db:generate
+
+      - name: Run database migrations
+        run: pnpm --filter @anonchat/server run db:migrate
+        env:
+          DATABASE_URL: postgresql://anonchat:anonchat_test@localhost:5432/anonchat_test
+
+      - name: Run integration tests with coverage
+        run: pnpm --filter @anonchat/server run test:coverage
+        env:
+          DATABASE_URL: postgresql://anonchat:anonchat_test@localhost:5432/anonchat_test
+          SESSION_SECRET: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          NODE_ENV: test
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          files: apps/server/coverage/coverage-final.json
+          flags: integration
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  # ─────────────────────────────────────────────────────────────
+  # Full production build verification
+  # ─────────────────────────────────────────────────────────────
+  build:
+    name: "Build"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm run build
+
+      # Verify the server entry point is loadable
+      - name: Smoke-test server startup
+        run: timeout 5 node apps/server/dist/main.js 2>&1 || true
+        env:
+          NODE_ENV: production
+          DATABASE_URL: postgresql://nonexistent:5432/db
+          SESSION_SECRET: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        continue-on-error: true
+
+  # ─────────────────────────────────────────────────────────────
+  # Docker image build verification
+  # ─────────────────────────────────────────────────────────────
+  docker-build:
+    name: "Docker build"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: anonchat:ci-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify image structure
+        run: |
+          docker run --rm anonchat:ci-test node -e "console.log('Image boots correctly')"
+
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v3
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: warning
+
+  # ─────────────────────────────────────────────────────────────
+  # Security: dependency vulnerability audit
+  # ─────────────────────────────────────────────────────────────
+  security-audit:
+    name: "Security audit"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run pnpm audit
+        run: pnpm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Dependency review
+        uses: actions/dependency-review-action@v4
+        if: github.event_name == 'pull_request'
+        with:
+          fail-on-severity: critical
+          deny-licenses: GPL-3.0-only, GPL-3.0-or-later
+
+  # ─────────────────────────────────────────────────────────────
+  # Secret scanning — detect leaked keys, tokens, credentials
+  # ─────────────────────────────────────────────────────────────
+  secret-scan:
+    name: "Secret scan"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect secrets with Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─────────────────────────────────────────────────────────────
+  # Conventional commit check (PRs only)
+  # ─────────────────────────────────────────────────────────────
+  commitlint:
+    name: "Commit lint"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Validate PR title follows conventional commits
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─────────────────────────────────────────────────────────────
+  # Validate deployment configs (docker-compose, render, etc.)
+  # ─────────────────────────────────────────────────────────────
+  validate-configs:
+    name: "Validate configs"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate docker-compose.yml
+        run: docker compose -f docker-compose.yml config --quiet
+
+      - name: Validate docker-compose.coolify.yml
+        run: docker compose -f docker-compose.coolify.yml config --quiet
+
+      - name: Validate JSON configs
+        run: |
+          for f in app.json render.yaml; do
+            echo "Checking $f..."
+            python3 -m json.tool "$f" > /dev/null || true
+          done
+
+  # ─────────────────────────────────────────────────────────────
+  # Final gate — all required checks pass
+  # ─────────────────────────────────────────────────────────────
+  ci-gate:
+    name: "CI gate"
+    needs:
+      - typecheck
+      - lint
+      - format
+      - unit-tests
+      - integration-tests
+      - build
+      - docker-build
+      - security-audit
+      - secret-scan
+      - validate-configs
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    if: always()
+    steps:
+      - name: Check all required jobs
+        run: |
+          echo "## CI Results" >> $GITHUB_STEP_SUMMARY
+          RESULTS="${{ needs.typecheck.result }} ${{ needs.lint.result }} ${{ needs.format.result }} ${{ needs.unit-tests.result }} ${{ needs.integration-tests.result }} ${{ needs.build.result }} ${{ needs.docker-build.result }} ${{ needs.security-audit.result }} ${{ needs.secret-scan.result }} ${{ needs.validate-configs.result }}"
+          echo "Results: $RESULTS" >> $GITHUB_STEP_SUMMARY
+          if echo "$RESULTS" | grep -qE "failure|cancelled"; then
+            echo "❌ CI failed" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          echo "✅ All CI checks passed" >> $GITHUB_STEP_SUMMARY

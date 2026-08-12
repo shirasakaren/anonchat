@@ -30,7 +30,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               className={({ isActive }) =>
                 clsx(
                   "flex items-center gap-2 rounded-lg px-3 py-2 text-sm",
-                  isActive ? "bg-[var(--color-accent-100)] font-medium text-[var(--color-accent-700)]" : "hover:bg-[var(--surface-muted)]",
+                  isActive
+                    ? "bg-[var(--color-accent-100)] font-medium text-[var(--color-accent-700)]"
+                    : "hover:bg-[var(--surface-muted)]",
                 )
               }
             >
@@ -39,7 +41,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </NavLink>
           ))}
         </div>
-        <button type="button" onClick={() => logout()} className="rounded-lg px-3 py-2 text-left text-sm text-[var(--text-muted)] hover:bg-[var(--surface-muted)]">
+        <button
+          type="button"
+          onClick={() => logout()}
+          className="rounded-lg px-3 py-2 text-left text-sm text-[var(--text-muted)] hover:bg-[var(--surface-muted)]"
+        >
           Logout
         </button>
       </nav>

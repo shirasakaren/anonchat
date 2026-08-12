@@ -27,18 +27,30 @@ export default function SessionsPage() {
       <h1 className="mb-6 text-xl font-semibold">Active sessions</h1>
       <div className="space-y-2">
         {sessions.map((session) => (
-          <div key={session.id} className="flex items-center justify-between rounded-xl border border-[var(--border)] p-4">
+          <div
+            key={session.id}
+            className="flex items-center justify-between rounded-xl border border-[var(--border)] p-4"
+          >
             <div>
               <p className="text-sm font-medium">
-                {session.current && <span className="mr-1.5 rounded bg-[var(--color-accent-100)] px-1.5 py-0.5 text-xs text-[var(--color-accent-700)]">This device</span>}
+                {session.current && (
+                  <span className="mr-1.5 rounded bg-[var(--color-accent-100)] px-1.5 py-0.5 text-xs text-[var(--color-accent-700)]">
+                    This device
+                  </span>
+                )}
                 {session.ipAddress ?? "Unknown IP"}
               </p>
               <p className="text-xs text-[var(--text-muted)]">
-                {session.userAgent ?? "Unknown device"} · Last active {formatDistanceToNowStrict(new Date(session.lastSeenAt), { addSuffix: true })}
+                {session.userAgent ?? "Unknown device"} · Last active{" "}
+                {formatDistanceToNowStrict(new Date(session.lastSeenAt), { addSuffix: true })}
               </p>
             </div>
             {!session.current && (
-              <button type="button" onClick={() => handleRevoke(session.id)} className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-red-500">
+              <button
+                type="button"
+                onClick={() => handleRevoke(session.id)}
+                className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-red-500"
+              >
                 Revoke
               </button>
             )}

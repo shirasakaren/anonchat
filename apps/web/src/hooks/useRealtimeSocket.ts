@@ -8,7 +8,11 @@ export type SocketStatus = "connecting" | "open" | "closed";
  * truth. On reconnect, callers re-fetch via REST rather than relying on any
  * replay from the socket - see docs/ARCHITECTURE.md.
  */
-export function useRealtimeSocket(onEvent: (event: ServerWsEvent) => void, enabled: boolean, onReconnected?: () => void) {
+export function useRealtimeSocket(
+  onEvent: (event: ServerWsEvent) => void,
+  enabled: boolean,
+  onReconnected?: () => void,
+) {
   const [status, setStatus] = useState<SocketStatus>("connecting");
   const wsRef = useRef<WebSocket | null>(null);
   const onEventRef = useRef(onEvent);

@@ -96,7 +96,11 @@ export async function createMessage(params: {
     });
 
     const dto = toMessageDto(message);
-    publishToConversation(params.conversationId, { type: "message.created", conversationId: params.conversationId, message: dto });
+    publishToConversation(params.conversationId, {
+      type: "message.created",
+      conversationId: params.conversationId,
+      message: dto,
+    });
     return dto;
   } catch (error) {
     await Promise.allSettled(storageKeys.map((key) => storage.delete(key)));
@@ -127,7 +131,11 @@ export async function editMessage(params: {
     include: MESSAGE_INCLUDE,
   });
   const dto = toMessageDto(updated);
-  publishToConversation(params.conversationId, { type: "message.updated", conversationId: params.conversationId, message: dto });
+  publishToConversation(params.conversationId, {
+    type: "message.updated",
+    conversationId: params.conversationId,
+    message: dto,
+  });
   return dto;
 }
 
@@ -164,7 +172,9 @@ export async function setReaction(params: {
   emoji: EncryptedPayloadInput | null;
 }) {
   await assertUserCanMutate(params.conversationId, params.senderType);
-  const message = await prisma.message.findFirst({ where: { id: params.messageId, conversationId: params.conversationId } });
+  const message = await prisma.message.findFirst({
+    where: { id: params.messageId, conversationId: params.conversationId },
+  });
   if (!message || message.deletedAt) throw Errors.notFound();
 
   if (params.emoji === null) {
@@ -173,7 +183,12 @@ export async function setReaction(params: {
     const emoji = toBuffer(params.emoji);
     await prisma.messageReaction.upsert({
       where: { messageId_senderType: { messageId: message.id, senderType: params.senderType } },
-      create: { messageId: message.id, senderType: params.senderType, emojiCiphertext: emoji.ciphertext, emojiNonce: emoji.nonce },
+      create: {
+        messageId: message.id,
+        senderType: params.senderType,
+        emojiCiphertext: emoji.ciphertext,
+        emojiNonce: emoji.nonce,
+      },
       update: { emojiCiphertext: emoji.ciphertext, emojiNonce: emoji.nonce },
     });
   }

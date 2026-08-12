@@ -6,7 +6,10 @@ import { api } from "./client.js";
 export function registerAnonymousIdentity(identity: Identity): Promise<RegisterResponse> {
   const signingPublicKey = bytesToBase64url(identity.signingPublicKey);
   const exchangePublicKey = bytesToBase64url(identity.exchangePublicKey);
-  const proof = signChallenge(identity.signingSecretKey, buildRegistrationProofMessage(signingPublicKey, exchangePublicKey));
+  const proof = signChallenge(
+    identity.signingSecretKey,
+    buildRegistrationProofMessage(signingPublicKey, exchangePublicKey),
+  );
   return api.post<RegisterResponse>("/anonymous/register", {
     signingPublicKey,
     exchangePublicKey,

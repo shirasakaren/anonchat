@@ -1,7 +1,7 @@
 {
   "name": "anonchat",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Self-hosted anonymous persistent messaging inbox",
   "license": "MIT",
   "engines": {
@@ -13,17 +13,24 @@
     "dev:web": "pnpm --filter @anonchat/web run dev",
     "build": "pnpm --filter @anonchat/crypto run build && pnpm --filter @anonchat/shared run build && pnpm --filter @anonchat/server run build && pnpm --filter @anonchat/web run build",
     "test": "pnpm -r run test",
-    "lint": "pnpm -r run lint",
+    "test:coverage": "pnpm -r run test:coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format:check": "prettier --check .",
+    "format:fix": "prettier --write .",
     "typecheck": "pnpm -r run typecheck",
     "db:migrate": "pnpm --filter @anonchat/server run db:migrate",
     "db:generate": "pnpm --filter @anonchat/server run db:generate"
   },
   "devDependencies": {
-    "typescript": "^5.7.3",
+    "@eslint/js": "^10.0.1",
     "@typescript-eslint/eslint-plugin": "^8.19.0",
     "@typescript-eslint/parser": "^8.19.0",
+    "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^9.17.0",
-    "prettier": "^3.4.2"
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.67.0"
   },
   "packageManager": "pnpm@9.15.1"
 }

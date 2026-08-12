@@ -12,8 +12,9 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "echo skip"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@noble/ciphers": "^2.3.0",

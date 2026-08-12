@@ -48,10 +48,26 @@ export default function CannedRepliesPage() {
       <h1 className="mb-6 text-xl font-semibold">Canned replies</h1>
 
       <form onSubmit={handleSubmit} className="mb-6 space-y-3 rounded-xl border border-[var(--border)] p-4">
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" required className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm" />
-        <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Reply text" required rows={3} className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm" />
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Title"
+          required
+          className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+        />
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="Reply text"
+          required
+          rows={3}
+          className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+        />
         <div className="flex gap-2">
-          <button type="submit" className="rounded-lg bg-[var(--color-accent-600)] px-4 py-2 text-sm font-semibold text-white">
+          <button
+            type="submit"
+            className="rounded-lg bg-[var(--color-accent-600)] px-4 py-2 text-sm font-semibold text-white"
+          >
             {editingId ? "Update" : "Add"}
           </button>
           {editingId && (

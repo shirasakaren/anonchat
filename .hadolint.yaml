@@ -1,0 +1,11 @@
+trustedRegistries:
+  - docker.io
+  - ghcr.io
+
+ignored:
+  # pinning to exact digest is impractical for base images
+  - DL3007
+  # apk add --no-cache is used correctly
+  - DL3018
+  # we pin the major version tag intentionally
+  - DL3006

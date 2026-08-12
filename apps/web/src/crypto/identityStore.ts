@@ -1,4 +1,10 @@
-import { deriveIdentity, formatRecoverySecret, generateRecoverySecret, parseRecoverySecret, type Identity } from "@anonchat/crypto";
+import {
+  deriveIdentity,
+  formatRecoverySecret,
+  generateRecoverySecret,
+  parseRecoverySecret,
+  type Identity,
+} from "@anonchat/crypto";
 import { getDb, type StoredIdentityRecord } from "./db.js";
 
 const ACTIVE_IDENTITY_KEY = "anonchat.activeIdentity";
@@ -63,7 +69,10 @@ export async function loadIdentity(publicId: string): Promise<Identity | null> {
 }
 
 /** Re-derives and stores an identity from a pasted recovery phrase (new device, or lost local storage). */
-export async function importIdentityFromRecoveryPhrase(phrase: string, label = "Recovered identity"): Promise<Identity> {
+export async function importIdentityFromRecoveryPhrase(
+  phrase: string,
+  label = "Recovered identity",
+): Promise<Identity> {
   const secret = parseRecoverySecret(phrase);
   const identity = deriveIdentity(secret);
   const db = await getDb();

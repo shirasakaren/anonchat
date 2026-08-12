@@ -17,7 +17,9 @@ const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("production"),
   PORT: z.coerce.number().int().positive().default(3000),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
-  SESSION_SECRET: z.string().min(32, "SESSION_SECRET must be at least 32 characters - generate with `openssl rand -hex 32`"),
+  SESSION_SECRET: z
+    .string()
+    .min(32, "SESSION_SECRET must be at least 32 characters - generate with `openssl rand -hex 32`"),
   PUBLIC_URL: z.string().url().default("http://localhost:3000"),
   TRUST_PROXY: boolFromEnv,
 
@@ -28,7 +30,11 @@ const EnvSchema = z.object({
   MESSAGE_EDIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(DEFAULT_MESSAGE_EDIT_WINDOW_MINUTES),
 
   RATE_LIMIT_MESSAGES_PER_MINUTE: z.coerce.number().int().positive().default(DEFAULT_RATE_LIMIT_MESSAGES_PER_MINUTE),
-  RATE_LIMIT_REGISTRATIONS_PER_HOUR: z.coerce.number().int().positive().default(DEFAULT_RATE_LIMIT_REGISTRATIONS_PER_HOUR),
+  RATE_LIMIT_REGISTRATIONS_PER_HOUR: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(DEFAULT_RATE_LIMIT_REGISTRATIONS_PER_HOUR),
 
   TURNSTILE_SITE_KEY: z.string().optional(),
   TURNSTILE_SECRET_KEY: z.string().optional(),

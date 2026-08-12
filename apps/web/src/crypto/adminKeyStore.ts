@@ -31,7 +31,9 @@ export async function hasCachedAdminKey(): Promise<boolean> {
 }
 
 /** First-time setup: generates the admin's encryption identity and caches it behind the login password. */
-export async function createAndCacheAdminIdentity(password: string): Promise<{ identity: Identity; recoveryPhrase: string }> {
+export async function createAndCacheAdminIdentity(
+  password: string,
+): Promise<{ identity: Identity; recoveryPhrase: string }> {
   const secret = generateRecoverySecret();
   const identity = deriveIdentity(secret);
   await cacheAdminSecret(secret, password);

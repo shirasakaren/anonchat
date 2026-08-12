@@ -23,7 +23,8 @@ interface Props {
   downloadUrl: string;
 }
 
-type LoadState = { kind: "idle" } | { kind: "loading" } | { kind: "loaded"; url: string; mimetype: string } | { kind: "error" };
+type LoadState =
+  { kind: "idle" } | { kind: "loading" } | { kind: "loaded"; url: string; mimetype: string } | { kind: "error" };
 
 export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: Props) {
   const [meta, setMeta] = useState<AttachmentMetaEnvelope | null>(null);
@@ -37,7 +38,6 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
     return () => {
       if (state.kind === "loaded") URL.revokeObjectURL(state.url);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.kind === "loaded" ? state.url : null]);
 
   async function load() {
@@ -70,7 +70,11 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
     if (state.mimetype === "application/pdf") {
       return (
         <div className="space-y-1">
-          <iframe title={meta.filename} src={state.url} className="h-64 w-full rounded-lg border border-[var(--border)]" />
+          <iframe
+            title={meta.filename}
+            src={state.url}
+            className="h-64 w-full rounded-lg border border-[var(--border)]"
+          />
           <a href={state.url} download={meta.filename} className="text-xs underline">
             Download {meta.filename}
           </a>
@@ -78,7 +82,11 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
       );
     }
     return (
-      <a href={state.url} download={meta.filename} className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm">
+      <a
+        href={state.url}
+        download={meta.filename}
+        className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
+      >
         <span>{iconForMime(state.mimetype)}</span>
         <span className="truncate">{meta.filename}</span>
       </a>
@@ -95,7 +103,9 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
       <span>{iconForMime(meta.mimetype)}</span>
       <span className="min-w-0 flex-1 truncate">{meta.filename}</span>
       <span className="text-xs text-[var(--text-muted)]">{formatBytes(meta.size)}</span>
-      <span className="text-xs text-[var(--color-accent-600)]">{state.kind === "loading" ? "Loading…" : state.kind === "error" ? "Retry" : "Preview"}</span>
+      <span className="text-xs text-[var(--color-accent-600)]">
+        {state.kind === "loading" ? "Loading…" : state.kind === "error" ? "Retry" : "Preview"}
+      </span>
     </button>
   );
 }

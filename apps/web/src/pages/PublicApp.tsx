@@ -32,7 +32,11 @@ function PublicAppInner() {
   }
   if (pendingRecovery) {
     return (
-      <RecoveryConfirm phrase={pendingRecovery.phrase} publicId={pendingRecovery.publicId} onAcknowledge={() => setPendingRecovery(null)} />
+      <RecoveryConfirm
+        phrase={pendingRecovery.phrase}
+        publicId={pendingRecovery.publicId}
+        onAcknowledge={() => setPendingRecovery(null)}
+      />
     );
   }
   return <Chat />;

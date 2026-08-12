@@ -34,13 +34,14 @@ Visit `http://<instance-ip>` — you'll land on the first-run admin setup wizard
 ## PUBLIC_URL two-step apply
 
 Unlike the Hetzner/Vultr templates (which allocate a reserved IP before the
-server), Akamai assigns the IP *from* the instance — Terraform outputs it as
+server), Akamai assigns the IP _from_ the instance — Terraform outputs it as
 `ip_address`. Set `PUBLIC_URL` to that IP (or your domain pointing at it) and
 re-apply the same way the GCP/AWS/Azure templates do.
 
 ## Updating after a code change
 
 SSH into the VM:
+
 ```bash
 cd /opt/anonchat/src && git pull && docker compose up -d --build
 ```

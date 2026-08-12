@@ -1,6 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import { base64urlToBytes } from "@anonchat/crypto";
-import { ANON_SESSION_COOKIE, ChallengeRequestSchema, RecoverRequestSchema, RegisterRequestSchema } from "@anonchat/shared";
+import {
+  ANON_SESSION_COOKIE,
+  ChallengeRequestSchema,
+  RecoverRequestSchema,
+  RegisterRequestSchema,
+} from "@anonchat/shared";
 import type { ChallengeResponse, MeResponse, RegisterResponse } from "@anonchat/shared";
 import { loadEnv } from "../env.js";
 import { getAdminPublicKeys } from "../services/admin.service.js";

@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { encryptBlob } from "@anonchat/crypto";
 import type { MessageDto, ServerWsEvent } from "@anonchat/shared";
-import { attachmentUrl, deleteMessage, editMessage, getMessages, markRead, sendMessage, setReaction, clearReaction } from "../api/conversation.js";
+import {
+  attachmentUrl,
+  deleteMessage,
+  editMessage,
+  getMessages,
+  markRead,
+  sendMessage,
+  setReaction,
+  clearReaction,
+} from "../api/conversation.js";
 import { ApiError } from "../api/client.js";
 import { useAnonymousSession } from "../context/AnonymousSessionContext.js";
 import { useSite } from "../context/SiteContext.js";
@@ -123,7 +132,9 @@ export default function Chat() {
         case "conversation.read": {
           setMessages((prev) =>
             prev.map((m) =>
-              m.senderType === event.senderType && !m.readAt && m.createdAt <= event.readAt ? { ...m, readAt: event.readAt } : m,
+              m.senderType === event.senderType && !m.readAt && m.createdAt <= event.readAt
+                ? { ...m, readAt: event.readAt }
+                : m,
             ),
           );
           break;
@@ -187,7 +198,9 @@ export default function Chat() {
     } catch (err) {
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === localId ? { ...m, status: "failed", failureReason: err instanceof ApiError ? err.message : "Failed to send" } : m,
+          m.id === localId
+            ? { ...m, status: "failed", failureReason: err instanceof ApiError ? err.message : "Failed to send" }
+            : m,
         ),
       );
     }
@@ -204,7 +217,11 @@ export default function Chat() {
         .then((dto) => setMessages((prev) => prev.map((m) => (m.id === messageId ? decryptDto(dto) : m))))
         .catch((err) =>
           setMessages((prev) =>
-            prev.map((m) => (m.id === messageId ? { ...m, status: "failed", failureReason: err instanceof ApiError ? err.message : "Edit failed" } : m)),
+            prev.map((m) =>
+              m.id === messageId
+                ? { ...m, status: "failed", failureReason: err instanceof ApiError ? err.message : "Edit failed" }
+                : m,
+            ),
           ),
         );
       return;
@@ -234,7 +251,12 @@ export default function Chat() {
   function handleRetry(message: DisplayMessage) {
     const pending = pendingFilesRef.current.get(message.id);
     setMessages((prev) => prev.map((m) => (m.id === message.id ? { ...m, status: "sending" } : m)));
-    void performSend(message.id, pending?.text ?? message.text, pending?.files ?? [], pending?.replyToId ?? message.replyToId);
+    void performSend(
+      message.id,
+      pending?.text ?? message.text,
+      pending?.files ?? [],
+      pending?.replyToId ?? message.replyToId,
+    );
   }
 
   async function handleDelete(message: DisplayMessage) {
@@ -276,7 +298,9 @@ export default function Chat() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-xs font-mono">#{session.publicId}</span>
+          <span className="rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-xs font-mono">
+            #{session.publicId}
+          </span>
           <button type="button" onClick={() => logout()} className="text-xs text-[var(--text-muted)] underline">
             Switch identity
           </button>

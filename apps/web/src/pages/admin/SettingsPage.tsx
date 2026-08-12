@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import type { SiteSettingsDto } from "@anonchat/shared";
-import { getSettings, updateSettings, uploadAvatar, beginTotpSetup, verifyTotpSetup, disableTotp } from "../../api/admin.js";
+import {
+  getSettings,
+  updateSettings,
+  uploadAvatar,
+  beginTotpSetup,
+  verifyTotpSetup,
+  disableTotp,
+} from "../../api/admin.js";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
 import { useAdminNotifications } from "../../hooks/useAdminNotifications.js";
 import { useTheme } from "../../context/ThemeContext.js";
@@ -126,7 +133,9 @@ export default function SettingsPage() {
       <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
         <h2 className="mb-3 text-sm font-semibold">Profile</h2>
         <div className="mb-3 flex items-center gap-3">
-          {settings.avatarUrl && <img src={settings.avatarUrl} alt="" className="h-14 w-14 rounded-full object-cover" />}
+          {settings.avatarUrl && (
+            <img src={settings.avatarUrl} alt="" className="h-14 w-14 rounded-full object-cover" />
+          )}
           <label className="cursor-pointer text-sm text-[var(--color-accent-600)]">
             Change avatar
             <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
@@ -134,15 +143,30 @@ export default function SettingsPage() {
         </div>
         <label className="mb-3 block text-sm font-medium">
           Display name
-          <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm" />
+          <input
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+          />
         </label>
         <label className="mb-3 block text-sm font-medium">
           Bio
-          <textarea rows={2} value={bio} onChange={(e) => setBio(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm" />
+          <textarea
+            rows={2}
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+          />
         </label>
         <label className="mb-3 block text-sm font-medium">
           PGP public key
-          <textarea rows={3} value={pgpPublicKey} onChange={(e) => setPgpPublicKey(e.target.value)} placeholder="-----BEGIN PGP PUBLIC KEY BLOCK-----" className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 font-mono text-xs" />
+          <textarea
+            rows={3}
+            value={pgpPublicKey}
+            onChange={(e) => setPgpPublicKey(e.target.value)}
+            placeholder="-----BEGIN PGP PUBLIC KEY BLOCK-----"
+            className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 font-mono text-xs"
+          />
         </label>
         <label className="mb-3 flex items-center gap-2 text-sm font-medium">
           <input type="checkbox" checked={presenceEnabled} onChange={(e) => setPresenceEnabled(e.target.checked)} />
@@ -154,35 +178,50 @@ export default function SettingsPage() {
           <div key={i} className="mb-2 flex gap-2">
             <input
               value={link.label}
-              onChange={(e) => setContactLinks((prev) => prev.map((l, idx) => (idx === i ? { ...l, label: e.target.value } : l)))}
+              onChange={(e) =>
+                setContactLinks((prev) => prev.map((l, idx) => (idx === i ? { ...l, label: e.target.value } : l)))
+              }
               placeholder="Label"
               className="w-1/3 rounded-lg border border-[var(--border)] bg-transparent px-2 py-1.5 text-sm"
             />
             <input
               value={link.url}
-              onChange={(e) => setContactLinks((prev) => prev.map((l, idx) => (idx === i ? { ...l, url: e.target.value } : l)))}
+              onChange={(e) =>
+                setContactLinks((prev) => prev.map((l, idx) => (idx === i ? { ...l, url: e.target.value } : l)))
+              }
               placeholder="https://…"
               className="flex-1 rounded-lg border border-[var(--border)] bg-transparent px-2 py-1.5 text-sm"
             />
-            <button type="button" onClick={() => setContactLinks((prev) => prev.filter((_, idx) => idx !== i))} className="px-2 text-red-500">
+            <button
+              type="button"
+              onClick={() => setContactLinks((prev) => prev.filter((_, idx) => idx !== i))}
+              className="px-2 text-red-500"
+            >
               ✕
             </button>
           </div>
         ))}
-        <button type="button" onClick={() => setContactLinks((prev) => [...prev, { label: "", url: "" }])} className="mb-4 text-xs text-[var(--color-accent-600)]">
+        <button
+          type="button"
+          onClick={() => setContactLinks((prev) => [...prev, { label: "", url: "" }])}
+          className="mb-4 text-xs text-[var(--color-accent-600)]"
+        >
           + Add link
         </button>
 
-        <button type="button" onClick={handleSave} disabled={saving} className="rounded-lg bg-[var(--color-accent-600)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="rounded-lg bg-[var(--color-accent-600)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+        >
           {saving ? "Saving…" : saved ? "Saved!" : "Save changes"}
         </button>
       </section>
 
       <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
         <h2 className="mb-3 text-sm font-semibold">Theme</h2>
-        <p className="mb-3 text-xs text-[var(--text-muted)]">
-          Changes apply instantly for both you and your visitors.
-        </p>
+        <p className="mb-3 text-xs text-[var(--text-muted)]">Changes apply instantly for both you and your visitors.</p>
         <ThemePicker value={theme} onChange={handleThemeChange} />
         <p className="mt-3 text-xs text-[var(--text-muted)]">
           {themeSaving ? "Saving…" : themeSaved ? "Theme saved!" : ""}
@@ -204,7 +243,11 @@ export default function SettingsPage() {
           ) : notifPermission === "denied" ? (
             <span className="text-[var(--text-muted)]">Blocked - enable in browser settings</span>
           ) : (
-            <button type="button" onClick={handleEnableNotifications} className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs">
+            <button
+              type="button"
+              onClick={handleEnableNotifications}
+              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs"
+            >
               Enable
             </button>
           )}
@@ -216,22 +259,44 @@ export default function SettingsPage() {
         {admin?.totpEnabled ? (
           <div className="flex items-center justify-between">
             <p className="text-sm text-[var(--text-muted)]">Enabled</p>
-            <button type="button" onClick={handleDisableTotp} className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm">
+            <button
+              type="button"
+              onClick={handleDisableTotp}
+              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm"
+            >
               Disable
             </button>
           </div>
         ) : totpSetup ? (
           <div className="space-y-3">
-            <p className="text-sm text-[var(--text-muted)]">Scan this in your authenticator app, or enter the secret manually:</p>
-            <p className="select-all break-all rounded-lg bg-[var(--surface-muted)] p-2 font-mono text-xs">{totpSetup.secret}</p>
-            <input value={totpCode} onChange={(e) => setTotpCode(e.target.value)} placeholder="6-digit code" maxLength={6} className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm" />
+            <p className="text-sm text-[var(--text-muted)]">
+              Scan this in your authenticator app, or enter the secret manually:
+            </p>
+            <p className="select-all break-all rounded-lg bg-[var(--surface-muted)] p-2 font-mono text-xs">
+              {totpSetup.secret}
+            </p>
+            <input
+              value={totpCode}
+              onChange={(e) => setTotpCode(e.target.value)}
+              placeholder="6-digit code"
+              maxLength={6}
+              className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+            />
             {totpError && <p className="text-sm text-red-500">{totpError}</p>}
-            <button type="button" onClick={handleVerifyTotp} className="rounded-lg bg-[var(--color-accent-600)] px-4 py-2 text-sm font-semibold text-white">
+            <button
+              type="button"
+              onClick={handleVerifyTotp}
+              className="rounded-lg bg-[var(--color-accent-600)] px-4 py-2 text-sm font-semibold text-white"
+            >
               Verify and enable
             </button>
           </div>
         ) : (
-          <button type="button" onClick={handleEnableTotp} className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm">
+          <button
+            type="button"
+            onClick={handleEnableTotp}
+            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm"
+          >
             Enable 2FA
           </button>
         )}

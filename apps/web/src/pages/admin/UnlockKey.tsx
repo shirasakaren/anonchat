@@ -57,10 +57,18 @@ export default function UnlockKey() {
               />
             </label>
             {error && <p className="text-sm text-red-500">{error}</p>}
-            <button type="submit" disabled={busy} className="w-full rounded-lg bg-[var(--color-accent-600)] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+            <button
+              type="submit"
+              disabled={busy}
+              className="w-full rounded-lg bg-[var(--color-accent-600)] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+            >
               Unlock
             </button>
-            <button type="button" onClick={() => setMode("import")} className="w-full text-center text-xs text-[var(--text-muted)] underline">
+            <button
+              type="button"
+              onClick={() => setMode("import")}
+              className="w-full text-center text-xs text-[var(--text-muted)] underline"
+            >
               This is a new device - use my recovery key instead
             </button>
           </form>
@@ -89,10 +97,18 @@ export default function UnlockKey() {
             </label>
             {error && <p className="text-sm text-red-500">{error}</p>}
             <div className="flex gap-2">
-              <button type="button" onClick={() => setMode("unlock")} className="flex-1 rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium">
+              <button
+                type="button"
+                onClick={() => setMode("unlock")}
+                className="flex-1 rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium"
+              >
                 Back
               </button>
-              <button type="submit" disabled={busy} className="flex-1 rounded-lg bg-[var(--color-accent-600)] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+              <button
+                type="submit"
+                disabled={busy}
+                className="flex-1 rounded-lg bg-[var(--color-accent-600)] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+              >
                 Unlock
               </button>
             </div>

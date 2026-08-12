@@ -26,7 +26,11 @@ export function getConversationKey(
   theirExchangePublicKeyB64: string,
   conversationId: string,
 ): Uint8Array {
-  return deriveConversationKey(myIdentity.exchangeSecretKey, base64urlToBytes(theirExchangePublicKeyB64), conversationId);
+  return deriveConversationKey(
+    myIdentity.exchangeSecretKey,
+    base64urlToBytes(theirExchangePublicKeyB64),
+    conversationId,
+  );
 }
 
 export function encryptMessageText(key: Uint8Array, text: string): EncryptedPayload {

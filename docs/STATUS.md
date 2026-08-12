@@ -92,7 +92,7 @@ hypothetical, they reproduced in a real browser:
    `prisma migrate deploy` would have failed at container startup. Moved to
    a regular dependency.
 5. **Docker: Prisma Client not initialized after `pnpm deploy`.** `pnpm
-   deploy` re-resolves `node_modules` into a fresh virtual store that
+deploy` re-resolves `node_modules` into a fresh virtual store that
    doesn't carry over the client generated during the build stage. Fixed by
    re-running `prisma generate` inside the deployed directory as a final
    Dockerfile step.
@@ -120,7 +120,7 @@ exact diffs.
    (`message.service.ts`, with a regression test) and client-side
    (`MessageBubble.tsx`/`Chat.tsx` now disable those buttons when blocked).
 2. **HIGH - no rate limiting on edit/delete/react or attachment downloads.**
-   Only the two message-*send* routes were throttled. Fixed by rate-limiting
+   Only the two message-_send_ routes were throttled. Fixed by rate-limiting
    all of them (anon and admin sides).
 3. **LOW - admin message edit/delete/react weren't audit-logged**, unlike
    every other admin mutation (block/archive/delete/etc). Fixed.
@@ -153,6 +153,7 @@ exact diffs.
 Deliberately **not** changed (assessed as acceptable, not fixed to avoid
 scope creep on a review pass - see "Known gaps" if you want to pick these
 up):
+
 - Attachment upload/download still fully buffers in memory rather than
   streaming to/from storage. Bounded by existing size caps (25MB/attachment
   x 5/message by default = ~125MB/request) and now also rate-limited; a
@@ -188,12 +189,12 @@ up):
   neither Cloud Run nor Container Apps has persistent local disk by default.
   This is documented honestly in each template's README rather than papered
   over - not a bug, but worth knowing if you're the one running `terraform
-  apply` or `az deployment group create`.
+apply` or `az deployment group create`.
 - **Cloud templates are unvalidated against a live account.** Local
   schema/syntax validation passed for all five (see above), but nothing has
   actually been deployed. The first real `terraform apply` /
   `az deployment group create` / `aws cloudformation deploy` / `railway
-  config apply` for each is still an unknown - budget time to debug on
+config apply` for each is still an unknown - budget time to debug on
   first real deploy.
 
 ## Suggested next steps
@@ -201,6 +202,7 @@ up):
 Nothing is blocking or required - the project is feature-complete, tested,
 and has been through a security review pass. If picking this up further,
 reasonable follow-ups in rough priority order:
+
 1. Route-based code-splitting for the web bundle (quick, low-risk).
 2. A minimal PWA service worker if installability matters to the user.
 3. Streaming attachment upload/download instead of full in-memory

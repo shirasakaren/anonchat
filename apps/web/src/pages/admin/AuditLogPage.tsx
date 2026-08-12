@@ -29,7 +29,10 @@ export default function AuditLogPage() {
       <h1 className="mb-6 text-xl font-semibold">Audit log</h1>
       <div className="space-y-1.5">
         {entries.map((entry) => (
-          <div key={entry.id} className="flex items-center justify-between rounded-lg border border-[var(--border)] px-3 py-2 text-sm">
+          <div
+            key={entry.id}
+            className="flex items-center justify-between rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
+          >
             <span>
               {entry.action}
               {entry.targetType && <span className="text-[var(--text-muted)]"> · {entry.targetType}</span>}

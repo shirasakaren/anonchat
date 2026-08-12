@@ -150,7 +150,11 @@ export function ConversationView({ conversationId, onChanged }: Props) {
         case "conversation.read":
           if (!belongsHere(event.conversationId)) return;
           setMessages((prev) =>
-            prev.map((m) => (m.senderType === event.senderType && !m.readAt && m.createdAt <= event.readAt ? { ...m, readAt: event.readAt } : m)),
+            prev.map((m) =>
+              m.senderType === event.senderType && !m.readAt && m.createdAt <= event.readAt
+                ? { ...m, readAt: event.readAt }
+                : m,
+            ),
           );
           break;
         case "conversation.updated":
@@ -180,7 +184,11 @@ export function ConversationView({ conversationId, onChanged }: Props) {
         files.map(async (file) => {
           const bytes = new Uint8Array(await file.arrayBuffer());
           const encryptedBlob = encryptBlob(conversationKey!, bytes);
-          const meta = encryptAttachmentMeta(conversationKey!, { filename: file.name, mimetype: file.type || "application/octet-stream", size: file.size });
+          const meta = encryptAttachmentMeta(conversationKey!, {
+            filename: file.name,
+            mimetype: file.type || "application/octet-stream",
+            size: file.size,
+          });
           return { meta, blob: new Blob([toBlobPart(encryptedBlob)]) };
         }),
       );
@@ -197,7 +205,13 @@ export function ConversationView({ conversationId, onChanged }: Props) {
       pendingRef.current.delete(localId);
       onChanged();
     } catch (err) {
-      setMessages((prev) => prev.map((m) => (m.id === localId ? { ...m, status: "failed", failureReason: err instanceof ApiError ? err.message : "Failed" } : m)));
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === localId
+            ? { ...m, status: "failed", failureReason: err instanceof ApiError ? err.message : "Failed" }
+            : m,
+        ),
+      );
     }
   }
 
@@ -210,7 +224,15 @@ export function ConversationView({ conversationId, onChanged }: Props) {
       setEditing(null);
       editAdminMessage(conversationId, messageId, encryptMessageText(conversationKey!, text))
         .then((dto) => setMessages((prev) => prev.map((m) => (m.id === messageId ? decryptDto(dto) : m))))
-        .catch((err) => setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, status: "failed", failureReason: err instanceof ApiError ? err.message : "Edit failed" } : m))));
+        .catch((err) =>
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === messageId
+                ? { ...m, status: "failed", failureReason: err instanceof ApiError ? err.message : "Edit failed" }
+                : m,
+            ),
+          ),
+        );
       return;
     }
 
@@ -238,7 +260,12 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   function handleRetry(message: DisplayMessage) {
     const pending = pendingRef.current.get(message.id);
     setMessages((prev) => prev.map((m) => (m.id === message.id ? { ...m, status: "sending" } : m)));
-    void performSend(message.id, pending?.text ?? message.text, pending?.files ?? [], pending?.replyToId ?? message.replyToId);
+    void performSend(
+      message.id,
+      pending?.text ?? message.text,
+      pending?.files ?? [],
+      pending?.replyToId ?? message.replyToId,
+    );
   }
 
   async function handleDelete(message: DisplayMessage) {
@@ -257,13 +284,19 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   }
 
   async function handleArchiveToggle() {
-    const updated = conversation!.status === "ARCHIVED" ? await unarchiveConversation(conversationId) : await archiveConversation(conversationId);
+    const updated =
+      conversation!.status === "ARCHIVED"
+        ? await unarchiveConversation(conversationId)
+        : await archiveConversation(conversationId);
     setConversation(updated);
     onChanged();
   }
 
   async function handleBlockToggle() {
-    const updated = conversation!.status === "BLOCKED" ? await unblockConversation(conversationId) : await blockConversation(conversationId);
+    const updated =
+      conversation!.status === "BLOCKED"
+        ? await unblockConversation(conversationId)
+        : await blockConversation(conversationId);
     setConversation(updated);
     onChanged();
   }
@@ -288,16 +321,32 @@ export function ConversationView({ conversationId, onChanged }: Props) {
           <p className="text-xs text-[var(--text-muted)]">{conversation.status}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={handleArchiveToggle} className="rounded-md border border-[var(--border)] px-2.5 py-1 text-xs">
+          <button
+            type="button"
+            onClick={handleArchiveToggle}
+            className="rounded-md border border-[var(--border)] px-2.5 py-1 text-xs"
+          >
             {conversation.status === "ARCHIVED" ? "Unarchive" : "Archive"}
           </button>
-          <button type="button" onClick={handleBlockToggle} className="rounded-md border border-[var(--border)] px-2.5 py-1 text-xs">
+          <button
+            type="button"
+            onClick={handleBlockToggle}
+            className="rounded-md border border-[var(--border)] px-2.5 py-1 text-xs"
+          >
             {conversation.status === "BLOCKED" ? "Unblock" : "Block"}
           </button>
-          <button type="button" onClick={handleSoftDelete} className="rounded-md border border-[var(--border)] px-2.5 py-1 text-xs text-red-500">
+          <button
+            type="button"
+            onClick={handleSoftDelete}
+            className="rounded-md border border-[var(--border)] px-2.5 py-1 text-xs text-red-500"
+          >
             Delete
           </button>
-          <button type="button" onClick={handlePermanentDelete} className="rounded-md border border-red-500/40 px-2.5 py-1 text-xs text-red-500">
+          <button
+            type="button"
+            onClick={handlePermanentDelete}
+            className="rounded-md border border-red-500/40 px-2.5 py-1 text-xs text-red-500"
+          >
             Delete permanently
           </button>
         </div>
@@ -307,7 +356,9 @@ export function ConversationView({ conversationId, onChanged }: Props) {
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {messages.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">No messages yet.</div>
+          <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">
+            No messages yet.
+          </div>
         ) : (
           <div className="space-y-3">
             {messages.map((message) => (
@@ -317,7 +368,12 @@ export function ConversationView({ conversationId, onChanged }: Props) {
                 isOwn={message.senderType === "ADMIN"}
                 conversationKey={conversationKey}
                 attachmentUrlFor={(id) => adminAttachmentUrl(conversationId, id)}
-                canEdit={site ? Date.now() - new Date(message.createdAt).getTime() <= site.limits.messageEditWindowMinutes * 60_000 : false}
+                canEdit={
+                  site
+                    ? Date.now() - new Date(message.createdAt).getTime() <=
+                      site.limits.messageEditWindowMinutes * 60_000
+                    : false
+                }
                 replyPreview={message.replyToId ? messages.find((m) => m.id === message.replyToId)?.text : undefined}
                 onReply={() => setReplyTo(message)}
                 onEdit={() => setEditing(message)}

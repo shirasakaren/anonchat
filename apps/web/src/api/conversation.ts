@@ -21,7 +21,10 @@ export async function sendMessage(params: {
   attachments?: OutgoingAttachment[];
 }): Promise<MessageDto> {
   if (!params.attachments || params.attachments.length === 0) {
-    return api.post<MessageDto>("/conversation/messages", { content: params.content, replyToId: params.replyToId ?? null });
+    return api.post<MessageDto>("/conversation/messages", {
+      content: params.content,
+      replyToId: params.replyToId ?? null,
+    });
   }
   const form = new FormData();
   form.append("content", JSON.stringify(params.content));

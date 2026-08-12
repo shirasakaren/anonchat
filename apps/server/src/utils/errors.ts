@@ -18,8 +18,7 @@ export const Errors = {
   notFound: (message = "Not found.") => new AppError(404, "NOT_FOUND", message),
   badRequest: (message = "That request doesn't look right.") => new AppError(400, "BAD_REQUEST", message),
   conflict: (message = "That already exists.") => new AppError(409, "CONFLICT", message),
-  blocked: (message = "You can no longer send messages in this conversation.") =>
-    new AppError(403, "BLOCKED", message),
+  blocked: (message = "You can no longer send messages in this conversation.") => new AppError(403, "BLOCKED", message),
   rateLimited: (message = "You're sending messages too quickly. Please slow down and try again shortly.") =>
     new AppError(429, "RATE_LIMITED", message),
   tooLarge: (message = "That upload is too large.") => new AppError(413, "PAYLOAD_TOO_LARGE", message),

@@ -47,14 +47,21 @@ export function MessageBubble({
     [message.reactions, conversationKey],
   );
 
-  const myReaction = decryptedReactions.find((r) => r.senderType === (isOwn ? message.senderType : message.senderType === "USER" ? "ADMIN" : "USER"));
+  const myReaction = decryptedReactions.find(
+    (r) => r.senderType === (isOwn ? message.senderType : message.senderType === "USER" ? "ADMIN" : "USER"),
+  );
 
   const html = message.deleted ? null : renderMessageMarkdown(message.text);
 
   return (
     <div className={clsx("group flex flex-col gap-1", isOwn ? "items-end" : "items-start")}>
       {replyPreview && (
-        <div className={clsx("max-w-[80%] truncate rounded-md border-l-2 px-2 py-1 text-xs text-[var(--text-muted)]", "border-[var(--color-accent-400)]")}>
+        <div
+          className={clsx(
+            "max-w-[80%] truncate rounded-md border-l-2 px-2 py-1 text-xs text-[var(--text-muted)]",
+            "border-[var(--color-accent-400)]",
+          )}
+        >
           {replyPreview}
         </div>
       )}
@@ -77,7 +84,9 @@ export function MessageBubble({
         <div
           className={clsx(
             "rounded-2xl px-3.5 py-2 text-sm shadow-sm",
-            isOwn ? "bg-[var(--bubble-user)] text-[var(--bubble-user-text)]" : "bg-[var(--bubble-admin)] text-[var(--bubble-admin-text)]",
+            isOwn
+              ? "bg-[var(--bubble-user)] text-[var(--bubble-user-text)]"
+              : "bg-[var(--bubble-admin)] text-[var(--bubble-admin-text)]",
           )}
         >
           {message.deleted ? (
@@ -87,7 +96,12 @@ export function MessageBubble({
               {message.attachments.length > 0 && (
                 <div className="mb-2 space-y-2">
                   {message.attachments.map((a) => (
-                    <AttachmentPreview key={a.id} attachment={a} conversationKey={conversationKey} downloadUrl={attachmentUrlFor(a.id)} />
+                    <AttachmentPreview
+                      key={a.id}
+                      attachment={a}
+                      conversationKey={conversationKey}
+                      downloadUrl={attachmentUrlFor(a.id)}
+                    />
                   ))}
                 </div>
               )}
@@ -186,7 +200,12 @@ function MessageActions({
       >
         🙂
       </button>
-      <button type="button" title="Reply" onClick={onReply} className="rounded p-1 text-xs hover:bg-[var(--surface-muted)]">
+      <button
+        type="button"
+        title="Reply"
+        onClick={onReply}
+        className="rounded p-1 text-xs hover:bg-[var(--surface-muted)]"
+      >
         ↩︎
       </button>
       {isOwn && canEdit && (

@@ -36,7 +36,13 @@ export function registerConversationRoutes(app: FastifyInstance): void {
       throw Errors.rateLimited();
     }
     const { content, replyToId, attachments } = await parseSendMessageBody(request, env.MAX_ATTACHMENTS_PER_MESSAGE);
-    const dto = await createMessage({ conversationId: conversation.id, senderType: "USER", content, replyToId, attachments });
+    const dto = await createMessage({
+      conversationId: conversation.id,
+      senderType: "USER",
+      content,
+      replyToId,
+      attachments,
+    });
     reply.status(201).send(dto);
   });
 

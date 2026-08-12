@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { THEMES, type ThemeMeta, themesByVariant } from "../../themes/index.js";
+import { type ThemeMeta, themesByVariant } from "../../themes/index.js";
 
 interface ThemePickerProps {
   /** The currently selected theme id. */

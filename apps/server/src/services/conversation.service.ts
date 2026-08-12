@@ -147,7 +147,10 @@ export async function getConversationForAdmin(conversationId: string): Promise<C
   return toConversationDto(conversation, conversation.anonymousUser, unreadCount);
 }
 
-export async function setConversationStatus(conversationId: string, status: ConversationStatus): Promise<ConversationDto> {
+export async function setConversationStatus(
+  conversationId: string,
+  status: ConversationStatus,
+): Promise<ConversationDto> {
   const conversation = await prisma.conversation.update({
     where: { id: conversationId },
     data: { status },
@@ -182,7 +185,9 @@ export async function hardDeleteConversation(conversationId: string): Promise<vo
 
   const storage = getStorageAdapter();
   await Promise.allSettled(
-    conversation.messages.flatMap((message) => message.attachments).map((attachment) => storage.delete(attachment.storageKey)),
+    conversation.messages
+      .flatMap((message) => message.attachments)
+      .map((attachment) => storage.delete(attachment.storageKey)),
   );
 
   await prisma.$transaction([

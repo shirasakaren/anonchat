@@ -1,7 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Identity } from "@anonchat/crypto";
 import type { PublicKeysInput } from "@anonchat/shared";
-import { getAnonymousMe, logoutAnonymous, recoverAnonymousSession, registerAnonymousIdentity } from "../api/anonymous.js";
+import {
+  getAnonymousMe,
+  logoutAnonymous,
+  recoverAnonymousSession,
+  registerAnonymousIdentity,
+} from "../api/anonymous.js";
 import { ApiError } from "../api/client.js";
 import {
   createIdentity as createIdentityInStore,
@@ -139,7 +144,16 @@ export function AnonymousSessionProvider({ children }: { children: ReactNode }) 
 
   return (
     <Ctx.Provider
-      value={{ status, session, error, createNewIdentity, continueWithStoredIdentity, importFromRecoveryPhrase, logout, setConversationStatus }}
+      value={{
+        status,
+        session,
+        error,
+        createNewIdentity,
+        continueWithStoredIdentity,
+        importFromRecoveryPhrase,
+        logout,
+        setConversationStatus,
+      }}
     >
       {children}
     </Ctx.Provider>

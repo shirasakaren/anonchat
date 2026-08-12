@@ -1,0 +1,274 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+  attestations: write
+  checks: write
+  pull-requests: read
+
+env:
+  PNPM_VERSION: "9.15.1"
+  NODE_VERSION: "22"
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # Run the full CI suite first (reuse, not re-define)
+  # ─────────────────────────────────────────────────────────────
+  ci:
+    name: "Pre-flight CI"
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
+  # ─────────────────────────────────────────────────────────────
+  # Determine next semantic version from conventional commits
+  # ─────────────────────────────────────────────────────────────
+  version:
+    name: "Determine version"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: ci
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      previous_version: ${{ steps.version.outputs.previous_version }}
+      bump: ${{ steps.bump.outputs.bump }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get previous version
+        id: previous
+        run: |
+          if [ -f VERSION ]; then
+            echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
+          else
+            echo "version=0.0.0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine version bump from conventional commits
+        id: bump
+        run: |
+          PREV_TAG="v${{ steps.previous.outputs.version }}"
+
+          # Get all commits since the last version tag
+          COMMITS=$(git log "${PREV_TAG}"..HEAD --pretty=format:"%s" 2>/dev/null || git log --pretty=format:"%s")
+
+          # Check for breaking changes (! after type/scope or BREAKING CHANGE footer)
+          if echo "$COMMITS" | grep -qE '^\w+(\(.+\))?!:'; then
+            echo "bump=major" >> $GITHUB_OUTPUT
+            echo "🔍 Found breaking changes → MAJOR bump" >> $GITHUB_STEP_SUMMARY
+          elif echo "$COMMITS" | grep -qE '^BREAKING CHANGE'; then
+            echo "bump=major" >> $GITHUB_OUTPUT
+            echo "🔍 Found BREAKING CHANGE footer → MAJOR bump" >> $GITHUB_STEP_SUMMARY
+          elif echo "$COMMITS" | grep -qE '^feat(\(.+\))?:'; then
+            echo "bump=minor" >> $GITHUB_OUTPUT
+            echo "🔍 Found feat commits → MINOR bump" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "bump=patch" >> $GITHUB_OUTPUT
+            echo "🔍 No feat/breaking commits → PATCH bump" >> $GITHUB_STEP_SUMMARY
+          fi
+        env:
+          PREV_TAG: v${{ steps.previous.outputs.version }}
+
+      - name: Calculate next version
+        id: version
+        run: |
+          PREV="${{ steps.previous.outputs.version }}"
+          BUMP="${{ steps.bump.outputs.bump }}"
+
+          # Split version into major.minor.patch
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$PREV"
+
+          case "$BUMP" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+          echo "previous_version=${PREV}" >> $GITHUB_OUTPUT
+          echo "📦 $PREV → v${NEW_VERSION} ($BUMP)" >> $GITHUB_STEP_SUMMARY
+
+  # ─────────────────────────────────────────────────────────────
+  # Build and push multi-platform Docker image to GHCR
+  # ─────────────────────────────────────────────────────────────
+  docker:
+    name: "Build & push image"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: version
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU for multi-platform builds
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log into GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ needs.version.outputs.version }}
+            type=sha,prefix=,format=short
+            type=ref,event=branch
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
+
+  # ─────────────────────────────────────────────────────────────
+  # Sign container image with cosign (keyless)
+  # ─────────────────────────────────────────────────────────────
+  sign:
+    name: "Sign image"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [version, docker]
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Log into GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sign container image
+        env:
+          DIGEST: ${{ needs.docker.outputs.digest }}
+        run: |
+          cosign sign --yes \
+            "${REGISTRY}/${IMAGE_NAME}@${DIGEST}"
+        continue-on-error: true
+
+  # ─────────────────────────────────────────────────────────────
+  # Create GitHub Release with changelog
+  # ─────────────────────────────────────────────────────────────
+  release:
+    name: "Create release"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [version, docker, sign]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV_TAG="v${{ needs.version.outputs.previous_version }}"
+
+          {
+            echo "## What's Changed"
+            echo ""
+            # Try to get commits since last tag; fall back to last 50 commits
+            if git rev-parse "$PREV_TAG" >/dev/null 2>&1; then
+              git log "${PREV_TAG}"..HEAD --pretty=format:"- %s (%h)" --no-merges
+            else
+              echo "- Initial release v${{ needs.version.outputs.version }}"
+            fi
+            echo ""
+            echo ""
+            echo "## Docker Image"
+            echo ""
+            echo "\`\`\`"
+            echo "docker pull ghcr.io/${{ env.IMAGE_NAME }}:${{ needs.version.outputs.version }}"
+            echo "docker pull ghcr.io/${{ env.IMAGE_NAME }}:latest"
+            echo "\`\`\`"
+          } > CHANGELOG.md
+
+      - name: Update VERSION file
+        run: |
+          echo "${{ needs.version.outputs.version }}" > VERSION
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add VERSION
+          git commit -m "chore: bump version to v${{ needs.version.outputs.version }}" || true
+          git push || true
+
+      - name: Create tag and GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.version.outputs.version }}
+          name: v${{ needs.version.outputs.version }}
+          body_path: CHANGELOG.md
+          draft: false
+          prerelease: ${{ contains(needs.version.outputs.version, '-') }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─────────────────────────────────────────────────────────────
+  # CD gate — summary
+  # ─────────────────────────────────────────────────────────────
+  cd-gate:
+    name: "CD complete"
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    needs: [version, docker, sign, release]
+    if: always()
+    steps:
+      - name: Publish summary
+        run: |
+          {
+            echo "## 🚀 Release v${{ needs.version.outputs.version }} published"
+            echo ""
+            echo "| Artifact | Reference |"
+            echo "|----------|-----------|"
+            echo "| Docker Image | \`ghcr.io/${{ env.IMAGE_NAME }}:${{ needs.version.outputs.version }}\` |"
+            echo "| Docker Image (latest) | \`ghcr.io/${{ env.IMAGE_NAME }}:latest\` |"
+            echo "| GitHub Release | [v${{ needs.version.outputs.version }}](${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ needs.version.outputs.version }}) |"
+          } >> $GITHUB_STEP_SUMMARY

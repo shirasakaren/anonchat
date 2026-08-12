@@ -94,7 +94,6 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversations, identity]);
 
   return (
@@ -114,7 +113,9 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
               onClick={() => setFilter(f.value)}
               className={clsx(
                 "rounded-full px-2.5 py-1 text-xs",
-                filter === f.value ? "bg-[var(--color-accent-600)] text-white" : "bg-[var(--surface-muted)] text-[var(--text-muted)]",
+                filter === f.value
+                  ? "bg-[var(--color-accent-600)] text-white"
+                  : "bg-[var(--surface-muted)] text-[var(--text-muted)]",
               )}
             >
               {f.label}
@@ -144,19 +145,32 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
             >
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-sm font-medium">
-                  <span className={clsx("h-2 w-2 rounded-full", conv.unreadCount > 0 ? "bg-[var(--color-accent-500)]" : "bg-transparent")} />
+                  <span
+                    className={clsx(
+                      "h-2 w-2 rounded-full",
+                      conv.unreadCount > 0 ? "bg-[var(--color-accent-500)]" : "bg-transparent",
+                    )}
+                  />
                   Anonymous #{conv.publicId}
                 </span>
                 {conv.lastMessageAt && (
-                  <span className="text-xs text-[var(--text-muted)]">{formatDistanceToNowStrict(new Date(conv.lastMessageAt), { addSuffix: true })}</span>
+                  <span className="text-xs text-[var(--text-muted)]">
+                    {formatDistanceToNowStrict(new Date(conv.lastMessageAt), { addSuffix: true })}
+                  </span>
                 )}
               </div>
               <p className="truncate text-xs text-[var(--text-muted)]">{previews[conv.id] ?? "…"}</p>
               <div className="flex items-center gap-1.5">
-                {conv.status === "ARCHIVED" && <span className="rounded bg-[var(--surface-muted)] px-1.5 py-0.5 text-[10px]">Archived</span>}
-                {conv.status === "BLOCKED" && <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] text-red-500">Blocked</span>}
+                {conv.status === "ARCHIVED" && (
+                  <span className="rounded bg-[var(--surface-muted)] px-1.5 py-0.5 text-[10px]">Archived</span>
+                )}
+                {conv.status === "BLOCKED" && (
+                  <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] text-red-500">Blocked</span>
+                )}
                 {conv.unreadCount > 0 && (
-                  <span className="rounded-full bg-[var(--color-accent-600)] px-1.5 py-0.5 text-[10px] text-white">{conv.unreadCount}</span>
+                  <span className="rounded-full bg-[var(--color-accent-600)] px-1.5 py-0.5 text-[10px] text-white">
+                    {conv.unreadCount}
+                  </span>
                 )}
               </div>
             </button>

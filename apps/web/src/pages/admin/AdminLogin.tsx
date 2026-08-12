@@ -31,7 +31,10 @@ export default function AdminLogin() {
   return (
     <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6">
       <h1 className="mb-6 text-center text-xl font-semibold">Admin sign in</h1>
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-raised)] p-6 shadow-sm">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-raised)] p-6 shadow-sm"
+      >
         <label className="block text-sm font-medium">
           Username
           <input

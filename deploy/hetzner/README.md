@@ -40,6 +40,7 @@ PaaS templates.
 ## Updating after a code change
 
 SSH into the VM and run:
+
 ```bash
 cd /opt/anonchat/src && git pull && docker compose up -d --build
 ```

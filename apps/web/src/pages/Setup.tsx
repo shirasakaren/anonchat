@@ -39,7 +39,9 @@ export default function Setup() {
   const [acknowledged, setAcknowledged] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pendingIdentity, setPendingIdentity] = useState<Awaited<ReturnType<typeof createAndCacheAdminIdentity>>["identity"] | null>(null);
+  const [pendingIdentity, setPendingIdentity] = useState<
+    Awaited<ReturnType<typeof createAndCacheAdminIdentity>>["identity"] | null
+  >(null);
 
   // One-time, independent check on mount - deliberately NOT tied to the
   // shared SiteContext value, since this component's own completion flow
@@ -124,8 +126,8 @@ export default function Setup() {
           <div className="space-y-4">
             <p className="text-sm text-[var(--text-muted)]">
               This is a one-time setup. You'll create your admin account and an encryption identity so anonymous
-              conversations sent to you are end-to-end encrypted. No one else will be able to run this step once
-              it's done.
+              conversations sent to you are end-to-end encrypted. No one else will be able to run this step once it's
+              done.
             </p>
             <button
               type="button"
@@ -173,7 +175,10 @@ export default function Setup() {
               />
             </label>
             <p className="text-xs text-[var(--text-muted)]">Shown to anonymous visitors as who they're talking to.</p>
-            <button type="submit" className="w-full rounded-lg bg-[var(--color-accent-600)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-700)]">
+            <button
+              type="submit"
+              className="w-full rounded-lg bg-[var(--color-accent-600)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-700)]"
+            >
               Continue
             </button>
           </form>
@@ -213,7 +218,10 @@ export default function Setup() {
               />
             </label>
             {error && <p className="text-sm text-red-500">{error}</p>}
-            <button type="submit" className="w-full rounded-lg bg-[var(--color-accent-600)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-700)]">
+            <button
+              type="submit"
+              className="w-full rounded-lg bg-[var(--color-accent-600)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-700)]"
+            >
               Continue
             </button>
           </form>
@@ -222,13 +230,18 @@ export default function Setup() {
         {step === "recovery" && recoveryPhrase && (
           <div className="space-y-4">
             <p className="text-sm text-[var(--text-muted)]">
-              This is your <strong>encryption recovery key</strong>. It decrypts every conversation you'll ever
-              receive. Save it somewhere safe - a password manager is ideal. If you lose it and ever log in from a
-              new browser, past messages become permanently unreadable.
+              This is your <strong>encryption recovery key</strong>. It decrypts every conversation you'll ever receive.
+              Save it somewhere safe - a password manager is ideal. If you lose it and ever log in from a new browser,
+              past messages become permanently unreadable.
             </p>
             <RecoveryPhraseDisplay phrase={recoveryPhrase} />
             <label className="flex items-start gap-2 text-sm">
-              <input type="checkbox" checked={acknowledged} onChange={(e) => setAcknowledged(e.target.checked)} className="mt-0.5" />
+              <input
+                type="checkbox"
+                checked={acknowledged}
+                onChange={(e) => setAcknowledged(e.target.checked)}
+                className="mt-0.5"
+              />
               I've saved my recovery key
             </label>
             {error && <p className="text-sm text-red-500">{error}</p>}

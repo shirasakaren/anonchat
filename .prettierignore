@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+pnpm-lock.yaml
+.turbo/
+.vite/
+data/
+uploads/
+*.tsbuildinfo
+prisma/*.db

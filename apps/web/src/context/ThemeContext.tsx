@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useSyncExternalStore, type ReactNode } from "react";
 import { DEFAULT_THEME, THEMES, type ThemeMeta, getThemeMeta } from "../themes/index.js";
 
 // ── Store ──────────────────────────────────────────────────────────────
@@ -9,14 +9,18 @@ function readStoredTheme(): string {
   try {
     const stored = localStorage.getItem(THEME_KEY);
     if (stored && getThemeMeta(stored)) return stored;
-  } catch { /* localStorage may be unavailable */ }
+  } catch {
+    /* localStorage may be unavailable */
+  }
   return DEFAULT_THEME;
 }
 
 function writeStoredTheme(id: string): void {
   try {
     localStorage.setItem(THEME_KEY, id);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 // ── Simple external store for useSyncExternalStore ─────────────────────
