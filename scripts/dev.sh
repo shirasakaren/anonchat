@@ -68,6 +68,7 @@ fi
 ENV_FILE="apps/server/.env"
 if [ ! -f "${ENV_FILE}" ]; then
   echo "▶ Writing ${ENV_FILE} with dev defaults..."
+  umask 077
   cat > "${ENV_FILE}" <<EOF
 DATABASE_URL=${DATABASE_URL}
 SESSION_SECRET=dev-only-secret-generate-a-real-one-with-openssl-rand-hex-32
@@ -77,6 +78,7 @@ PORT=3000
 EOF
 else
   echo "✓ ${ENV_FILE} exists (not overwriting)"
+  chmod 600 "${ENV_FILE}"
 fi
 
 # ── 4. Migrations ───────────────────────────────────────────────────────

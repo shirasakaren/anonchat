@@ -62,6 +62,7 @@ fi
 ENV_FILE="apps/server/.env"
 echo "▶ Ensuring ${ENV_FILE} has preview settings..."
 if [ ! -f "${ENV_FILE}" ]; then
+  umask 077
   cat > "${ENV_FILE}" <<EOF
 DATABASE_URL=${DATABASE_URL}
 SESSION_SECRET=dev-only-secret-generate-a-real-one-with-openssl-rand-hex-32
@@ -75,6 +76,7 @@ else
     sed -i "s|^DATABASE_URL=.*|DATABASE_URL=${DATABASE_URL}|" "${ENV_FILE}"
   sed -i '' "s|^PUBLIC_URL=.*|PUBLIC_URL=http://localhost:3000|" "${ENV_FILE}" 2>/dev/null || \
     sed -i "s|^PUBLIC_URL=.*|PUBLIC_URL=http://localhost:3000|" "${ENV_FILE}"
+  chmod 600 "${ENV_FILE}"
 fi
 
 # ── 4. Migrations ───────────────────────────────────────────────────────
