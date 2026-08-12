@@ -229,6 +229,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Generate Prisma client
+        run: pnpm --filter @anonchat/server run db:generate
+
       - name: Build all packages
         run: pnpm run build
 
