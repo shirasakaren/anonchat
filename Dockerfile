@@ -46,7 +46,8 @@ RUN pnpm --filter @anonchat/server --prod deploy /deployed
 # pnpm deploy re-resolves node_modules into a fresh virtual store, which
 # does not carry over the Prisma Client generated during the build stage -
 # regenerate it here so it lands in the deployed node_modules.
-RUN cd /deployed && node_modules/.bin/prisma generate --schema=prisma/schema.prisma
+WORKDIR /deployed
+RUN node_modules/.bin/prisma generate --schema=prisma/schema.prisma
 
 # ---------------------------------------------------------------------------
 # runtime: minimal final image
@@ -74,7 +75,7 @@ USER anonchat
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD curl -sf http://localhost:3000/health || exit 1
+  CMD ["curl", "-sf", "http://localhost:3000/health"]
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["node", "dist/main.js"]
