@@ -25,6 +25,10 @@ FROM deps AS build
 COPY packages packages
 COPY apps apps
 COPY tsconfig.base.json ./
+# Prisma generate needs DATABASE_URL to validate the schema, but it doesn't
+# actually connect — a dummy postgres:// URL satisfies it during build.
+ARG DATABASE_URL=postgresql://dummy:5432/dummy
+ENV DATABASE_URL=${DATABASE_URL}
 RUN pnpm --filter @anonchat/crypto run build \
   && pnpm --filter @anonchat/shared run build \
   && pnpm --filter @anonchat/server run db:generate \

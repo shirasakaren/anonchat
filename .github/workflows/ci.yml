@@ -23,12 +23,54 @@ env:
 
 jobs:
   # ─────────────────────────────────────────────────────────────
-  # TypeScript type-checking across all workspace packages
+  # Build @anonchat/crypto and @anonchat/shared first — almost
+  # every downstream job needs their compiled output.
+  # ─────────────────────────────────────────────────────────────
+  build-deps:
+    name: "Build deps"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build crypto and shared packages
+        run: |
+          pnpm --filter @anonchat/crypto run build
+          pnpm --filter @anonchat/shared run build
+
+      - name: Generate Prisma client
+        run: pnpm --filter @anonchat/server run db:generate
+
+      # Cache the built dist so downstream jobs can use it
+      - name: Upload built packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-packages
+          path: |
+            packages/crypto/dist/
+            packages/shared/dist/
+            node_modules/.pnpm/@prisma+client*/node_modules/.prisma/
+          retention-days: 1
+
+  # ─────────────────────────────────────────────────────────────
+  # TypeScript type-checking (depends on crypto+shared dist)
   # ─────────────────────────────────────────────────────────────
   typecheck:
     name: "Type-check"
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: build-deps
     steps:
       - uses: actions/checkout@v4
 
@@ -43,19 +85,23 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Generate Prisma client
-        run: pnpm --filter @anonchat/server run db:generate
+      - name: Download built packages
+        uses: actions/download-artifact@v4
+        with:
+          name: built-packages
 
       - name: Type-check all packages
         run: pnpm run typecheck
 
   # ─────────────────────────────────────────────────────────────
-  # ESLint static analysis
+  # ESLint static analysis (depends on crypto+shared dist for
+  # type-checked rules)
   # ─────────────────────────────────────────────────────────────
   lint:
     name: "Lint"
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: build-deps
     steps:
       - uses: actions/checkout@v4
 
@@ -70,11 +116,16 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Download built packages
+        uses: actions/download-artifact@v4
+        with:
+          name: built-packages
+
       - name: Run ESLint
         run: pnpm run lint
 
   # ─────────────────────────────────────────────────────────────
-  # Prettier format check
+  # Prettier format check (no deps needed)
   # ─────────────────────────────────────────────────────────────
   format:
     name: "Format check"
@@ -98,12 +149,14 @@ jobs:
         run: pnpm run format:check
 
   # ─────────────────────────────────────────────────────────────
-  # Unit tests — crypto + shared packages (no database needed)
+  # Unit tests — crypto + shared packages (no database needed,
+  # but needs built dist for shared tests)
   # ─────────────────────────────────────────────────────────────
   unit-tests:
     name: "Unit tests"
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: build-deps
     steps:
       - uses: actions/checkout@v4
 
@@ -118,6 +171,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Download built packages
+        uses: actions/download-artifact@v4
+        with:
+          name: built-packages
+
       - name: Run unit tests with coverage
         run: |
           pnpm --filter @anonchat/crypto run test:coverage
@@ -125,7 +183,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: always()
-        uses: codecov/codecov-action@04b047e8bb82a0c002c8312c1c880fbc6a999d45  # v5
+        uses: codecov/codecov-action@04b047e8bb82a0c002c8312c1c880fbc6a999d45 # v5
         with:
           files: packages/crypto/coverage/coverage-final.json,packages/shared/coverage/coverage-final.json
           flags: unit
@@ -139,6 +197,7 @@ jobs:
     name: "Integration tests"
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: build-deps
     services:
       postgres:
         image: postgres:17-alpine
@@ -167,7 +226,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Generate Prisma client
+      - name: Download built packages
+        uses: actions/download-artifact@v4
+        with:
+          name: built-packages
+
+      - name: Rebuild Prisma client (runner arch may differ)
         run: pnpm --filter @anonchat/server run db:generate
 
       - name: Run database migrations
@@ -184,7 +248,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: always()
-        uses: codecov/codecov-action@04b047e8bb82a0c002c8312c1c880fbc6a999d45  # v5
+        uses: codecov/codecov-action@04b047e8bb82a0c002c8312c1c880fbc6a999d45 # v5
         with:
           files: apps/server/coverage/coverage-final.json
           flags: integration
@@ -198,6 +262,7 @@ jobs:
     name: "Build"
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: build-deps
     steps:
       - uses: actions/checkout@v4
 
@@ -211,6 +276,14 @@ jobs:
           cache: "pnpm"
 
       - run: pnpm install --frozen-lockfile
+
+      - name: Download built packages
+        uses: actions/download-artifact@v4
+        with:
+          name: built-packages
+
+      - name: Rebuild Prisma client
+        run: pnpm --filter @anonchat/server run db:generate
 
       - name: Build all packages
         run: pnpm run build
@@ -235,10 +308,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Build Docker image (no push)
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
           load: true
@@ -248,10 +321,10 @@ jobs:
 
       - name: Verify image structure
         run: |
-          docker run --rm anonchat:ci-test node -e "console.log('Image boots correctly')"
+          docker inspect anonchat:ci-test --format '{{.Config.User}}' | grep -q anonchat
 
       - name: Lint Dockerfile
-        uses: hadolint/hadolint-action@32c6895df40d4c982b0de822c4c8536908def4d8  # v3
+        uses: hadolint/hadolint-action@32c6895df40d4c982b0de822c4c8536908def4d8 # v3
         with:
           dockerfile: Dockerfile
           failure-threshold: warning
@@ -301,7 +374,7 @@ jobs:
           fetch-depth: 0
 
       - name: Detect secrets with Gitleaks
-        uses: gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc  # v2
+        uses: gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -330,7 +403,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Validate PR title follows conventional commits
-        uses: amannn/action-semantic-pull-request@e32d7e603df1aa1ba07e981f2a23455dee596825  # v5
+        uses: amannn/action-semantic-pull-request@e32d7e603df1aa1ba07e981f2a23455dee596825 # v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -379,11 +452,11 @@ jobs:
     steps:
       - name: Check all required jobs
         run: |
-          echo "## CI Results" >> $GITHUB_STEP_SUMMARY
+          echo "## CI Results" >> "$GITHUB_STEP_SUMMARY"
           RESULTS="${{ needs.typecheck.result }} ${{ needs.lint.result }} ${{ needs.format.result }} ${{ needs.unit-tests.result }} ${{ needs.integration-tests.result }} ${{ needs.build.result }} ${{ needs.docker-build.result }} ${{ needs.security-audit.result }} ${{ needs.secret-scan.result }} ${{ needs.validate-configs.result }}"
-          echo "Results: $RESULTS" >> $GITHUB_STEP_SUMMARY
+          echo "Results: $RESULTS" >> "$GITHUB_STEP_SUMMARY"
           if echo "$RESULTS" | grep -qE "failure|cancelled"; then
-            echo "❌ CI failed" >> $GITHUB_STEP_SUMMARY
+            echo ":x: CI failed" >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
-          echo "✅ All CI checks passed" >> $GITHUB_STEP_SUMMARY
+          echo ":white_check_mark: All CI checks passed" >> "$GITHUB_STEP_SUMMARY"

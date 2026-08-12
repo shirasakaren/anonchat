@@ -19,9 +19,9 @@ fix release.
 
 ## Supported Versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| latest  | :white_check_mark: |
+| Version  | Supported          |
+| -------- | ------------------ |
+| latest   | :white_check_mark: |
 | < latest | :x:                |
 
 Only the latest tagged release receives security patches.
