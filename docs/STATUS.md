@@ -7,11 +7,12 @@ this file is what's meant to survive across sessions.)
 
 ## Where things stand
 
-Every planned feature is built, and the full stack has been exercised in a
-real headless browser (Playwright) against a real Postgres instance in
-Docker - not just unit-tested in isolation. **The one thing that has not
-happened yet is a dedicated security review pass.** See "Immediate next
-step" below.
+Every planned feature is built, the full stack has been exercised in a real
+headless browser (Playwright) against a real Postgres instance in Docker,
+and a dedicated security review pass has since been done and its findings
+fixed (see "Security review" below). There is no "immediate next step" -
+the project is feature-complete, tested, and reviewed. Anything further is
+a deliberately deferred follow-up (see "Known gaps").
 
 ### Done and verified
 
@@ -24,7 +25,7 @@ step" below.
   and the setup script.
 - **`apps/server`** - Fastify REST API, WebSocket hub, auth (anonymous
   challenge-response + admin password/TOTP), storage abstraction
-  (local/S3), rate limiting, CSRF, security headers. 6 integration tests
+  (local/S3), rate limiting, CSRF, security headers. 7 integration tests
   passing against real Postgres (`pnpm --filter @termine/server run test`).
 - **`apps/web`** - public chat UI and admin dashboard, both typecheck clean
   (`pnpm --filter @termine/web run typecheck`).
@@ -102,17 +103,73 @@ hypothetical, they reproduced in a real browser:
    version), and the container-app module's `cpu` field is a plain number,
    not a string. All fixed; template now compiles with zero errors/warnings.
 
+### Security review (done)
+
+A dedicated review pass (crypto core, auth/session/CSRF, WebSocket hub,
+every route's ownership/authorization scoping, storage adapters, frontend
+key handling, Docker/secrets config) found and fixed the following, most
+severe first. All are on `main`; see the individual commit messages for
+exact diffs.
+
+1. **CRITICAL - blocked users could still edit/delete/react.** `Conversation.status`
+   was only checked by `createMessage` (the send path). `editMessage`,
+   `deleteMessage`, and `setReaction` never checked it at all, and the
+   frontend didn't gate those buttons either - a blocked user could still
+   wipe their own message history (destroying moderation evidence) or spam
+   reactions on the admin's messages indefinitely. Fixed server-side
+   (`message.service.ts`, with a regression test) and client-side
+   (`MessageBubble.tsx`/`Chat.tsx` now disable those buttons when blocked).
+2. **HIGH - no rate limiting on edit/delete/react or attachment downloads.**
+   Only the two message-*send* routes were throttled. Fixed by rate-limiting
+   all of them (anon and admin sides).
+3. **LOW - admin message edit/delete/react weren't audit-logged**, unlike
+   every other admin mutation (block/archive/delete/etc). Fixed.
+4. **Anonymous `/challenge` and `/recover` had no rate limit**, unlike
+   `/register` and admin `/login` - each call inserts into an in-memory
+   challenge map evicted only by a 60s sweep, so an unthrottled flood could
+   outgrow the sweep. Fixed.
+5. **`@fastify/multipart` only capped `fileSize`/`files`**, leaving
+   `fields`/`fieldSize`/`parts` at busboy's effectively-unbounded defaults -
+   a request could pad itself with oversized non-file fields before ever
+   reaching a file part. Fixed with explicit bounds.
+6. **No Origin check on the `/ws` upgrade.** `SameSite=Lax` on the session
+   cookie already blunts cross-site WebSocket hijacking in modern browsers,
+   but added an explicit Origin allowlist check as defense-in-depth that
+   doesn't depend on that.
+7. **`docker-compose.yml`'s optional `minio` profile had an insecure default
+   password** (`MINIO_ROOT_PASSWORD:-changeme12345`) if the operator enabled
+   it by hand instead of via `scripts/setup.sh` (which already generates a
+   strong one). Removed the fallback - it's required now, same as
+   `POSTGRES_PASSWORD`.
+8. **`.env.example`'s `TURNSTILE_*` comment implied CAPTCHA protection that
+   doesn't exist** - the server never actually verifies a token against
+   those keys (there's no CAPTCHA integration at all yet, only the env vars
+   and the site-key passthrough). Corrected the comment to say so plainly
+   rather than leaving an operator with a false sense of bot protection.
+9. **Attachment downloads sent `Cache-Control: ... immutable, max-age=1y`.**
+   A deleted attachment's ciphertext could still linger in the browser's
+   disk cache long after server-side deletion. Changed to `no-store`.
+
+Deliberately **not** changed (assessed as acceptable, not fixed to avoid
+scope creep on a review pass - see "Known gaps" if you want to pick these
+up):
+- Attachment upload/download still fully buffers in memory rather than
+  streaming to/from storage. Bounded by existing size caps (25MB/attachment
+  x 5/message by default = ~125MB/request) and now also rate-limited; a
+  real fix would mean changing the `StorageAdapter` interface to streams.
+- Turnstile/CAPTCHA itself is still unimplemented (see finding 8) - only
+  its misleading documentation was fixed. Implementing it is a feature
+  addition, not a bug fix.
+
 ### Known gaps (not started / deliberately deferred)
 
-- **Security review pass has not been run.** This is task #16 and the
-  natural next step - see below.
 - **No DOM-dependent frontend tests** (e.g. for `markdown.ts`'s XSS
   sanitization via DOMPurify, or React component rendering) - would need a
   jsdom test environment wired into `apps/web`'s vitest config, which
   doesn't exist yet. `packages/crypto`, `packages/shared`, `apps/server`,
   and the DOM-independent parts of `apps/web` (emoji shortcodes, the E2EE
   conversation-crypto round-trip) all have real unit test coverage and pass
-  (56 tests total, zero failures, as of this writing). The XSS-sanitization
+  (57 tests total, zero failures, as of this writing). The XSS-sanitization
   path itself was exercised manually via the Playwright browser tests
   (markdown rendered correctly, no injection observed) but doesn't have an
   automated regression test.
@@ -139,19 +196,19 @@ hypothetical, they reproduced in a real browser:
   config apply` for each is still an unknown - budget time to debug on
   first real deploy.
 
-## Immediate next step
+## Suggested next steps
 
-**Task #16: security review pass.** Run the `security-review` skill over
-the full diff (or `git log` back to the initial commit, since this is a
-fresh repo built entirely in one continuous effort) and fix what it finds,
-then re-report. Given how much of this project is security-load-bearing
-(E2EE design, auth, admin session handling, CSRF, rate limiting, attachment
-handling), take it seriously rather than treating it as a formality.
-
-After that, reasonable follow-ups in rough priority order:
+Nothing is blocking or required - the project is feature-complete, tested,
+and has been through a security review pass. If picking this up further,
+reasonable follow-ups in rough priority order:
 1. Route-based code-splitting for the web bundle (quick, low-risk).
 2. A minimal PWA service worker if installability matters to the user.
-3. Actually deploy-test one of the five cloud templates against a real
+3. Streaming attachment upload/download instead of full in-memory
+   buffering, if this instance expects heavy attachment traffic (see
+   "Security review" above for why this was deliberately left as-is).
+4. Actually implementing Turnstile/CAPTCHA verification if bot signups
+   become a real problem (today's mitigation is the per-IP rate limit).
+5. Actually deploy-test one of the five cloud templates against a real
    account, if/when the user wants that validated for real (ask first -
    each one provisions real, billable infrastructure).
 
