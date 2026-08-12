@@ -93,9 +93,9 @@ export function updateSettings(
   return api.patch<SiteSettingsDto>("/admin/settings", patch);
 }
 
-export async function uploadAvatar(file: File): Promise<SiteSettingsDto> {
+export async function uploadAvatar(file: File | Blob): Promise<SiteSettingsDto> {
   const form = new FormData();
-  form.append("file", file);
+  form.append("file", file, file instanceof File ? file.name : "avatar.jpg");
   return apiFetch<SiteSettingsDto>("/admin/avatar", { method: "POST", body: form });
 }
 

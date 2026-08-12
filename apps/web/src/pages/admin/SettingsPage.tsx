@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import clsx from "clsx";
 import type { SiteSettingsDto } from "@anonchat/shared";
 import {
   getSettings,
@@ -13,6 +14,7 @@ import { useAdminNotifications } from "../../hooks/useAdminNotifications.js";
 import { useTheme } from "../../context/ThemeContext.js";
 import { FullScreenLoader } from "../../components/common/Loader.js";
 import { ThemePicker } from "../../components/common/ThemePicker.js";
+import { AvatarCropper } from "../../components/common/AvatarCropper.js";
 
 export default function SettingsPage() {
   const { admin, refreshAdmin } = useAdminSession();
@@ -34,6 +36,8 @@ export default function SettingsPage() {
   const [totpSetup, setTotpSetup] = useState<{ secret: string; uri: string } | null>(null);
   const [totpCode, setTotpCode] = useState("");
   const [totpError, setTotpError] = useState<string | null>(null);
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   useEffect(() => {
     getSettings().then((s) => {
@@ -96,11 +100,22 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    const updated = await uploadAvatar(file);
-    setSettings(updated);
+    setPendingAvatarFile(file);
+  }
+
+  async function handleAvatarCropped(blob: Blob) {
+    setPendingAvatarFile(null);
+    setAvatarUploading(true);
+    try {
+      const updated = await uploadAvatar(blob);
+      setSettings(updated);
+    } finally {
+      setAvatarUploading(false);
+    }
   }
 
   async function handleEnableTotp() {
@@ -136,11 +151,29 @@ export default function SettingsPage() {
           {settings.avatarUrl && (
             <img src={settings.avatarUrl} alt="" className="h-14 w-14 rounded-full object-cover" />
           )}
-          <label className="cursor-pointer text-sm text-[var(--color-accent-600)]">
-            Change avatar
-            <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+          <label
+            className={clsx(
+              "text-sm text-[var(--color-accent-600)]",
+              avatarUploading ? "pointer-events-none opacity-50" : "cursor-pointer",
+            )}
+          >
+            {avatarUploading ? "Uploading…" : "Change avatar"}
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="hidden"
+              disabled={avatarUploading}
+              onChange={handleAvatarChange}
+            />
           </label>
         </div>
+        {pendingAvatarFile && (
+          <AvatarCropper
+            file={pendingAvatarFile}
+            onCancel={() => setPendingAvatarFile(null)}
+            onCropped={(blob) => void handleAvatarCropped(blob)}
+          />
+        )}
         <label className="mb-3 block text-sm font-medium">
           Display name
           <input
