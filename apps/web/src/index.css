@@ -1,43 +1,52 @@
 @import "tailwindcss";
+@import "./themes/themes.css";
+
+/* ── Tailwind v4 theme token declarations ──────────────────────────── */
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --color-accent-50: #eef4ff;
-  --color-accent-100: #dfe9ff;
-  --color-accent-300: #a3bfff;
-  --color-accent-500: #4f6df5;
-  --color-accent-600: #3c56db;
-  --color-accent-700: #2f44ad;
 }
+
+/* ── Fallback defaults (monochrome-dark) before JS applies data-theme ─ */
 
 :root {
-  color-scheme: light dark;
-  --surface: #ffffff;
-  --surface-muted: #f4f5f7;
-  --surface-raised: #ffffff;
-  --border: #e2e4e9;
-  --text: #14161a;
-  --text-muted: #6b7280;
-  --bubble-user: #4f6df5;
-  --bubble-user-text: #ffffff;
-  --bubble-admin: #f0f1f4;
-  --bubble-admin-text: #14161a;
+  color-scheme: dark;
+  --surface: #0a0a0a;
+  --surface-muted: #14161a;
+  --surface-raised: #1a1d22;
+  --border: #2c303a;
+  --text: #f4f5f7;
+  --text-muted: #9aa0ac;
+  --bubble-user: #ffffff;
+  --bubble-user-text: #0a0a0a;
+  --bubble-admin: #1e2128;
+  --bubble-admin-text: #f4f5f7;
+  --color-accent-50: #f4f5f7;
+  --color-accent-100: #e2e4e9;
+  --color-accent-300: #9aa0ac;
+  --color-accent-400: #7d848f;
+  --color-accent-500: #5a5f6a;
+  --color-accent-600: #e2e4e9;
+  --color-accent-700: #ffffff;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --surface: #14161a;
-    --surface-muted: #1b1e24;
-    --surface-raised: #20242c;
-    --border: #2c303a;
-    --text: #f4f5f7;
-    --text-muted: #9aa0ac;
-    --bubble-user: #4f6df5;
-    --bubble-user-text: #ffffff;
-    --bubble-admin: #262a33;
-    --bubble-admin-text: #f4f5f7;
-  }
+/* ── Light-theme color-scheme overrides ────────────────────────────── */
+
+[data-theme="paper"],
+[data-theme="forest-light"],
+[data-theme="ocean-light"],
+[data-theme="rose-light"],
+[data-theme="lavender-light"],
+[data-theme="mint-light"],
+[data-theme="honey-light"],
+[data-theme="cloud-light"],
+[data-theme="matcha"],
+[data-theme="sepia"],
+[data-theme="glacier"] {
+  color-scheme: light;
 }
+
+/* ── Global reset / layout ─────────────────────────────────────────── */
 
 html,
 body,
@@ -67,6 +76,8 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* ── Message prose ─────────────────────────────────────────────────── */
 
 .prose-message a {
   color: var(--color-accent-600);

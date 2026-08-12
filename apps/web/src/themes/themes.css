@@ -1,0 +1,542 @@
+/* ==========================================================================
+   Anonchat — Theme System
+   25 color themes: 10 dark, 8 light, 7 gradient/special
+   Default: monochrome-dark (dark background, white monochrome palette)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   DARK THEMES (1–10)
+   -------------------------------------------------------------------------- */
+
+/* 1. Monochrome Dark — DEFAULT. Dark canvas with white/neutral text. */
+[data-theme="monochrome-dark"] {
+  --surface: #0a0a0a;
+  --surface-muted: #14161a;
+  --surface-raised: #1a1d22;
+  --border: #2c303a;
+  --text: #f4f5f7;
+  --text-muted: #9aa0ac;
+  --bubble-user: #ffffff;
+  --bubble-user-text: #0a0a0a;
+  --bubble-admin: #1e2128;
+  --bubble-admin-text: #f4f5f7;
+  --color-accent-50: #f4f5f7;
+  --color-accent-100: #e2e4e9;
+  --color-accent-300: #9aa0ac;
+  --color-accent-400: #7d848f;
+  --color-accent-500: #5a5f6a;
+  --color-accent-600: #e2e4e9;
+  --color-accent-700: #ffffff;
+}
+
+/* 2. Forest Dark — Deep evergreen, green accents. */
+[data-theme="forest-dark"] {
+  --surface: #0a1310;
+  --surface-muted: #0f1c16;
+  --surface-raised: #16261e;
+  --border: #243a30;
+  --text: #dce8e0;
+  --text-muted: #7a9a82;
+  --bubble-user: #2d8a4e;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #1c2e24;
+  --bubble-admin-text: #dce8e0;
+  --color-accent-50: #e0f5e6;
+  --color-accent-100: #b8e6c8;
+  --color-accent-300: #4dba6e;
+  --color-accent-400: #35a058;
+  --color-accent-500: #2d8a4e;
+  --color-accent-600: #267a42;
+  --color-accent-700: #1e6335;
+}
+
+/* 3. Ocean Dark — Deep navy, blue accents. */
+[data-theme="ocean-dark"] {
+  --surface: #0a0f1a;
+  --surface-muted: #101624;
+  --surface-raised: #181e30;
+  --border: #26304a;
+  --text: #d8e0f4;
+  --text-muted: #7888b0;
+  --bubble-user: #3b6fb6;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #1c2438;
+  --bubble-admin-text: #d8e0f4;
+  --color-accent-50: #e0eaf8;
+  --color-accent-100: #b8ccee;
+  --color-accent-300: #5a8ed4;
+  --color-accent-400: #4a7ec4;
+  --color-accent-500: #3b6fb6;
+  --color-accent-600: #3360a0;
+  --color-accent-700: #2a4e82;
+}
+
+/* 4. Crimson Dark — Deep burgundy, rose accents. */
+[data-theme="crimson-dark"] {
+  --surface: #1a0a0e;
+  --surface-muted: #241016;
+  --surface-raised: #301820;
+  --border: #4a2430;
+  --text: #f4d8dc;
+  --text-muted: #b07880;
+  --bubble-user: #b63b4a;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #381c24;
+  --bubble-admin-text: #f4d8dc;
+  --color-accent-50: #fce0e4;
+  --color-accent-100: #f6b8c0;
+  --color-accent-300: #d45a6a;
+  --color-accent-400: #c44a5a;
+  --color-accent-500: #b63b4a;
+  --color-accent-600: #a03240;
+  --color-accent-700: #822836;
+}
+
+/* 5. Amethyst Dark — Deep plum, purple accents. */
+[data-theme="amethyst-dark"] {
+  --surface: #120a1a;
+  --surface-muted: #1c1026;
+  --surface-raised: #261834;
+  --border: #3c2650;
+  --text: #e4d8f8;
+  --text-muted: #9078b8;
+  --bubble-user: #7b3bb6;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #2c1c3c;
+  --bubble-admin-text: #e4d8f8;
+  --color-accent-50: #ece0fc;
+  --color-accent-100: #d4b8f6;
+  --color-accent-300: #9a5ad4;
+  --color-accent-400: #8a4ac4;
+  --color-accent-500: #7b3bb6;
+  --color-accent-600: #6a32a0;
+  --color-accent-700: #562882;
+}
+
+/* 6. Teal Dark — Deep teal waters. */
+[data-theme="teal-dark"] {
+  --surface: #0a1816;
+  --surface-muted: #102220;
+  --surface-raised: #182e2c;
+  --border: #264644;
+  --text: #d0f0ee;
+  --text-muted: #72a09c;
+  --bubble-user: #2d8a82;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #1c3432;
+  --bubble-admin-text: #d0f0ee;
+  --color-accent-50: #d8f8f6;
+  --color-accent-100: #a8ece8;
+  --color-accent-300: #4dbaa8;
+  --color-accent-400: #3aa898;
+  --color-accent-500: #2d8a82;
+  --color-accent-600: #267870;
+  --color-accent-700: #1e6058;
+}
+
+/* 7. Amber Dark — Warm earth, gold accents. */
+[data-theme="amber-dark"] {
+  --surface: #1a140a;
+  --surface-muted: #241c10;
+  --surface-raised: #302618;
+  --border: #4a3a24;
+  --text: #f4e8d0;
+  --text-muted: #b09a70;
+  --bubble-user: #c88a2a;
+  --bubble-user-text: #1a140a;
+  --bubble-admin: #382e1c;
+  --bubble-admin-text: #f4e8d0;
+  --color-accent-50: #fcf0d8;
+  --color-accent-100: #f6dea8;
+  --color-accent-300: #d4a64d;
+  --color-accent-400: #cc963a;
+  --color-accent-500: #c88a2a;
+  --color-accent-600: #b07824;
+  --color-accent-700: #8a5c1e;
+}
+
+/* 8. Slate Dark — Cool blue-gray. */
+[data-theme="slate-dark"] {
+  --surface: #0e1016;
+  --surface-muted: #141820;
+  --surface-raised: #1c202c;
+  --border: #2c3242;
+  --text: #dce0e8;
+  --text-muted: #788098;
+  --bubble-user: #5a6e8a;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #222838;
+  --bubble-admin-text: #dce0e8;
+  --color-accent-50: #e4e8f0;
+  --color-accent-100: #c0c8d8;
+  --color-accent-300: #7a8ea8;
+  --color-accent-400: #6a7e98;
+  --color-accent-500: #5a6e8a;
+  --color-accent-600: #4e6078;
+  --color-accent-700: #3e4e62;
+}
+
+/* 9. Emerald Dark — Rich gemstone green. */
+[data-theme="emerald-dark"] {
+  --surface: #0a1810;
+  --surface-muted: #0f2016;
+  --surface-raised: #162c1e;
+  --border: #244232;
+  --text: #d0f0d8;
+  --text-muted: #6aaa7a;
+  --bubble-user: #2a8a4a;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #1c3424;
+  --bubble-admin-text: #d0f0d8;
+  --color-accent-50: #d8ffe4;
+  --color-accent-100: #a8f0bc;
+  --color-accent-300: #4dba60;
+  --color-accent-400: #3aa850;
+  --color-accent-500: #2a8a4a;
+  --color-accent-600: #247840;
+  --color-accent-700: #1e6032;
+}
+
+/* 10. Graphite Dark — Neutral gray, balanced. */
+[data-theme="graphite-dark"] {
+  --surface: #131313;
+  --surface-muted: #1a1a1a;
+  --surface-raised: #222222;
+  --border: #353535;
+  --text: #e5e5e5;
+  --text-muted: #999999;
+  --bubble-user: #ababab;
+  --bubble-user-text: #131313;
+  --bubble-admin: #282828;
+  --bubble-admin-text: #e5e5e5;
+  --color-accent-50: #f0f0f0;
+  --color-accent-100: #d5d5d5;
+  --color-accent-300: #8a8a8a;
+  --color-accent-400: #7a7a7a;
+  --color-accent-500: #6a6a6a;
+  --color-accent-600: #c0c0c0;
+  --color-accent-700: #d5d5d5;
+}
+
+/* --------------------------------------------------------------------------
+   LIGHT THEMES (11–18)
+   -------------------------------------------------------------------------- */
+
+/* 11. Paper — Warm white monochrome. The style-reference theme. */
+[data-theme="paper"] {
+  --surface: #fafafa;
+  --surface-muted: #f4f4f4;
+  --surface-raised: #ffffff;
+  --border: #ebebeb;
+  --text: #171717;
+  --text-muted: #7d7d7d;
+  --bubble-user: #171717;
+  --bubble-user-text: #fafafa;
+  --bubble-admin: #f0f0f0;
+  --bubble-admin-text: #171717;
+  --color-accent-50: #f0f0f0;
+  --color-accent-100: #e0e0e0;
+  --color-accent-300: #999999;
+  --color-accent-400: #808080;
+  --color-accent-500: #4d4d4d;
+  --color-accent-600: #171717;
+  --color-accent-700: #000000;
+}
+
+/* 12. Forest Light — Fresh green morning. */
+[data-theme="forest-light"] {
+  --surface: #f5faf7;
+  --surface-muted: #edf5ef;
+  --surface-raised: #ffffff;
+  --border: #d4e5d8;
+  --text: #1a2a1e;
+  --text-muted: #6a8a70;
+  --bubble-user: #2d6b3a;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #edf5ef;
+  --bubble-admin-text: #1a2a1e;
+  --color-accent-50: #e8f5ea;
+  --color-accent-100: #c8e5ce;
+  --color-accent-300: #5aaa66;
+  --color-accent-400: #3d8a4a;
+  --color-accent-500: #2d6b3a;
+  --color-accent-600: #255a30;
+  --color-accent-700: #1c4524;
+}
+
+/* 13. Ocean Light — Open sky blue. */
+[data-theme="ocean-light"] {
+  --surface: #f5f8fc;
+  --surface-muted: #edf2f8;
+  --surface-raised: #ffffff;
+  --border: #d4dce8;
+  --text: #1a2430;
+  --text-muted: #6a7890;
+  --bubble-user: #3b6fb6;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #edf2f8;
+  --bubble-admin-text: #1a2430;
+  --color-accent-50: #e8f0fa;
+  --color-accent-100: #c8daf2;
+  --color-accent-300: #6a9ed4;
+  --color-accent-400: #4a82c0;
+  --color-accent-500: #3b6fb6;
+  --color-accent-600: #3260a0;
+  --color-accent-700: #284c80;
+}
+
+/* 14. Rose Light — Soft floral pink. */
+[data-theme="rose-light"] {
+  --surface: #fcf5f6;
+  --surface-muted: #f8edef;
+  --surface-raised: #ffffff;
+  --border: #e8d4d8;
+  --text: #2a1a1e;
+  --text-muted: #906a70;
+  --bubble-user: #b64a5a;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #f8edef;
+  --bubble-admin-text: #2a1a1e;
+  --color-accent-50: #fae8ec;
+  --color-accent-100: #f2c8d0;
+  --color-accent-300: #d46a78;
+  --color-accent-400: #c45062;
+  --color-accent-500: #b64a5a;
+  --color-accent-600: #a0384a;
+  --color-accent-700: #802c3a;
+}
+
+/* 15. Lavender Light — Calm purple fields. */
+[data-theme="lavender-light"] {
+  --surface: #f8f5fc;
+  --surface-muted: #f2edf8;
+  --surface-raised: #ffffff;
+  --border: #dcd4e8;
+  --text: #201a2a;
+  --text-muted: #786a90;
+  --bubble-user: #6a4ab6;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #f2edf8;
+  --bubble-admin-text: #201a2a;
+  --color-accent-50: #ece0f8;
+  --color-accent-100: #d4c0f0;
+  --color-accent-300: #8a6ad4;
+  --color-accent-400: #7a52c4;
+  --color-accent-500: #6a4ab6;
+  --color-accent-600: #5a3ca0;
+  --color-accent-700: #482e80;
+}
+
+/* 16. Mint Light — Refreshing cool green. */
+[data-theme="mint-light"] {
+  --surface: #f5fbf9;
+  --surface-muted: #edf6f2;
+  --surface-raised: #ffffff;
+  --border: #d4e8e0;
+  --text: #1a2824;
+  --text-muted: #6a9082;
+  --bubble-user: #2d7a6a;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #edf6f2;
+  --bubble-admin-text: #1a2824;
+  --color-accent-50: #e0f8f2;
+  --color-accent-100: #b8eeda;
+  --color-accent-300: #5ac4a0;
+  --color-accent-400: #3daa84;
+  --color-accent-500: #2d7a6a;
+  --color-accent-600: #256a5a;
+  --color-accent-700: #1c5044;
+}
+
+/* 17. Honey Light — Warm golden morning. */
+[data-theme="honey-light"] {
+  --surface: #fcfaf5;
+  --surface-muted: #f8f4ed;
+  --surface-raised: #ffffff;
+  --border: #e8e0d4;
+  --text: #2a2418;
+  --text-muted: #908268;
+  --bubble-user: #b68a2a;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #f8f4ed;
+  --bubble-admin-text: #2a2418;
+  --color-accent-50: #faf0d8;
+  --color-accent-100: #f2dea8;
+  --color-accent-300: #d4aa4d;
+  --color-accent-400: #c8963a;
+  --color-accent-500: #b68a2a;
+  --color-accent-600: #a07624;
+  --color-accent-700: #805e1c;
+}
+
+/* 18. Cloud Light — Cool high-altitude gray. */
+[data-theme="cloud-light"] {
+  --surface: #f7f8fa;
+  --surface-muted: #eff0f4;
+  --surface-raised: #ffffff;
+  --border: #d8dae0;
+  --text: #1a1c22;
+  --text-muted: #6a6e78;
+  --bubble-user: #5a6a8a;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #eff0f4;
+  --bubble-admin-text: #1a1c22;
+  --color-accent-50: #e8ecf4;
+  --color-accent-100: #c8d0e0;
+  --color-accent-300: #808ea8;
+  --color-accent-400: #6a7a98;
+  --color-accent-500: #5a6a8a;
+  --color-accent-600: #4e5e78;
+  --color-accent-700: #3c4a60;
+}
+
+/* --------------------------------------------------------------------------
+   GRADIENT & SPECIAL THEMES (19–25)
+   -------------------------------------------------------------------------- */
+
+/* 19. Sunset — Dark canvas, warm gradient accents (orange → rose). */
+[data-theme="sunset"] {
+  --surface: #1a100a;
+  --surface-muted: #241812;
+  --surface-raised: #302018;
+  --border: #4a3024;
+  --text: #f4e0d0;
+  --text-muted: #b08a70;
+  --bubble-user: #d4733a;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #38281c;
+  --bubble-admin-text: #f4e0d0;
+  --color-accent-50: #fce8d8;
+  --color-accent-100: #f6c8a8;
+  --color-accent-300: #e08a50;
+  --color-accent-400: #d4783e;
+  --color-accent-500: #cc6633;
+  --color-accent-600: #b8582a;
+  --color-accent-700: #944420;
+}
+
+/* 20. Aurora — Dark canvas, cool green/cyan gradient accents. */
+[data-theme="aurora"] {
+  --surface: #0a1518;
+  --surface-muted: #102022;
+  --surface-raised: #182c2e;
+  --border: #264044;
+  --text: #d0f0f2;
+  --text-muted: #70a0a6;
+  --bubble-user: #3a9e8a;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #1c3438;
+  --bubble-admin-text: #d0f0f2;
+  --color-accent-50: #d8faf0;
+  --color-accent-100: #a8f0d8;
+  --color-accent-300: #4ecaaa;
+  --color-accent-400: #3ab898;
+  --color-accent-500: #2d9e82;
+  --color-accent-600: #268a70;
+  --color-accent-700: #1e7058;
+}
+
+/* 21. Midnight — Ultra-dark blue-black, stark contrast. */
+[data-theme="midnight"] {
+  --surface: #060a14;
+  --surface-muted: #0c1020;
+  --surface-raised: #12182c;
+  --border: #1e2850;
+  --text: #d8e0ff;
+  --text-muted: #6a78b0;
+  --bubble-user: #4a5eb6;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #182038;
+  --bubble-admin-text: #d8e0ff;
+  --color-accent-50: #e0e8ff;
+  --color-accent-100: #b8c8f6;
+  --color-accent-300: #5a72d4;
+  --color-accent-400: #4a62c4;
+  --color-accent-500: #3a4eb6;
+  --color-accent-600: #3242a0;
+  --color-accent-700: #283680;
+}
+
+/* 22. Matcha — Soft earthy green-cream (light). */
+[data-theme="matcha"] {
+  --surface: #f8faf6;
+  --surface-muted: #f0f4ea;
+  --surface-raised: #ffffff;
+  --border: #dce4d4;
+  --text: #1e2418;
+  --text-muted: #7a8268;
+  --bubble-user: #5a7a3a;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #f0f4ea;
+  --bubble-admin-text: #1e2418;
+  --color-accent-50: #eef4e4;
+  --color-accent-100: #d8e8c4;
+  --color-accent-300: #8aaa5a;
+  --color-accent-400: #6e9242;
+  --color-accent-500: #5a7a3a;
+  --color-accent-600: #4c6830;
+  --color-accent-700: #3c5226;
+}
+
+/* 23. Sepia — Warm vintage brown/cream (light). */
+[data-theme="sepia"] {
+  --surface: #faf7f2;
+  --surface-muted: #f4efe6;
+  --surface-raised: #ffffff;
+  --border: #e0d8c8;
+  --text: #2c2014;
+  --text-muted: #908060;
+  --bubble-user: #8a6a3a;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #f4efe6;
+  --bubble-admin-text: #2c2014;
+  --color-accent-50: #f8f0d8;
+  --color-accent-100: #eee0b0;
+  --color-accent-300: #c0a060;
+  --color-accent-400: #a88a4a;
+  --color-accent-500: #8a6a3a;
+  --color-accent-600: #745a30;
+  --color-accent-700: #5c4624;
+}
+
+/* 24. Cherry — Dark canvas with pink cherry blossom accents. */
+[data-theme="cherry"] {
+  --surface: #1a0c12;
+  --surface-muted: #24141c;
+  --surface-raised: #301c26;
+  --border: #4a2c3a;
+  --text: #f4d8e4;
+  --text-muted: #b07890;
+  --bubble-user: #c44a7a;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #38202c;
+  --bubble-admin-text: #f4d8e4;
+  --color-accent-50: #fce0ec;
+  --color-accent-100: #f6b8d4;
+  --color-accent-300: #d45a90;
+  --color-accent-400: #cc4a82;
+  --color-accent-500: #c44a7a;
+  --color-accent-600: #aa3a6a;
+  --color-accent-700: #882c54;
+}
+
+/* 25. Glacier — Light with cold icy blue accents. */
+[data-theme="glacier"] {
+  --surface: #f6f9fc;
+  --surface-muted: #eef3f8;
+  --surface-raised: #ffffff;
+  --border: #d4dfea;
+  --text: #18222c;
+  --text-muted: #68788c;
+  --bubble-user: #5a82a4;
+  --bubble-user-text: #ffffff;
+  --bubble-admin: #eef3f8;
+  --bubble-admin-text: #18222c;
+  --color-accent-50: #e4f0f8;
+  --color-accent-100: #c4dcee;
+  --color-accent-300: #7aa4c4;
+  --color-accent-400: #648eae;
+  --color-accent-500: #5a82a4;
+  --color-accent-600: #4a7090;
+  --color-accent-700: #3a5a74;
+}
