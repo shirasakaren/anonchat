@@ -53,6 +53,11 @@ export function registerAnonymousRoutes(app: FastifyInstance): void {
   });
 
   app.post("/anonymous/challenge", async (request) => {
+    const env = loadEnv();
+    const ip = getClientIp(request);
+    if (!checkRateLimit(`challenge:${ip}`, env.RATE_LIMIT_REGISTRATIONS_PER_HOUR * 5, 60 * 60_000)) {
+      throw Errors.rateLimited("Too many attempts from this network recently. Please try again later.");
+    }
     const body = ChallengeRequestSchema.parse(request.body);
     const { challengeId, challenge, expiresAt } = await beginAnonymousLogin(body.publicId);
     const response: ChallengeResponse = { challengeId, challenge, expiresAt: new Date(expiresAt).toISOString() };
@@ -62,6 +67,9 @@ export function registerAnonymousRoutes(app: FastifyInstance): void {
   app.post("/anonymous/recover", async (request, reply) => {
     const env = loadEnv();
     const ip = getClientIp(request);
+    if (!checkRateLimit(`recover:${ip}`, env.RATE_LIMIT_REGISTRATIONS_PER_HOUR * 5, 60 * 60_000)) {
+      throw Errors.rateLimited("Too many attempts from this network recently. Please try again later.");
+    }
     const body = RecoverRequestSchema.parse(request.body);
     const user = await completeAnonymousLogin({
       publicId: body.publicId,
