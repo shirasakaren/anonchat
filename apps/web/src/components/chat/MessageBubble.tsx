@@ -15,6 +15,7 @@ interface Props {
   attachmentUrlFor: (attachmentId: string) => string;
   replyPreview?: string;
   canEdit: boolean;
+  disableActions?: boolean;
   onReply: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -29,6 +30,7 @@ export function MessageBubble({
   attachmentUrlFor,
   replyPreview,
   canEdit,
+  disableActions = false,
   onReply,
   onEdit,
   onDelete,
@@ -62,6 +64,7 @@ export function MessageBubble({
           <MessageActions
             canEdit={canEdit}
             isOwn={isOwn}
+            disableActions={disableActions}
             showReactionPicker={showReactionPicker}
             setShowReactionPicker={setShowReactionPicker}
             onReply={onReply}
@@ -97,6 +100,7 @@ export function MessageBubble({
           <MessageActions
             canEdit={canEdit}
             isOwn={isOwn}
+            disableActions={disableActions}
             showReactionPicker={showReactionPicker}
             setShowReactionPicker={setShowReactionPicker}
             onReply={onReply}
@@ -153,6 +157,7 @@ export function MessageBubble({
 function MessageActions({
   canEdit,
   isOwn,
+  disableActions,
   showReactionPicker,
   setShowReactionPicker,
   onReply,
@@ -162,6 +167,7 @@ function MessageActions({
 }: {
   canEdit: boolean;
   isOwn: boolean;
+  disableActions: boolean;
   showReactionPicker: boolean;
   setShowReactionPicker: (v: boolean) => void;
   onReply: () => void;
@@ -171,19 +177,37 @@ function MessageActions({
 }) {
   return (
     <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-      <button type="button" title="React" onClick={() => setShowReactionPicker(!showReactionPicker)} className="rounded p-1 text-xs hover:bg-[var(--surface-muted)]">
+      <button
+        type="button"
+        title="React"
+        disabled={disableActions}
+        onClick={() => setShowReactionPicker(!showReactionPicker)}
+        className="rounded p-1 text-xs hover:bg-[var(--surface-muted)] disabled:pointer-events-none disabled:opacity-40"
+      >
         🙂
       </button>
       <button type="button" title="Reply" onClick={onReply} className="rounded p-1 text-xs hover:bg-[var(--surface-muted)]">
         ↩︎
       </button>
       {isOwn && canEdit && (
-        <button type="button" title="Edit" onClick={onEdit} className="rounded p-1 text-xs hover:bg-[var(--surface-muted)]">
+        <button
+          type="button"
+          title="Edit"
+          disabled={disableActions}
+          onClick={onEdit}
+          className="rounded p-1 text-xs hover:bg-[var(--surface-muted)] disabled:pointer-events-none disabled:opacity-40"
+        >
           ✎
         </button>
       )}
       {isOwn && (
-        <button type="button" title="Delete" onClick={onDelete} className="rounded p-1 text-xs hover:bg-[var(--surface-muted)]">
+        <button
+          type="button"
+          title="Delete"
+          disabled={disableActions}
+          onClick={onDelete}
+          className="rounded p-1 text-xs hover:bg-[var(--surface-muted)] disabled:pointer-events-none disabled:opacity-40"
+        >
           🗑
         </button>
       )}

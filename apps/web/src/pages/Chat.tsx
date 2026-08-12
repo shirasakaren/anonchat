@@ -302,6 +302,7 @@ export default function Chat() {
                 conversationKey={conversationKey}
                 attachmentUrlFor={attachmentUrl}
                 canEdit={canEdit(message)}
+                disableActions={isBlocked}
                 replyPreview={message.replyToId ? messages.find((m) => m.id === message.replyToId)?.text : undefined}
                 onReply={() => setReplyTo(message)}
                 onEdit={() => setEditing(message)}
