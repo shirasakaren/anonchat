@@ -1,0 +1,169 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Termine on AWS App Runner + RDS PostgreSQL. Deploys the Docker image you've
+  already pushed to ECR (see deploy/aws/README.md for the exact push
+  commands) as an App Runner service, backed by a private RDS Postgres
+  instance reachable only through a VPC connector - not exposed to the
+  public internet.
+
+Parameters:
+  ImageUri:
+    Type: String
+    Description: Full ECR image URI, e.g. 123456789012.dkr.ecr.us-east-1.amazonaws.com/termine:latest
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC to deploy into (your account's default VPC works fine).
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: At least two subnets in the VPC above, in different AZs.
+  DBPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 12
+    Description: Password for the termine Postgres user.
+  SessionSecret:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+    Description: "Random session-signing secret. Generate with: openssl rand -hex 32"
+  PublicUrl:
+    Type: String
+    Description: Public URL this app will be served at, e.g. https://termine.example.com (or the App Runner default domain, filled in after first deploy).
+    Default: ""
+  DBInstanceClass:
+    Type: String
+    Default: db.t4g.micro
+  StoreIpAddresses:
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "false"
+
+Resources:
+  # ---------------------------------------------------------------------
+  # Networking
+  # ---------------------------------------------------------------------
+  VpcConnectorSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Termine App Runner VPC connector
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: 0.0.0.0/0
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Termine RDS - only reachable from the App Runner VPC connector
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref VpcConnectorSecurityGroup
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Termine RDS subnet group
+      SubnetIds: !Ref SubnetIds
+
+  VpcConnector:
+    Type: AWS::AppRunner::VpcConnector
+    Properties:
+      VpcConnectorName: !Sub "${AWS::StackName}-connector"
+      Subnets: !Ref SubnetIds
+      SecurityGroups:
+        - !Ref VpcConnectorSecurityGroup
+
+  # ---------------------------------------------------------------------
+  # Database
+  # ---------------------------------------------------------------------
+  Database:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    Properties:
+      Engine: postgres
+      EngineVersion: "17"
+      DBInstanceClass: !Ref DBInstanceClass
+      AllocatedStorage: "20"
+      StorageType: gp3
+      MasterUsername: termine
+      MasterUserPassword: !Ref DBPassword
+      DBName: termine
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+      PubliclyAccessible: false
+      BackupRetentionPeriod: 7
+      StorageEncrypted: true
+
+  # ---------------------------------------------------------------------
+  # App Runner
+  # ---------------------------------------------------------------------
+  EcrAccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: build.apprunner.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess
+
+  Service:
+    Type: AWS::AppRunner::Service
+    Properties:
+      ServiceName: termine
+      SourceConfiguration:
+        AuthenticationConfiguration:
+          AccessRoleArn: !GetAtt EcrAccessRole.Arn
+        AutoDeploymentsEnabled: false
+        ImageRepository:
+          ImageIdentifier: !Ref ImageUri
+          ImageRepositoryType: ECR
+          ImageConfiguration:
+            Port: "3000"
+            RuntimeEnvironmentVariables:
+              - Name: DATABASE_URL
+                Value: !Sub "postgresql://termine:${DBPassword}@${Database.Endpoint.Address}:${Database.Endpoint.Port}/termine"
+              - Name: SESSION_SECRET
+                Value: !Ref SessionSecret
+              - Name: PUBLIC_URL
+                Value: !Ref PublicUrl
+              - Name: NODE_ENV
+                Value: production
+              - Name: PORT
+                Value: "3000"
+              - Name: TRUST_PROXY
+                Value: "true"
+              - Name: STORE_IP_ADDRESSES
+                Value: !Ref StoreIpAddresses
+              - Name: STORAGE_DRIVER
+                Value: local
+              - Name: UPLOAD_DIR
+                Value: /app/data/uploads
+      InstanceConfiguration:
+        Cpu: 1 vCPU
+        Memory: 2 GB
+      NetworkConfiguration:
+        EgressConfiguration:
+          EgressType: VPC
+          VpcConnectorArn: !GetAtt VpcConnector.VpcConnectorArn
+      HealthCheckConfiguration:
+        Protocol: HTTP
+        Path: /health
+        Interval: 10
+        Timeout: 5
+        HealthyThreshold: 1
+        UnhealthyThreshold: 5
+
+Outputs:
+  ServiceUrl:
+    Description: App Runner default domain - set as PUBLIC_URL and redeploy, or attach a custom domain.
+    Value: !Sub "https://${Service.ServiceUrl}"
+  DatabaseEndpoint:
+    Value: !GetAtt Database.Endpoint.Address

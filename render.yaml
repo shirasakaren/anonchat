@@ -1,0 +1,41 @@
+databases:
+  - name: termine-db
+    databaseName: termine
+    plan: basic-256mb
+    postgresMajorVersion: "17"
+
+services:
+  - type: web
+    runtime: docker
+    name: termine
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: termine-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      # Render assigns the service's onrender.com URL only after the first
+      # deploy - set this in the dashboard once you know it (or your custom
+      # domain), then redeploy. See deploy/render/README.md.
+      - key: PUBLIC_URL
+        sync: false
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "true"
+      - key: STORE_IP_ADDRESSES
+        value: "false"
+      - key: STORAGE_DRIVER
+        value: local
+      - key: UPLOAD_DIR
+        value: /app/data/uploads
+    disk:
+      name: termine-uploads
+      mountPath: /app/data/uploads
+      sizeGB: 5
