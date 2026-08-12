@@ -194,13 +194,17 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
               </p>
               <div className="flex items-center gap-1.5">
                 {conv.status === "ARCHIVED" && (
-                  <span className="rounded bg-[var(--surface-muted)] px-1.5 py-0.5 text-[10px]">Archived</span>
+                  <span className="rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-xs text-[var(--text-muted)]">
+                    Archived
+                  </span>
                 )}
                 {conv.status === "BLOCKED" && (
-                  <span className="rounded bg-[var(--danger-bg)] px-1.5 py-0.5 text-[10px] text-[var(--danger-fg)]">Blocked</span>
+                  <span className="rounded-full bg-[var(--danger-bg)] px-2 py-0.5 text-xs text-[var(--danger-fg)]">
+                    Blocked
+                  </span>
                 )}
                 {conv.unreadCount > 0 && (
-                  <span className="rounded-full bg-[var(--btn-bg)] px-1.5 py-0.5 text-[10px] text-[var(--btn-fg)]">
+                  <span className="rounded-full bg-[var(--btn-bg)] px-1.5 py-0.5 text-xs text-[var(--btn-fg)]">
                     {conv.unreadCount}
                   </span>
                 )}

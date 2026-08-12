@@ -250,7 +250,7 @@ export default function Setup() {
                 type="checkbox"
                 checked={acknowledged}
                 onChange={(e) => setAcknowledged(e.target.checked)}
-                className="mt-0.5"
+                className="mt-0.5 accent-[var(--color-accent-500)]"
               />
               I've saved my recovery key
             </label>

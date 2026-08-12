@@ -203,7 +203,12 @@ export default function SettingsPage() {
           />
         </label>
         <label className="mb-3 flex items-center gap-2 text-sm font-medium">
-          <input type="checkbox" checked={presenceEnabled} onChange={(e) => setPresenceEnabled(e.target.checked)} />
+          <input
+            type="checkbox"
+            checked={presenceEnabled}
+            onChange={(e) => setPresenceEnabled(e.target.checked)}
+            className="accent-[var(--color-accent-500)]"
+          />
           Show online status to visitors
         </label>
 
@@ -268,7 +273,12 @@ export default function SettingsPage() {
       <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
         <h2 className="mb-3 text-sm font-semibold">Notifications</h2>
         <label className="mb-3 flex items-center gap-2 text-sm font-medium">
-          <input type="checkbox" checked={soundOn} onChange={(e) => handleSoundToggle(e.target.checked)} />
+          <input
+            type="checkbox"
+            checked={soundOn}
+            onChange={(e) => handleSoundToggle(e.target.checked)}
+            className="accent-[var(--color-accent-500)]"
+          />
           Play a sound for new messages
         </label>
         <div className="flex items-center justify-between text-sm">
