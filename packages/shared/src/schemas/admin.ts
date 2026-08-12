@@ -17,6 +17,7 @@ export const OnboardingRequestSchema = z.object({
   signingPublicKey: Base64UrlSchema.max(64),
   exchangePublicKey: Base64UrlSchema.max(64),
   proof: Base64UrlSchema.max(256),
+  theme: z.string().min(1).max(64).optional(),
 });
 export type OnboardingRequestInput = z.infer<typeof OnboardingRequestSchema>;
 
@@ -49,6 +50,7 @@ export const SiteSettingsRequestSchema = z.object({
     .optional(),
   pgpPublicKey: z.string().max(20_000).optional(),
   presenceEnabled: z.boolean().optional(),
+  theme: z.string().min(1).max(64).optional(),
 });
 export type SiteSettingsRequestInput = z.infer<typeof SiteSettingsRequestSchema>;
 
@@ -118,5 +120,6 @@ export interface SiteSettingsDto {
   contactLinks: { label: string; url: string }[];
   pgpPublicKey: string | null;
   presenceEnabled: boolean;
+  theme: string;
   adminPublicKeys: z.infer<typeof PublicKeysSchema> | null;
 }

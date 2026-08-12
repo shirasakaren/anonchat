@@ -9,6 +9,7 @@ export interface PublicSiteInfoDto {
   pgpPublicKey: string | null;
   adminPublicKeys: PublicKeysInput | null;
   presenceEnabled: boolean;
+  theme: string;
   limits: {
     maxMessageLength: number;
     maxAttachmentSizeMb: number;
