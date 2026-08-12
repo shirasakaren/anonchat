@@ -70,3 +70,10 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   cached = parsed.data;
   return cached;
 }
+
+/** The origins this deployment accepts cross-origin requests (and WebSocket upgrades) from. */
+export function corsOrigins(env: Env): string[] {
+  const origins = [env.PUBLIC_URL];
+  if (env.NODE_ENV === "development") origins.push("http://localhost:5173");
+  return origins;
+}

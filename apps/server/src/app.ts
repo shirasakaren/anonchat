@@ -8,7 +8,7 @@ import multipart from "@fastify/multipart";
 import staticPlugin from "@fastify/static";
 import websocketPlugin from "@fastify/websocket";
 import authPlugin from "./auth/plugin.js";
-import { loadEnv, type Env } from "./env.js";
+import { corsOrigins, loadEnv } from "./env.js";
 import { buildLoggerOptions } from "./logger.js";
 import { registerWsRoutes } from "./realtime/wsRoutes.js";
 import { registerAdminAuthRoutes } from "./routes/admin/auth.js";
@@ -25,12 +25,6 @@ import { ensureCsrfCookie, verifyCsrf } from "./security/csrf.js";
 import { handleError } from "./utils/errors.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-
-function corsOrigins(env: Env): string[] {
-  const origins = [env.PUBLIC_URL];
-  if (env.NODE_ENV === "development") origins.push("http://localhost:5173");
-  return origins;
-}
 
 export async function buildApp(): Promise<FastifyInstance> {
   const env = loadEnv();
@@ -65,6 +59,13 @@ export async function buildApp(): Promise<FastifyInstance> {
     limits: {
       fileSize: env.MAX_ATTACHMENT_SIZE_MB * 1024 * 1024,
       files: env.MAX_ATTACHMENTS_PER_MESSAGE,
+      // Non-file fields on a send-message request: content, replyToId, and
+      // one attachmentMeta per attachment - bound these explicitly too, or
+      // busboy's unbounded defaults let a client pad a request with huge
+      // non-file fields before ever reaching a file part.
+      fields: env.MAX_ATTACHMENTS_PER_MESSAGE + 2,
+      fieldSize: 200_000,
+      parts: env.MAX_ATTACHMENTS_PER_MESSAGE * 2 + 4,
     },
   });
   await app.register(websocketPlugin);

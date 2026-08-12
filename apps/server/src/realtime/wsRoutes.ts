@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { ClientWsMessageSchema } from "@termine/shared";
+import { corsOrigins, loadEnv } from "../env.js";
 import { getSiteSettings } from "../services/siteSettings.service.js";
 import {
   isAdminOnline,
@@ -11,6 +12,18 @@ import {
 
 export function registerWsRoutes(fastify: FastifyInstance): void {
   fastify.get("/ws", { websocket: true }, async (socket, request) => {
+    // The WS handshake is a GET request the CSRF double-submit check
+    // deliberately skips (it's a "safe" method) - the session cookie is
+    // SameSite=Lax, which modern browsers already withhold from a
+    // cross-site `new WebSocket(...)` call, but an explicit Origin
+    // allowlist here is cheap, unambiguous defense-in-depth against
+    // cross-site WebSocket hijacking regardless of cookie/browser quirks.
+    const origin = request.headers.origin;
+    if (origin && !corsOrigins(loadEnv()).includes(origin)) {
+      socket.close(4003, "Forbidden origin");
+      return;
+    }
+
     if (request.adminAuth) {
       const wasOnline = isAdminOnline();
       const unsubscribe = subscribeAdmin(socket);
