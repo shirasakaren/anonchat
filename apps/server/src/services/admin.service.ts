@@ -147,7 +147,9 @@ export async function disableTotp(adminId: string): Promise<void> {
 
 export async function listAdminSessions(adminId: string, currentSessionId: string): Promise<AdminSessionDto[]> {
   const sessions = await prisma.adminSession.findMany({
-    where: { adminId, revokedAt: null, expiresAt: { gt: new Date() } },
+    // No expiry filter: sessions persist until revoked, so a listing must
+    // include every non-revoked session (see resolveAdminFromRequest).
+    where: { adminId, revokedAt: null },
     orderBy: { lastSeenAt: "desc" },
   });
   return sessions.map((session) => ({

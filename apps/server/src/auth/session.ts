@@ -95,7 +95,11 @@ export async function resolveAdminFromRequest(request: FastifyRequest) {
     where: { tokenHash: hashSessionToken(token) },
     include: { admin: true },
   });
-  if (!session || session.revokedAt || session.expiresAt < new Date()) return null;
+  // Deliberately NO expiresAt check: per the product requirement, an admin
+  // session persists forever - the only ways it ends are an explicit logout
+  // or a revoke from the Sessions page. expiresAt is still written below so
+  // the column keeps a value if an expiry policy is ever re-enabled.
+  if (!session || session.revokedAt) return null;
   const now = new Date();
   await prisma.adminSession.update({
     where: { id: session.id },
