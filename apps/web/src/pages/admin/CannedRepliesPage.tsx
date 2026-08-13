@@ -86,26 +86,33 @@ export default function CannedRepliesPage() {
         </div>
       </form>
 
-      <div className="space-y-2">
-        {replies.map((reply) => (
-          <div key={reply.id} className="rounded-xl border border-[var(--border)] p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium">{reply.title}</p>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">{reply.body}</p>
-              </div>
-              <div className="flex gap-2 text-xs">
-                <button type="button" onClick={() => startEdit(reply)} className="text-[var(--link-fg)]">
-                  Edit
-                </button>
-                <button type="button" onClick={() => handleDelete(reply.id)} className="text-[var(--danger-fg)]">
-                  Delete
-                </button>
+      {replies.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--text-muted)]">
+          <p>No canned replies yet.</p>
+          <p className="mt-1">Add one above to reuse it while replying to conversations.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {replies.map((reply) => (
+            <div key={reply.id} className="rounded-xl border border-[var(--border)] p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium">{reply.title}</p>
+                  <p className="mt-1 text-sm text-[var(--text-muted)]">{reply.body}</p>
+                </div>
+                <div className="flex gap-2 text-xs">
+                  <button type="button" onClick={() => startEdit(reply)} className="text-[var(--link-fg)]">
+                    Edit
+                  </button>
+                  <button type="button" onClick={() => handleDelete(reply.id)} className="text-[var(--danger-fg)]">
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
