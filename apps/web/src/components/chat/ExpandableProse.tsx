@@ -12,8 +12,13 @@ const COLLAPSED_MAX_HEIGHT_PX = 320;
  * emphasis marker mid-syntax and rendering garbage. `useLayoutEffect`
  * (not `useEffect`) measures before the browser paints, so a long message
  * never flashes fully expanded before collapsing.
+ *
+ * `clamp={false}` (used by the Composer's live preview, which already
+ * scrolls inside its own fixed-height box) skips the height clamp and the
+ * "See more" toggle entirely, while still running the same sanitized-HTML
+ * + DOM-enhancement pipeline as a sent message.
  */
-export function ExpandableProse({ html }: { html: string }) {
+export function ExpandableProse({ html, clamp = true }: { html: string; clamp?: boolean }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
@@ -36,10 +41,10 @@ export function ExpandableProse({ html }: { html: string }) {
     // boundary.
     sanitizeLinkAttributes(el);
     enhanceCodeBlocks(el);
-    setOverflowing(el.scrollHeight > COLLAPSED_MAX_HEIGHT_PX + 1);
+    if (clamp) setOverflowing(el.scrollHeight > COLLAPSED_MAX_HEIGHT_PX + 1);
   });
 
-  const clamped = !expanded && overflowing;
+  const clamped = clamp && !expanded && overflowing;
 
   return (
     <div>
@@ -49,7 +54,7 @@ export function ExpandableProse({ html }: { html: string }) {
         style={clamped ? { maxHeight: COLLAPSED_MAX_HEIGHT_PX } : undefined}
         dangerouslySetInnerHTML={{ __html: html }}
       />
-      {overflowing && (
+      {clamp && overflowing && (
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}

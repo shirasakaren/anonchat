@@ -7,6 +7,7 @@ import {
   type DragEvent,
   type KeyboardEvent,
 } from "react";
+import clsx from "clsx";
 import EmojiPicker, { EmojiStyle, Theme } from "emoji-picker-react";
 import { X, Paperclip, Smile, File as FileIcon } from "lucide-react";
 import {
@@ -16,6 +17,10 @@ import {
   searchShortcodes,
   type ShortcodeMatch,
 } from "./emojiShortcuts.js";
+import { justCompletedFreshCodeFence } from "./codeFenceDetection.js";
+import { CodeBlockModal } from "./CodeBlockModal.js";
+import { ExpandableProse } from "./ExpandableProse.js";
+import { renderMessageMarkdown } from "./markdown.js";
 import { useTheme } from "../../context/ThemeContext.js";
 
 export interface PendingFile {
@@ -55,6 +60,8 @@ export function Composer({
   const [showEmoji, setShowEmoji] = useState(false);
   const [shortcodeQuery, setShortcodeQuery] = useState<{ start: number; query: string } | null>(null);
   const [selectedSuggestion, setSelectedSuggestion] = useState(0);
+  const [mode, setMode] = useState<"write" | "preview">("write");
+  const [codeModal, setCodeModal] = useState<{ fenceStart: number; fenceEnd: number } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const pickerWrapperRef = useRef<HTMLDivElement>(null);
   const { meta } = useTheme();
@@ -64,9 +71,24 @@ export function Composer({
   useEffect(() => {
     if (initialText !== undefined) {
       setText(initialText);
+      setMode("write");
       textareaRef.current?.focus();
     }
   }, [initialText]);
+
+  /** Preview mode has no textarea to edit or autocomplete into - closing
+   *  both here means neither can linger open with stale state when the
+   *  user switches away from Write. Switching back to Write restores focus
+   *  so typing can resume immediately. */
+  function switchMode(next: "write" | "preview") {
+    setMode(next);
+    if (next === "preview") {
+      setShortcodeQuery(null);
+      setShowEmoji(false);
+    } else {
+      requestAnimationFrame(() => textareaRef.current?.focus());
+    }
+  }
 
   // Close the emoji picker on an outside click - it has no built-in
   // dismiss-on-blur behavior of its own.
@@ -111,8 +133,37 @@ export function Composer({
       requestAnimationFrame(() => el.setSelectionRange(newCursor, newCursor));
       return;
     }
+    if (justCompletedFreshCodeFence(el.value, cursor)) {
+      // Open the Teams-style code modal instead of leaving a bare ``` in
+      // the draft - the fence's own position is recorded so the inserted
+      // block can replace exactly those three characters, not re-scan the
+      // text for them (the same "```" can legitimately appear more than
+      // once).
+      updateText(el.value);
+      setShortcodeQuery(null);
+      setCodeModal({ fenceStart: cursor - 3, fenceEnd: cursor });
+      return;
+    }
     updateText(el.value);
     syncShortcodeQuery(el);
+  }
+
+  function handleCodeInsert(code: string, language: string) {
+    if (!codeModal) return;
+    const fence = "```" + language + "\n" + code.replace(/\n+$/, "") + "\n```\n";
+    const newValue = text.slice(0, codeModal.fenceStart) + fence + text.slice(codeModal.fenceEnd);
+    const newCursor = codeModal.fenceStart + fence.length;
+    updateText(newValue);
+    setCodeModal(null);
+    setMode("write");
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(newCursor, newCursor);
+      el.style.height = "auto";
+      el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
+    });
   }
 
   function applySuggestion(match: ShortcodeMatch) {
@@ -157,6 +208,7 @@ export function Composer({
     );
     setText("");
     setFiles([]);
+    setMode("write");
     onTypingChange?.(false);
     textareaRef.current?.focus();
   }
@@ -292,6 +344,35 @@ export function Composer({
         </div>
       )}
 
+      <div className="mb-1.5 flex gap-1 text-xs font-medium">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => switchMode("write")}
+          className={clsx(
+            "rounded-md px-2 py-1",
+            mode === "write"
+              ? "bg-[var(--surface-muted)] text-[var(--text)]"
+              : "text-[var(--text-muted)] hover:text-[var(--text)]",
+          )}
+        >
+          Write
+        </button>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => switchMode("preview")}
+          className={clsx(
+            "rounded-md px-2 py-1",
+            mode === "preview"
+              ? "bg-[var(--surface-muted)] text-[var(--text)]"
+              : "text-[var(--text-muted)] hover:text-[var(--text)]",
+          )}
+        >
+          Preview
+        </button>
+      </div>
+
       <div className="flex items-end gap-2">
         <input id="attachment-input" type="file" multiple className="hidden" onChange={handleFilePick} />
         <label
@@ -328,32 +409,51 @@ export function Composer({
                 onEmojiClick={(emojiData) => {
                   setText((prev) => prev + emojiData.emoji);
                   setShowEmoji(false);
-                  textareaRef.current?.focus();
+                  // Switch back to Write so the inserted emoji is actually
+                  // visible - clicking this while in Preview would otherwise
+                  // silently edit text the user can't currently see.
+                  switchMode("write");
                 }}
               />
             </div>
           )}
         </div>
 
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={handleTextChange}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          onSelect={(e) => syncShortcodeQuery(e.currentTarget)}
-          onClick={(e) => syncShortcodeQuery(e.currentTarget)}
-          placeholder="Type a message… (Enter to send, Shift+Enter for a new line)"
-          rows={1}
-          disabled={disabled}
-          className="max-h-32 min-h-[2.5rem] flex-1 resize-none rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm disabled:opacity-50"
-          style={{ height: "auto" }}
-          onInput={(e) => {
-            const el = e.currentTarget;
-            el.style.height = "auto";
-            el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
-          }}
-        />
+        {mode === "write" ? (
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={handleTextChange}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            onSelect={(e) => syncShortcodeQuery(e.currentTarget)}
+            onClick={(e) => syncShortcodeQuery(e.currentTarget)}
+            placeholder="Type a message… (Enter to send, Shift+Enter for a new line)"
+            rows={1}
+            disabled={disabled}
+            className="max-h-32 min-h-[2.5rem] flex-1 resize-none rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm disabled:opacity-50"
+            style={{ height: "auto" }}
+            onInput={(e) => {
+              const el = e.currentTarget;
+              el.style.height = "auto";
+              el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
+            }}
+          />
+        ) : (
+          // Read-only render of exactly what Send will encrypt and ship -
+          // never a separate draft, just a view toggle on the same `text`
+          // state. clamp={false}: this box already scrolls at a fixed
+          // height itself, so ExpandableProse's own "See more" clamp (meant
+          // for an already-sent bubble) would just be a second, redundant
+          // scroll boundary here.
+          <div className="max-h-32 min-h-[2.5rem] flex-1 overflow-y-auto rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm">
+            {text.trim() ? (
+              <ExpandableProse html={renderMessageMarkdown(text)} clamp={false} />
+            ) : (
+              <p className="text-[var(--text-muted)]">Nothing to preview yet.</p>
+            )}
+          </div>
+        )}
 
         <button
           type="button"
@@ -368,6 +468,8 @@ export function Composer({
         {overLimit && <span className="text-[var(--danger-fg)]">Message is too long. </span>}
         {text.length}/{maxLength}
       </div>
+
+      {codeModal && <CodeBlockModal onInsert={handleCodeInsert} onClose={() => setCodeModal(null)} />}
     </div>
   );
 }
