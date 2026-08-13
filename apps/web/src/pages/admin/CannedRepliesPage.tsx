@@ -101,10 +101,10 @@ export default function CannedRepliesPage() {
                   <p className="mt-1 text-sm text-[var(--text-muted)]">{reply.body}</p>
                 </div>
                 <div className="flex gap-2 text-xs">
-                  <button type="button" onClick={() => startEdit(reply)} className="text-[var(--link-fg)]">
+                  <button type="button" onClick={() => startEdit(reply)} className="text-[var(--link-fg)] hover:underline">
                     Edit
                   </button>
-                  <button type="button" onClick={() => handleDelete(reply.id)} className="text-[var(--danger-fg)]">
+                  <button type="button" onClick={() => handleDelete(reply.id)} className="text-[var(--danger-fg)] hover:underline">
                     Delete
                   </button>
                 </div>

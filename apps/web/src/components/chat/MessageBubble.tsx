@@ -141,7 +141,7 @@ export function MessageBubble({
         {message.edited && !message.deleted && <span>· edited</span>}
         {isOwn && message.status === "sending" && <span>· Sending…</span>}
         {isOwn && message.status === "failed" && (
-          <button type="button" onClick={onRetry} className="text-[var(--danger-fg)] underline">
+          <button type="button" onClick={onRetry} className="text-[var(--danger-fg)] underline hover:opacity-80">
             Failed · Retry
           </button>
         )}

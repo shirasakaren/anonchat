@@ -49,7 +49,7 @@ export default function AuditLogPage() {
         </div>
       )}
       {cursor && (
-        <button type="button" onClick={loadMore} className="mt-4 text-sm text-[var(--link-fg)]">
+        <button type="button" onClick={loadMore} className="mt-4 text-sm text-[var(--link-fg)] hover:underline">
           Load more
         </button>
       )}

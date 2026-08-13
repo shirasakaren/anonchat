@@ -70,7 +70,7 @@ export default function UnlockKey() {
             <button
               type="button"
               onClick={() => setMode("import")}
-              className="w-full text-center text-xs text-[var(--text-muted)] underline"
+              className="w-full text-center text-xs text-[var(--text-muted)] underline hover:text-[var(--text)]"
             >
               This is a new device - use my recovery key instead
             </button>
@@ -103,7 +103,7 @@ export default function UnlockKey() {
               <button
                 type="button"
                 onClick={() => setMode("unlock")}
-                className="flex-1 rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium"
+                className="flex-1 rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium hover:bg-[var(--surface-muted)]"
               >
                 Back
               </button>

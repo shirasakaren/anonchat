@@ -102,7 +102,7 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
             <button
               type="button"
               onClick={() => setView("import")}
-              className="w-full text-center text-xs text-[var(--text-muted)] underline underline-offset-2"
+              className="w-full text-center text-xs text-[var(--text-muted)] underline underline-offset-2 hover:text-[var(--text)]"
             >
               Have a recovery key from another device?
             </button>
@@ -128,7 +128,7 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
               <button
                 type="button"
                 onClick={() => setView("landing")}
-                className="flex-1 rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium"
+                className="flex-1 rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium hover:bg-[var(--surface-muted)]"
               >
                 Back
               </button>

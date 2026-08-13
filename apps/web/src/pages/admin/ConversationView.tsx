@@ -391,7 +391,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
                   type="submit"
                   disabled={aliasBusy}
                   onMouseDown={(e) => e.preventDefault()}
-                  className="rounded-md bg-[var(--btn-bg)] px-2 py-1 text-xs font-semibold text-[var(--btn-fg)] disabled:opacity-50"
+                  className="rounded-md bg-[var(--btn-bg)] px-2 py-1 text-xs font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
                 >
                   Save
                 </button>
@@ -405,7 +405,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
                     e.preventDefault();
                     void clearAlias();
                   }}
-                  className="rounded-md border border-[var(--border)] px-2 py-1 text-xs disabled:opacity-50"
+                  className="rounded-md border border-[var(--border)] px-2 py-1 text-xs hover:bg-[var(--surface-muted)] disabled:opacity-50"
                 >
                   Clear
                 </button>

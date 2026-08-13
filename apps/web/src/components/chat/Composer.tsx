@@ -254,7 +254,7 @@ export function Composer({
                 type="button"
                 onClick={() => removeFile(i)}
                 aria-label={`Remove ${f.file.name}`}
-                className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-xs text-white"
+                className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-xs text-white hover:bg-black"
               >
                 <X size={12} aria-hidden />
               </button>
