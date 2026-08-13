@@ -68,7 +68,9 @@ export function TextCodePreview({ bytes, language }: Props) {
               {expanded ? "Show less" : "Show more"}
             </button>
           )}
-          {truncated && <span className="text-[var(--text-muted)]">Truncated - download the file to see the rest.</span>}
+          {truncated && (
+            <span className="text-[var(--text-muted)]">Truncated - download the file to see the rest.</span>
+          )}
         </div>
       )}
     </div>

@@ -234,10 +234,7 @@ export async function setConversationAlias(
 /** Mutes or unmutes a conversation for the admin: while muted, new user
  *  messages don't fire the admin's notification sound/popup. Same
  *  admin-only/private-metadata rules as the alias. */
-export async function setConversationMuted(
-  conversationId: string,
-  muted: boolean,
-): Promise<AdminConversationDto> {
+export async function setConversationMuted(conversationId: string, muted: boolean): Promise<AdminConversationDto> {
   const conversation = await prisma.conversation.update({
     where: { id: conversationId },
     data: { mutedAt: muted ? new Date() : null },

@@ -48,9 +48,18 @@ function ThemeCard({ theme, active, onClick }: { theme: ThemeMeta; active: boole
 
       {/* Bottom 1.25/6 — solid color swatches, anchored bottom-left. */}
       <div className="flex items-end justify-start gap-1.5 px-3 pb-3" style={{ background: "var(--surface-raised)" }}>
-        <span className="h-3.5 w-3.5 rounded-full border border-[var(--border)]" style={{ background: "var(--surface-muted)" }} />
-        <span className="h-3.5 w-3.5 rounded-full border border-[var(--border)]" style={{ background: "var(--color-accent-500)" }} />
-        <span className="h-3.5 w-3.5 rounded-full border border-[var(--border)]" style={{ background: "var(--bubble-user)" }} />
+        <span
+          className="h-3.5 w-3.5 rounded-full border border-[var(--border)]"
+          style={{ background: "var(--surface-muted)" }}
+        />
+        <span
+          className="h-3.5 w-3.5 rounded-full border border-[var(--border)]"
+          style={{ background: "var(--color-accent-500)" }}
+        />
+        <span
+          className="h-3.5 w-3.5 rounded-full border border-[var(--border)]"
+          style={{ background: "var(--bubble-user)" }}
+        />
       </div>
 
       {active && (

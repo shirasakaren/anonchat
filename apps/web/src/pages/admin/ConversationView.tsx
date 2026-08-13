@@ -2,7 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { encryptBlob } from "@anonchat/crypto";
 import { Pencil } from "lucide-react";
-import { DEFAULT_MAX_MESSAGE_LENGTH, type AdminConversationDto, type MessageDto, type ServerWsEvent } from "@anonchat/shared";
+import {
+  DEFAULT_MAX_MESSAGE_LENGTH,
+  type AdminConversationDto,
+  type MessageDto,
+  type ServerWsEvent,
+} from "@anonchat/shared";
 import {
   deleteAdminMessage,
   editAdminMessage,
@@ -434,7 +439,11 @@ export function ConversationView({ conversationId, onChanged }: Props) {
                 <h2 className="min-w-0 truncate text-sm font-semibold">
                   {conversation.adminAlias || `Anonymous #${conversation.publicId}`}
                 </h2>
-                <Pencil size={12} aria-hidden className="shrink-0 text-[var(--text-muted)] group-hover:text-[var(--text)]" />
+                <Pencil
+                  size={12}
+                  aria-hidden
+                  className="shrink-0 text-[var(--text-muted)] group-hover:text-[var(--text)]"
+                />
               </button>
             )}
             <p className="mt-0.5 flex items-center gap-1.5 truncate px-1 text-[11px] text-[var(--text-muted)]">
@@ -480,9 +489,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
                   }
                   showReadReceipt={item.message.id === lastReadOwnMessageId}
                   replyPreview={
-                    item.message.replyToId
-                      ? messages.find((m) => m.id === item.message.replyToId)?.text
-                      : undefined
+                    item.message.replyToId ? messages.find((m) => m.id === item.message.replyToId)?.text : undefined
                   }
                   onReply={() => setReplyTo(item.message)}
                   onEdit={() => setEditing(item.message)}

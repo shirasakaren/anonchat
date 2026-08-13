@@ -23,7 +23,11 @@ export function CannedReplyPicker({ onPick }: { onPick: (body: string) => void }
 
   return (
     <div className="border-t border-[var(--border)] px-3 py-1.5">
-      <button type="button" onClick={() => setOpen((v) => !v)} className="text-xs text-[var(--link-fg)] hover:underline">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="text-xs text-[var(--link-fg)] hover:underline"
+      >
         {open ? "Hide canned replies" : "Canned replies"}
       </button>
       {open && (

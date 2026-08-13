@@ -12,10 +12,34 @@ type State = { kind: "loading" } | { kind: "ready"; html: string } | { kind: "er
 // library for it. A .doc attachment falls back to the generic download
 // button in AttachmentPreview.tsx, same as any other unrecognized type.
 const ALLOWED_TAGS = [
-  "p", "br", "strong", "em", "u", "s", "a", "ul", "ol", "li",
-  "h1", "h2", "h3", "h4", "h5", "h6",
-  "table", "thead", "tbody", "tr", "th", "td",
-  "img", "blockquote", "code", "pre", "hr", "span",
+  "p",
+  "br",
+  "strong",
+  "em",
+  "u",
+  "s",
+  "a",
+  "ul",
+  "ol",
+  "li",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "table",
+  "thead",
+  "tbody",
+  "tr",
+  "th",
+  "td",
+  "img",
+  "blockquote",
+  "code",
+  "pre",
+  "hr",
+  "span",
 ];
 
 export function DocxPreview({ bytes }: Props) {

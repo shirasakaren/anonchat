@@ -97,7 +97,12 @@ export function ImageLightbox({ url, filename, onClose }: Props) {
           >
             <Download size={18} aria-hidden />
           </a>
-          <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-2 text-white hover:bg-white/10">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-lg p-2 text-white hover:bg-white/10"
+          >
             <X size={18} aria-hidden />
           </button>
         </div>

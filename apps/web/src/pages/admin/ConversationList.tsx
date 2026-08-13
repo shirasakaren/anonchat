@@ -21,10 +21,7 @@ import { decryptMessageText, getConversationKey } from "../../crypto/conversatio
 import { getAdminMessages } from "../../api/admin.js";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
 import { useRealtimeSocket } from "../../hooks/useRealtimeSocket.js";
-import {
-  setConversationMutedLocally,
-  syncMutedConversationIds,
-} from "./mutedConversations.js";
+import { setConversationMutedLocally, syncMutedConversationIds } from "./mutedConversations.js";
 
 type StatusFilter = "ALL" | "UNREAD" | "READ" | "ARCHIVED" | "BLOCKED";
 
@@ -244,9 +241,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                     "flex w-full flex-col gap-0.5 px-4 py-3 text-left transition-colors",
                     // The selected row keeps its accent tint on hover instead
                     // of swapping to the generic highlight.
-                    selectedId === conv.id
-                      ? "bg-[var(--selected-bg)]"
-                      : "hover:bg-[var(--row-hover)]",
+                    selectedId === conv.id ? "bg-[var(--selected-bg)]" : "hover:bg-[var(--row-hover)]",
                   )}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -396,9 +391,7 @@ function RowMenuItem({
       }}
       className={clsx(
         "block w-full px-3 py-1.5 text-left text-sm transition-colors",
-        destructive
-          ? "text-[var(--danger-fg)] hover:bg-[var(--danger-bg)]"
-          : "hover:bg-[var(--surface-muted)]",
+        destructive ? "text-[var(--danger-fg)] hover:bg-[var(--danger-bg)]" : "hover:bg-[var(--surface-muted)]",
       )}
     >
       {children}

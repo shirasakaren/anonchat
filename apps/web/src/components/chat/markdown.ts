@@ -6,7 +6,10 @@ import { BARE_URL_RE } from "./embeds/urlExtraction.js";
 marked.setOptions({ breaks: true, gfm: true });
 
 function linkify(raw: string): string {
-  return raw.replace(new RegExp(BARE_URL_RE.source, "g"), (match, lead: string, url: string) => `${lead}[${url}](${url})`);
+  return raw.replace(
+    new RegExp(BARE_URL_RE.source, "g"),
+    (match, lead: string, url: string) => `${lead}[${url}](${url})`,
+  );
 }
 
 const renderer = new marked.Renderer();
@@ -57,7 +60,24 @@ DOMPurify.addHook("uponSanitizeAttribute", (_node, data) => {
 });
 
 const SANITIZE_CONFIG = {
-  ALLOWED_TAGS: ["p", "br", "strong", "em", "del", "code", "pre", "blockquote", "ul", "ol", "li", "a", "span", "h1", "h2", "h3"],
+  ALLOWED_TAGS: [
+    "p",
+    "br",
+    "strong",
+    "em",
+    "del",
+    "code",
+    "pre",
+    "blockquote",
+    "ul",
+    "ol",
+    "li",
+    "a",
+    "span",
+    "h1",
+    "h2",
+    "h3",
+  ],
   ALLOWED_ATTR: ["href", "target", "rel", "class"],
 };
 

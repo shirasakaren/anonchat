@@ -1,5 +1,15 @@
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, Video, Music, FileText, FileCode, FileSpreadsheet, Paperclip, ZoomIn, Download } from "lucide-react";
+import {
+  Image as ImageIcon,
+  Video,
+  Music,
+  FileText,
+  FileCode,
+  FileSpreadsheet,
+  Paperclip,
+  ZoomIn,
+  Download,
+} from "lucide-react";
 import { decryptBlob } from "@anonchat/crypto";
 import type { AttachmentDto } from "@anonchat/shared";
 import { decryptAttachmentMeta, toBlobPart, type AttachmentMetaEnvelope } from "../../crypto/conversationCrypto.js";

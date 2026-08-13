@@ -272,7 +272,9 @@ export function Composer({
       onDrop={handleDrop}
     >
       {disabled && disabledReason && (
-        <p className="mb-2 rounded-md bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger-fg)]">{disabledReason}</p>
+        <p className="mb-2 rounded-md bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger-fg)]">
+          {disabledReason}
+        </p>
       )}
 
       {(replyPreview || editingPreview) && (

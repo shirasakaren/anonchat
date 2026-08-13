@@ -41,9 +41,7 @@ export function LinkPreviewCard({ url }: { url: string }) {
       rel="noopener noreferrer nofollow"
       className="flex max-w-sm gap-3 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2 hover:bg-[var(--surface-muted)]"
     >
-      {preview.image && (
-        <img src={preview.image} alt="" className="h-16 w-16 shrink-0 rounded object-cover" />
-      )}
+      {preview.image && <img src={preview.image} alt="" className="h-16 w-16 shrink-0 rounded object-cover" />}
       <div className="min-w-0 flex-1">
         <p className="truncate text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
           {preview.siteName || hostnameOf(preview.url)}
