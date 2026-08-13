@@ -25,8 +25,8 @@ function RootRouter() {
   const { site, loading, error, refresh } = useSite();
   const { syncFromServer } = useTheme();
 
-  // Adopt the server-side theme on first load (only if the user hasn't
-  // already set a local preference).
+  // The site's theme (set by the admin in Settings) is authoritative for
+  // every visitor - adopt it whenever site info loads or changes.
   useEffect(() => {
     if (site?.theme) syncFromServer(site.theme);
   }, [site?.theme, syncFromServer]);

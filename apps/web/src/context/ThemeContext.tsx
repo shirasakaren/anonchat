@@ -58,7 +58,7 @@ interface ThemeContextValue {
   allThemes: ThemeMeta[];
   /** Change the active theme. Persists to localStorage and updates the DOM. */
   setTheme: (id: string) => void;
-  /** Sync the stored theme with a server-provided value (called once on load). */
+  /** Adopt a server-provided theme as current, overriding any locally stored value. */
   syncFromServer: (serverTheme: string) => void;
 }
 
@@ -77,14 +77,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     listeners.forEach((cb) => cb());
   }, []);
 
-  /** Called once when the app first learns the server-side theme.
-   *  Only overrides localStorage if there is no stored preference yet. */
+  /** Called whenever the app learns the current site-wide theme (on load,
+   *  and whenever the site info is refetched). The site's theme - set by
+   *  the admin in Settings - is authoritative for every visitor; there is
+   *  no separate per-viewer theme preference to protect here (the only
+   *  thing that ever writes to this store otherwise is the admin's own
+   *  Settings page, which already applies its choice locally before this
+   *  ever runs). Previously this only adopted the server value the very
+   *  first time a browser had no stored theme at all, so an admin
+   *  changing the site theme later never reached anyone who had already
+   *  loaded the site once - fixed by always following the server value. */
   const syncFromServer = useCallback((serverTheme: string) => {
-    const stored = readStoredTheme();
-    // If the stored theme is still the default AND the server has a
-    // different value, adopt the server's theme. Otherwise keep the
-    // user's local override.
-    if (stored === DEFAULT_THEME && serverTheme !== DEFAULT_THEME && getThemeMeta(serverTheme)) {
+    if (serverTheme !== currentTheme && getThemeMeta(serverTheme)) {
       currentTheme = serverTheme;
       writeStoredTheme(serverTheme);
       applyDataThemeAttribute(serverTheme);
