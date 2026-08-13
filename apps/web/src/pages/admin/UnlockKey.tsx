@@ -2,8 +2,11 @@ import { useState } from "react";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
 
 export default function UnlockKey() {
-  const { unlockKey, importKey } = useAdminSession();
-  const [mode, setMode] = useState<"unlock" | "import">("unlock");
+  const { unlockKey, importKey, hasCachedKey } = useAdminSession();
+  // A genuinely new device has nothing cached to unlock with a password -
+  // default straight to the recovery-phrase import flow instead of a
+  // password prompt that can only ever fail here.
+  const [mode, setMode] = useState<"unlock" | "import">(hasCachedKey ? "unlock" : "import");
   const [password, setPassword] = useState("");
   const [phrase, setPhrase] = useState("");
   const [busy, setBusy] = useState(false);

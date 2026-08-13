@@ -16,6 +16,10 @@ interface AdminSessionContextValue {
   admin: AdminSummaryDto | null;
   identity: Identity | null;
   needsKeyUnlock: boolean;
+  /** Whether this browser has a wrapped key cached at all - false means it's
+   *  a genuinely new device, so UnlockKey should default straight to the
+   *  recovery-phrase import flow instead of a password prompt that can only fail. */
+  hasCachedKey: boolean;
   login: (username: string, password: string, totpCode?: string) => Promise<void>;
   unlockKey: (password: string) => Promise<void>;
   importKey: (phrase: string, password: string) => Promise<void>;
@@ -30,6 +34,7 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
   const [admin, setAdmin] = useState<AdminSummaryDto | null>(null);
   const [identity, setIdentity] = useState<Identity | null>(getUnlockedAdminIdentity());
   const [needsKeyUnlock, setNeedsKeyUnlock] = useState(false);
+  const [hasCachedKey, setHasCachedKey] = useState(false);
 
   const refreshAdmin = useCallback(async () => {
     try {
@@ -41,7 +46,14 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
         setIdentity(cached);
         setNeedsKeyUnlock(false);
       } else {
-        setNeedsKeyUnlock(await hasCachedAdminKey());
+        // Needs unlocking either way: a cached wrapped key just needs this
+        // browser's login password re-entered, and NO cached key at all
+        // (a genuinely new device) needs the recovery-phrase import flow -
+        // both live behind UnlockKey, which was previously only reachable
+        // in the first case, silently stranding new-device admins on an
+        // infinite "Unlocking…" spinner in every conversation.
+        setHasCachedKey(await hasCachedAdminKey());
+        setNeedsKeyUnlock(true);
       }
     } catch {
       setAdmin(null);
@@ -110,7 +122,18 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider
-      value={{ status, admin, identity, needsKeyUnlock, login, unlockKey, importKey, logout, refreshAdmin }}
+      value={{
+        status,
+        admin,
+        identity,
+        needsKeyUnlock,
+        hasCachedKey,
+        login,
+        unlockKey,
+        importKey,
+        logout,
+        refreshAdmin,
+      }}
     >
       {children}
     </Ctx.Provider>
