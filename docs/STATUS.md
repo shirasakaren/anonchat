@@ -69,6 +69,15 @@ Signal/WhatsApp conventions where they translate to a 1:1 E2EE product.
    `--bubble-admin-text`, already >=4.5:1 against their bubble by
    construction) with an underline for the link affordance instead of
    relying on color alone.
+10. **Attachment file-size label failed contrast in every theme, and the
+    fix for #9 briefly regressed the button's hover state** - the
+    file-size label used `--text-muted` (same "only checked against
+    `--surface`" root cause as #9, pre-existing); separately, once the
+    preview/retry label started inheriting bubble text color, the
+    button's existing `hover:bg-[var(--surface-muted)]` fill made that
+    inherited text nearly invisible on hover in 14/25 themes. Fixed the
+    label the same way as #9, and swapped the hover fill for a ring so
+    hovering never repaints behind inherited bubble text.
 
 ### Post-fix verification
 
@@ -81,6 +90,20 @@ Signal/WhatsApp conventions where they translate to a 1:1 E2EE product.
 - Re-captured tablet (768px) screenshots of the public landing page and
   admin inbox after all fixes landed - no layout regressions from the
   contrast/link changes.
+- Ran the full verification path from "How to verify things still work"
+  below (typecheck, lint, full build, and `pnpm run test` against a
+  throwaway Postgres instance separate from the live dev database) after
+  all fixes in this session - all green, 0 lint errors, 57/57 tests
+  passing.
+
+### Live admin credentials (after the DB reset in this session)
+
+The DB was wiped twice during this audit to test onboarding from empty
+state - the admin account currently live in the database is a fresh one
+created during this session, not whatever existed before. Credentials
+and the encryption recovery phrase were handed to the user directly and
+are not recorded here (they're a per-environment secret, not something
+that belongs in a checked-in doc).
 
 ### Features added
 
