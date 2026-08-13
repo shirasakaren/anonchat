@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import clsx from "clsx";
 import { Menu, X, MessageSquare, Settings, ShieldCheck, ClipboardList, ScrollText } from "lucide-react";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
+import { useUnreadCount } from "../../hooks/useUnreadCount.js";
 
 const NAV_ITEMS = [
   { to: "/admin", label: "Inbox", icon: MessageSquare, end: true },
@@ -15,6 +16,7 @@ const NAV_ITEMS = [
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { admin, logout } = useAdminSession();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const unreadCount = useUnreadCount();
 
   const closeMobileNav = () => setMobileNavOpen(false);
 
@@ -33,6 +35,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     >
       <item.icon size={16} aria-hidden />
       {item.label}
+      {item.to === "/admin" && unreadCount > 0 && (
+        <span className="ml-auto rounded-full bg-[var(--btn-bg)] px-1.5 py-0.5 text-xs font-medium text-[var(--btn-fg)]">
+          {unreadCount > 9 ? "9+" : unreadCount}
+        </span>
+      )}
     </NavLink>
   ));
 
@@ -61,10 +68,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <button
             type="button"
             onClick={() => setMobileNavOpen(true)}
-            aria-label="Open navigation menu"
-            className="rounded-lg p-2 hover:bg-[var(--surface-muted)]"
+            aria-label={unreadCount > 0 ? `Open navigation menu, ${unreadCount} unread` : "Open navigation menu"}
+            className="relative rounded-lg p-2 hover:bg-[var(--surface-muted)]"
           >
             <Menu size={18} aria-hidden />
+            {unreadCount > 0 && (
+              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[var(--btn-bg)]" aria-hidden />
+            )}
           </button>
         </header>
         <main className="min-w-0 flex-1 overflow-hidden">{children}</main>
