@@ -191,21 +191,29 @@ function MessageActions({
   onReact: (emoji: string | null) => void;
 }) {
   return (
-    <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+    // Always visible below md: opacity-0/group-hover has no touch equivalent,
+    // so a hover-only reveal made these unreachable on phones/tablets. At
+    // md+ (mouse-primary) it still hides until hover OR keyboard focus
+    // lands on one of the buttons (group-focus-within), which also fixes
+    // the earlier keyboard trap where a focused-but-invisible button had no
+    // visible focus indicator.
+    <div className="flex gap-0.5 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
       <button
         type="button"
         title="React"
+        aria-label="React"
         disabled={disableActions}
         onClick={() => setShowReactionPicker(!showReactionPicker)}
-        className="rounded p-1 text-xs hover:bg-[var(--surface-muted)] disabled:pointer-events-none disabled:opacity-40"
+        className="rounded p-1.5 text-xs hover:bg-[var(--surface-muted)] disabled:pointer-events-none disabled:opacity-40"
       >
         <SmilePlus size={14} aria-hidden />
       </button>
       <button
         type="button"
         title="Reply"
+        aria-label="Reply"
         onClick={onReply}
-        className="rounded p-1 text-xs hover:bg-[var(--surface-muted)]"
+        className="rounded p-1.5 text-xs hover:bg-[var(--surface-muted)]"
       >
         <Reply size={14} aria-hidden />
       </button>
@@ -213,9 +221,10 @@ function MessageActions({
         <button
           type="button"
           title="Edit"
+          aria-label="Edit"
           disabled={disableActions}
           onClick={onEdit}
-          className="rounded p-1 text-xs hover:bg-[var(--surface-muted)] disabled:pointer-events-none disabled:opacity-40"
+          className="rounded p-1.5 text-xs hover:bg-[var(--surface-muted)] disabled:pointer-events-none disabled:opacity-40"
         >
           <Pencil size={14} aria-hidden />
         </button>
@@ -224,9 +233,10 @@ function MessageActions({
         <button
           type="button"
           title="Delete"
+          aria-label="Delete"
           disabled={disableActions}
           onClick={onDelete}
-          className="rounded p-1 text-xs hover:bg-[var(--surface-muted)] disabled:pointer-events-none disabled:opacity-40"
+          className="rounded p-1.5 text-xs hover:bg-[var(--surface-muted)] disabled:pointer-events-none disabled:opacity-40"
         >
           <Trash2 size={14} aria-hidden />
         </button>

@@ -142,7 +142,7 @@ export function Composer({
             type="button"
             onClick={editingPreview ? onCancelEdit : onCancelReply}
             aria-label={editingPreview ? "Cancel edit" : "Cancel reply"}
-            className="ml-2 shrink-0 text-[var(--text-muted)]"
+            className="ml-2 shrink-0 rounded p-1.5 text-[var(--text-muted)] hover:bg-[var(--surface-raised)]"
           >
             <X size={14} aria-hidden />
           </button>
@@ -164,7 +164,7 @@ export function Composer({
                 type="button"
                 onClick={() => removeFile(i)}
                 aria-label={`Remove ${f.file.name}`}
-                className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-xs text-white"
+                className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-xs text-white"
               >
                 <X size={12} aria-hidden />
               </button>
