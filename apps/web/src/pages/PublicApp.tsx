@@ -7,7 +7,8 @@ import RecoveryConfirm from "./RecoveryConfirm.js";
 import Chat from "./Chat.js";
 
 function PublicAppInner() {
-  const { status, error } = useAnonymousSession();
+  const { status, error, discardBrokenIdentity } = useAnonymousSession();
+  const [discarding, setDiscarding] = useState(false);
   const [checkedAdmin, setCheckedAdmin] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [pendingRecovery, setPendingRecovery] = useState<{ phrase: string; publicId: string } | null>(null);
@@ -26,7 +27,35 @@ function PublicAppInner() {
   }
 
   if (status === "loading") return <FullScreenLoader label="Restoring your conversation…" />;
-  if (status === "error") return <FullScreenError message={error ?? "Something went wrong."} />;
+  if (status === "error") {
+    return (
+      <FullScreenError
+        message={error ?? "Something went wrong."}
+        actions={
+          <>
+            <button
+              type="button"
+              disabled={discarding}
+              onClick={async () => {
+                setDiscarding(true);
+                await discardBrokenIdentity();
+              }}
+              className="w-full rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-60"
+            >
+              {discarding ? "Starting over…" : "Start a new anonymous chat"}
+            </button>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="w-full rounded-lg border border-[var(--border-strong)] px-4 py-2.5 text-sm font-medium hover:bg-[var(--surface-muted)]"
+            >
+              Try again
+            </button>
+          </>
+        }
+      />
+    );
+  }
   if (status === "needs-identity") {
     return <PublicHome onCreated={(phrase, publicId) => setPendingRecovery({ phrase, publicId })} />;
   }

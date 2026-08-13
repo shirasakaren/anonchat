@@ -22,7 +22,7 @@ import AdminApp from "./pages/admin/AdminApp.js";
  * regular visitor's tab has no other way to know onboarding is done.
  */
 function RootRouter() {
-  const { site, loading, error } = useSite();
+  const { site, loading, error, refresh } = useSite();
   const { syncFromServer } = useTheme();
 
   // Adopt the server-side theme on first load (only if the user hasn't
@@ -32,7 +32,22 @@ function RootRouter() {
   }, [site?.theme, syncFromServer]);
 
   if (loading) return <FullScreenLoader label="Loading Anonchat…" />;
-  if (error || !site) return <FullScreenError message={error ?? "The site could not be loaded."} />;
+  if (error || !site) {
+    return (
+      <FullScreenError
+        message={error ?? "The site could not be loaded."}
+        actions={
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            className="w-full rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)]"
+          >
+            Try again
+          </button>
+        }
+      />
+    );
+  }
 
   return (
     <Routes>

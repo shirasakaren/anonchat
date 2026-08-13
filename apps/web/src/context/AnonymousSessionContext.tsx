@@ -13,6 +13,7 @@ import {
   getActiveIdentityId,
   importIdentityFromRecoveryPhrase,
   loadIdentity,
+  removeIdentity,
   setActiveIdentityId,
   touchIdentity,
 } from "../crypto/identityStore.js";
@@ -33,6 +34,12 @@ interface AnonymousSessionContextValue {
   continueWithStoredIdentity: (publicId: string) => Promise<void>;
   importFromRecoveryPhrase: (phrase: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Escape hatch for a broken identity (e.g. the server has no record of it
+   *  anymore - deleted, or a dev/test database reset): discards it from this
+   *  device and drops back to "needs-identity" so the visitor can start a
+   *  brand new anonymous chat instead of being stuck reloading the same
+   *  failure forever. */
+  discardBrokenIdentity: () => Promise<void>;
   setConversationStatus: (status: SessionState["conversationStatus"]) => void;
 }
 
@@ -138,6 +145,15 @@ export function AnonymousSessionProvider({ children }: { children: ReactNode }) 
     setStatus("needs-identity");
   }, []);
 
+  const discardBrokenIdentity = useCallback(async () => {
+    const activeId = getActiveIdentityId();
+    if (activeId) await removeIdentity(activeId);
+    await logoutAnonymous().catch(() => {});
+    setSession(null);
+    setError(null);
+    setStatus("needs-identity");
+  }, []);
+
   const setConversationStatus = useCallback((newStatus: SessionState["conversationStatus"]) => {
     setSession((prev) => (prev ? { ...prev, conversationStatus: newStatus } : prev));
   }, []);
@@ -152,6 +168,7 @@ export function AnonymousSessionProvider({ children }: { children: ReactNode }) 
         continueWithStoredIdentity,
         importFromRecoveryPhrase,
         logout,
+        discardBrokenIdentity,
         setConversationStatus,
       }}
     >
