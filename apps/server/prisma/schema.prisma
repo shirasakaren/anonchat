@@ -76,6 +76,8 @@ model Conversation {
   updatedAt       DateTime           @updatedAt
   lastMessageAt   DateTime?
   deletedAt       DateTime?
+  /// Admin-only nickname for this contact. Never sent to the anonymous user.
+  adminAlias      String?
 
   messages Message[]
 
