@@ -120,13 +120,14 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
   }, [conversations, identity]);
 
   return (
-    <div className="flex h-full w-80 flex-col border-r border-[var(--border)]">
+    <div className="flex h-full w-full flex-col border-r border-[var(--border)] md:w-80">
+      <h1 className="sr-only">Inbox</h1>
       <div className="border-b border-[var(--border)] p-3">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by ID…"
-          className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-1.5 text-sm"
+          className="w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-1.5 text-sm"
         />
         <div className="mt-2 flex flex-wrap gap-1">
           {FILTERS.map((f) => (

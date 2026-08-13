@@ -36,7 +36,7 @@ export default function UnlockKey() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6">
+    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6">
       <h1 className="mb-2 text-center text-xl font-semibold">Unlock message decryption</h1>
       <p className="mb-6 text-center text-sm text-[var(--text-muted)]">
         You're signed in, but this browser needs to unlock your encryption key before it can decrypt conversations.
@@ -53,7 +53,7 @@ export default function UnlockKey() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
               />
             </label>
             {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
@@ -82,7 +82,7 @@ export default function UnlockKey() {
                 rows={3}
                 value={phrase}
                 onChange={(e) => setPhrase(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 font-mono text-sm"
+                className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 font-mono text-sm"
               />
             </label>
             <label className="block text-sm font-medium">
@@ -92,7 +92,7 @@ export default function UnlockKey() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
               />
             </label>
             {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
@@ -115,6 +115,6 @@ export default function UnlockKey() {
           </form>
         )}
       </div>
-    </div>
+    </main>
   );
 }

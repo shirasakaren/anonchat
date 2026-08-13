@@ -213,7 +213,7 @@ export function Composer({
           placeholder="Type a message… (Enter to send, Shift+Enter for a new line)"
           rows={1}
           disabled={disabled}
-          className="max-h-32 min-h-[2.5rem] flex-1 resize-none rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm disabled:opacity-50"
+          className="max-h-32 min-h-[2.5rem] flex-1 resize-none rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm disabled:opacity-50"
           style={{ height: "auto" }}
           onInput={(e) => {
             const el = e.currentTarget;

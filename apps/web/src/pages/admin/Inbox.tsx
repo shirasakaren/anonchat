@@ -26,7 +26,7 @@ export default function Inbox() {
             <button
               type="button"
               onClick={() => navigate("/admin")}
-              className="flex items-center gap-1 border-b border-[var(--border)] px-4 py-2 text-left text-xs text-[var(--color-accent-600)] md:hidden"
+              className="flex items-center gap-1 border-b border-[var(--border)] px-4 py-2 text-left text-xs text-[var(--link-fg)] md:hidden"
             >
               <ArrowLeft size={13} aria-hidden />
               Back to conversations

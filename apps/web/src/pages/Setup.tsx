@@ -120,14 +120,14 @@ export default function Setup() {
   if (checkingExisting) return <FullScreenLoader />;
 
   return (
-    <div
+    <main
       className={clsx(
         "mx-auto flex min-h-screen flex-col justify-center px-6 py-12 transition-[max-width]",
         step === "theme" ? "max-w-3xl" : "max-w-lg",
       )}
     >
       <div className="mb-8 text-center">
-        <p className="text-sm font-medium uppercase tracking-wide text-[var(--color-accent-600)]">First-time setup</p>
+        <p className="text-sm font-medium uppercase tracking-wide text-[var(--link-fg)]">First-time setup</p>
         <h1 className="mt-1 text-2xl font-semibold">Welcome to Anonchat</h1>
       </div>
 
@@ -181,7 +181,7 @@ export default function Setup() {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="e.g. Alex"
-                className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
               />
             </label>
             <p className="text-xs text-[var(--text-muted)]">Shown to anonymous visitors as who they're talking to.</p>
@@ -203,7 +203,7 @@ export default function Setup() {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
               />
             </label>
             <label className="block text-sm font-medium">
@@ -214,7 +214,7 @@ export default function Setup() {
                 minLength={10}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
               />
             </label>
             <label className="block text-sm font-medium">
@@ -224,7 +224,7 @@ export default function Setup() {
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
               />
             </label>
             {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
@@ -268,6 +268,6 @@ export default function Setup() {
 
         {step === "done" && <p className="text-center text-sm">All set. Taking you to your dashboard…</p>}
       </div>
-    </div>
+    </main>
   );
 }

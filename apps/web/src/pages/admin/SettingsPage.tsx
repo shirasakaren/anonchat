@@ -154,7 +154,7 @@ export default function SettingsPage() {
           )}
           <label
             className={clsx(
-              "text-sm text-[var(--color-accent-600)]",
+              "text-sm text-[var(--link-fg)]",
               avatarUploading ? "pointer-events-none opacity-50" : "cursor-pointer",
             )}
           >
@@ -180,7 +180,7 @@ export default function SettingsPage() {
           <input
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
           />
         </label>
         <label className="mb-3 block text-sm font-medium">
@@ -189,7 +189,7 @@ export default function SettingsPage() {
             rows={2}
             value={bio}
             onChange={(e) => setBio(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
           />
         </label>
         <label className="mb-3 block text-sm font-medium">
@@ -199,7 +199,7 @@ export default function SettingsPage() {
             value={pgpPublicKey}
             onChange={(e) => setPgpPublicKey(e.target.value)}
             placeholder="-----BEGIN PGP PUBLIC KEY BLOCK-----"
-            className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 font-mono text-xs"
+            className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 font-mono text-xs"
           />
         </label>
         <label className="mb-3 flex items-center gap-2 text-sm font-medium">
@@ -221,7 +221,7 @@ export default function SettingsPage() {
                 setContactLinks((prev) => prev.map((l, idx) => (idx === i ? { ...l, label: e.target.value } : l)))
               }
               placeholder="Label"
-              className="w-1/3 rounded-lg border border-[var(--border)] bg-transparent px-2 py-1.5 text-sm"
+              className="w-1/3 rounded-lg border border-[var(--border-strong)] bg-transparent px-2 py-1.5 text-sm"
             />
             <input
               value={link.url}
@@ -229,7 +229,7 @@ export default function SettingsPage() {
                 setContactLinks((prev) => prev.map((l, idx) => (idx === i ? { ...l, url: e.target.value } : l)))
               }
               placeholder="https://…"
-              className="flex-1 rounded-lg border border-[var(--border)] bg-transparent px-2 py-1.5 text-sm"
+              className="flex-1 rounded-lg border border-[var(--border-strong)] bg-transparent px-2 py-1.5 text-sm"
             />
             <button
               type="button"
@@ -244,7 +244,7 @@ export default function SettingsPage() {
         <button
           type="button"
           onClick={() => setContactLinks((prev) => [...prev, { label: "", url: "" }])}
-          className="block text-xs text-[var(--color-accent-600)]"
+          className="block text-xs text-[var(--link-fg)]"
         >
           + Add link
         </button>
@@ -327,7 +327,7 @@ export default function SettingsPage() {
               onChange={(e) => setTotpCode(e.target.value)}
               placeholder="6-digit code"
               maxLength={6}
-              className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
             />
             {totpError && <p className="text-sm text-[var(--danger-fg)]">{totpError}</p>}
             <button

@@ -29,7 +29,7 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6">
+    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6">
       <h1 className="mb-6 text-center text-xl font-semibold">Admin sign in</h1>
       <form
         onSubmit={handleSubmit}
@@ -42,7 +42,7 @@ export default function AdminLogin() {
             required
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
           />
         </label>
         <label className="block text-sm font-medium">
@@ -52,7 +52,7 @@ export default function AdminLogin() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
           />
         </label>
         {needsTotp && (
@@ -66,7 +66,7 @@ export default function AdminLogin() {
               inputMode="numeric"
               pattern="\d{6}"
               maxLength={6}
-              className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
             />
           </label>
         )}
@@ -79,6 +79,6 @@ export default function AdminLogin() {
           {busy ? "Signing in…" : "Sign in"}
         </button>
       </form>
-    </div>
+    </main>
   );
 }

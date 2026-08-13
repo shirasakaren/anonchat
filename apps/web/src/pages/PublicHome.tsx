@@ -58,7 +58,7 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
   const ownerName = site?.displayName ?? "the site owner";
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-12">
+    <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-12">
       <div className="mb-8 text-center">
         {site?.avatarUrl && (
           <img src={site.avatarUrl} alt="" className="mx-auto mb-4 h-16 w-16 rounded-full object-cover" />
@@ -66,7 +66,7 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
         <h1 className="text-2xl font-semibold">Message {ownerName} anonymously</h1>
         <p className="mt-2 text-sm text-[var(--text-muted)]">No email. No account. No name required. {site?.bio}</p>
         <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-[var(--text-muted)]">
-          <ShieldCheck size={14} className="shrink-0 text-[var(--color-accent-600)]" aria-hidden />
+          <ShieldCheck size={14} className="shrink-0 text-[var(--link-fg)]" aria-hidden />
           End-to-end encrypted — only your identity and {ownerName}'s key can decrypt these messages.
         </p>
       </div>
@@ -120,7 +120,7 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
                 value={importText}
                 onChange={(e) => setImportText(e.target.value)}
                 placeholder="Paste your recovery key…"
-                className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 font-mono text-sm"
+                className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 font-mono text-sm"
               />
             </label>
             {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
@@ -143,6 +143,6 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
           </form>
         )}
       </div>
-    </div>
+    </main>
   );
 }

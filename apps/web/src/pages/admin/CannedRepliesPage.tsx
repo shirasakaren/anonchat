@@ -53,7 +53,7 @@ export default function CannedRepliesPage() {
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Title"
           required
-          className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
         />
         <textarea
           value={body}
@@ -61,7 +61,7 @@ export default function CannedRepliesPage() {
           placeholder="Reply text"
           required
           rows={3}
-          className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
         />
         <div className="flex gap-2">
           <button
@@ -95,7 +95,7 @@ export default function CannedRepliesPage() {
                 <p className="mt-1 text-sm text-[var(--text-muted)]">{reply.body}</p>
               </div>
               <div className="flex gap-2 text-xs">
-                <button type="button" onClick={() => startEdit(reply)} className="text-[var(--color-accent-600)]">
+                <button type="button" onClick={() => startEdit(reply)} className="text-[var(--link-fg)]">
                   Edit
                 </button>
                 <button type="button" onClick={() => handleDelete(reply.id)} className="text-[var(--danger-fg)]">
