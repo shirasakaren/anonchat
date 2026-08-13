@@ -1,6 +1,6 @@
 import type { Conversation, ConversationStatus, Prisma, SenderType } from "@prisma/client";
 import { bytesToBase64url } from "@anonchat/crypto";
-import type { AdminConversationSummaryDto, ConversationDto, MessagePage } from "@anonchat/shared";
+import type { AdminConversationDto, AdminConversationSummaryDto, ConversationDto, MessagePage } from "@anonchat/shared";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@anonchat/shared";
 import { prisma } from "../db.js";
 import { publishToConversation } from "../realtime/hub.js";
@@ -35,6 +35,18 @@ export function toConversationDto(
     unreadCount,
     anonymousExchangePublicKey: bytesToBase64url(anonymousUser.exchangePublicKey),
   };
+}
+
+/** Admin-only variant: adds the admin's private nickname. Deliberately kept
+ *  out of toConversationDto (and therefore out of every user-facing REST
+ *  response and WebSocket payload) so the alias can never reach the
+ *  anonymous user's client. */
+export function toAdminConversationDto(
+  conversation: Conversation,
+  anonymousUser: { publicId: string; exchangePublicKey: Uint8Array },
+  unreadCount: number,
+): AdminConversationDto {
+  return { ...toConversationDto(conversation, anonymousUser, unreadCount), adminAlias: conversation.adminAlias };
 }
 
 export async function getMessagesPage(
@@ -109,7 +121,12 @@ export async function listConversationsForAdmin(query: {
   }
 
   if (query.q) {
-    where.anonymousUser = { publicId: { contains: query.q, mode: "insensitive" } };
+    // Search matches either the anonymous publicId or the admin's private
+    // alias - the alias exists so the admin can find contacts by name.
+    where.OR = [
+      { anonymousUser: { publicId: { contains: query.q, mode: "insensitive" } } },
+      { adminAlias: { contains: query.q, mode: "insensitive" } },
+    ];
   }
 
   const rows = await prisma.conversation.findMany({
@@ -127,6 +144,7 @@ export async function listConversationsForAdmin(query: {
     conversations: page.map((c, i) => ({
       id: c.id,
       publicId: c.anonymousUser.publicId,
+      adminAlias: c.adminAlias,
       status: c.status,
       unreadCount: unreadCounts[i]!,
       createdAt: c.createdAt.toISOString(),
@@ -137,43 +155,63 @@ export async function listConversationsForAdmin(query: {
   };
 }
 
-export async function getConversationForAdmin(conversationId: string): Promise<ConversationDto> {
+export async function getConversationForAdmin(conversationId: string): Promise<AdminConversationDto> {
   const conversation = await prisma.conversation.findFirst({
     where: { id: conversationId, deletedAt: null },
     include: { anonymousUser: { select: ANONYMOUS_USER_SELECT } },
   });
   if (!conversation) throw Errors.notFound();
   const unreadCount = await countUnread(conversation.id, "ADMIN");
-  return toConversationDto(conversation, conversation.anonymousUser, unreadCount);
+  return toAdminConversationDto(conversation, conversation.anonymousUser, unreadCount);
 }
 
 export async function setConversationStatus(
   conversationId: string,
   status: ConversationStatus,
-): Promise<ConversationDto> {
+): Promise<AdminConversationDto> {
   const conversation = await prisma.conversation.update({
     where: { id: conversationId },
     data: { status },
     include: { anonymousUser: { select: ANONYMOUS_USER_SELECT } },
   });
   const unreadCount = await countUnread(conversationId, "ADMIN");
-  const dto = toConversationDto(conversation, conversation.anonymousUser, unreadCount);
-  publishToConversation(conversationId, { type: "conversation.updated", conversation: dto });
-  return dto;
+  // The broadcast DTO stays user-safe (no adminAlias) - it reaches the
+  // anonymous user's socket too. The admin response carries the alias.
+  const userSafeDto = toConversationDto(conversation, conversation.anonymousUser, unreadCount);
+  publishToConversation(conversationId, { type: "conversation.updated", conversation: userSafeDto });
+  return toAdminConversationDto(conversation, conversation.anonymousUser, unreadCount);
 }
 
 export async function softDeleteConversation(conversationId: string): Promise<void> {
   await prisma.conversation.update({ where: { id: conversationId }, data: { deletedAt: new Date() } });
 }
 
-export async function restoreConversation(conversationId: string): Promise<ConversationDto> {
+export async function restoreConversation(conversationId: string): Promise<AdminConversationDto> {
   const conversation = await prisma.conversation.update({
     where: { id: conversationId },
     data: { deletedAt: null },
     include: { anonymousUser: { select: ANONYMOUS_USER_SELECT } },
   });
   const unreadCount = await countUnread(conversationId, "ADMIN");
-  return toConversationDto(conversation, conversation.anonymousUser, unreadCount);
+  return toAdminConversationDto(conversation, conversation.anonymousUser, unreadCount);
+}
+
+/** Sets (or clears, with null/empty) the admin's private nickname for this
+ *  conversation. Returns the admin DTO to the caller, but only the
+ *  user-safe DTO is broadcast. */
+export async function setConversationAlias(
+  conversationId: string,
+  alias: string | null,
+): Promise<AdminConversationDto> {
+  const conversation = await prisma.conversation.update({
+    where: { id: conversationId },
+    data: { adminAlias: alias && alias.trim().length > 0 ? alias.trim() : null },
+    include: { anonymousUser: { select: ANONYMOUS_USER_SELECT } },
+  });
+  const unreadCount = await countUnread(conversationId, "ADMIN");
+  const userSafeDto = toConversationDto(conversation, conversation.anonymousUser, unreadCount);
+  publishToConversation(conversationId, { type: "conversation.updated", conversation: userSafeDto });
+  return toAdminConversationDto(conversation, conversation.anonymousUser, unreadCount);
 }
 
 export async function hardDeleteConversation(conversationId: string): Promise<void> {

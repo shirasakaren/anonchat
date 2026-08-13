@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import {
   AdminConversationsQuerySchema,
+  ConversationAliasRequestSchema,
   ConversationAttachmentParamsSchema,
   ConversationMessageParamsSchema,
   EditMessageRequestSchema,
@@ -19,6 +20,7 @@ import {
   listConversationsForAdmin,
   markRead,
   restoreConversation,
+  setConversationAlias,
   setConversationStatus,
   softDeleteConversation,
 } from "../../services/conversation.service.js";
@@ -196,6 +198,15 @@ export function registerAdminConversationRoutes(app: FastifyInstance): void {
     const params = ConversationIdParam.parse(request.params);
     const dto = await setConversationStatus(params.id, "ACTIVE");
     await recordAudit(admin.id, "conversation.unblocked", { type: "Conversation", id: params.id });
+    reply.send(dto);
+  });
+
+  app.patch("/admin/conversations/:id/alias", { preHandler: requireAdmin }, async (request, reply) => {
+    const { admin } = request.adminAuth!;
+    const params = ConversationIdParam.parse(request.params);
+    const body = ConversationAliasRequestSchema.parse(request.body);
+    const dto = await setConversationAlias(params.id, body.alias);
+    await recordAudit(admin.id, "conversation.alias_updated", { type: "Conversation", id: params.id });
     reply.send(dto);
   });
 
