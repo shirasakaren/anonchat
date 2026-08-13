@@ -1,5 +1,6 @@
 import DOMPurify from "dompurify";
-import { marked } from "marked";
+import { marked, type Tokens } from "marked";
+import { ensureLanguagesRegistered } from "./codeLanguages.js";
 
 marked.setOptions({ breaks: true, gfm: true });
 
@@ -8,6 +9,32 @@ const BARE_URL = /(^|[\s(])((https?:\/\/)[^\s<)]+)/g;
 function linkify(raw: string): string {
   return raw.replace(BARE_URL, (match, lead: string, url: string) => `${lead}[${url}](${url})`);
 }
+
+const renderer = new marked.Renderer();
+
+// Overrides marked's default `code` rendering to run the fenced block's
+// content through highlight.js first. highlight.js escapes the source
+// itself before wrapping it in `hljs-*` spans, so `result.value` is already
+// safe HTML - it still goes through the same DOMPurify pass as everything
+// else below as defense in depth (see the class-token allowlist above it).
+renderer.code = ({ text, lang }: Tokens.Code): string => {
+  const hljs = ensureLanguagesRegistered();
+  const code = text.replace(/\n$/, "");
+  const requested = (lang || "").trim().split(/\s+/)[0]?.toLowerCase();
+  const known = requested && hljs.getLanguage(requested) ? requested : null;
+  const highlighted = known ? hljs.highlight(code, { language: known, ignoreIllegals: true }).value : escapeHtml(code);
+  const id = known ?? "plaintext";
+  // The human-readable label (languageLabel) is looked up client-side from
+  // this class in the post-render pass that adds the copy button - no need
+  // to carry it as an attribute through the sanitizer too.
+  return `<pre><code class="hljs language-${id}">${highlighted}</code></pre>`;
+};
+
+function escapeHtml(text: string): string {
+  return text.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+}
+
+marked.use({ renderer });
 
 // `class` is allowed below so syntax-highlighted code blocks (hljs-* spans,
 // language-* on the wrapping <code>) render with color - but `class` is

@@ -197,6 +197,70 @@ select:disabled {
   font-size: 0.875em;
 }
 
+/* ── Syntax highlighting (highlight.js output) ───────────────────────
+   Code blocks render on --surface-muted (a page-level surface, not a
+   message bubble), so the same tokens already contrast-audited for
+   page-level text/link/status roles are safe to reuse here directly -
+   unlike the bubble-background cases elsewhere in this file, this isn't
+   the "only checked against --surface" trap. Deliberately reuses existing
+   roles instead of adding 25 more per-theme token sets for one feature. */
+.prose-message .hljs-comment,
+.prose-message .hljs-quote {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.prose-message .hljs-keyword,
+.prose-message .hljs-selector-tag,
+.prose-message .hljs-literal,
+.prose-message .hljs-type,
+.prose-message .hljs-doctag {
+  color: var(--color-accent-600);
+  font-weight: 600;
+}
+
+.prose-message .hljs-string,
+.prose-message .hljs-attr,
+.prose-message .hljs-regexp,
+.prose-message .hljs-addition,
+.prose-message .hljs-link {
+  color: var(--link-fg);
+}
+
+.prose-message .hljs-number,
+.prose-message .hljs-symbol,
+.prose-message .hljs-bullet {
+  color: var(--warning-fg);
+}
+
+.prose-message .hljs-title,
+.prose-message .hljs-name,
+.prose-message .hljs-section,
+.prose-message .hljs-selector-id,
+.prose-message .hljs-selector-class {
+  color: var(--color-accent-600);
+  font-weight: 600;
+}
+
+.prose-message .hljs-deletion {
+  color: var(--danger-fg);
+}
+
+.prose-message .hljs-built_in,
+.prose-message .hljs-variable,
+.prose-message .hljs-template-variable,
+.prose-message .hljs-attribute {
+  color: var(--text-muted);
+}
+
+.prose-message .hljs-emphasis {
+  font-style: italic;
+}
+
+.prose-message .hljs-strong {
+  font-weight: 700;
+}
+
 .prose-message p {
   margin: 0;
 }
