@@ -21,6 +21,8 @@ import { useSite } from "../../context/SiteContext.js";
 import { useRealtimeSocket } from "../../hooks/useRealtimeSocket.js";
 import { Composer } from "../../components/chat/Composer.js";
 import { ConnectionBanner } from "../../components/chat/ConnectionBanner.js";
+import { DateSeparator } from "../../components/chat/DateSeparator.js";
+import { withDateSeparators } from "../../components/chat/dateSeparators.js";
 import { MessageBubble } from "../../components/chat/MessageBubble.js";
 import { TypingIndicator } from "../../components/chat/TypingIndicator.js";
 import { FullScreenLoader } from "../../components/common/Loader.js";
@@ -214,6 +216,8 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   );
 
   const { status: wsStatus, send: wsSend } = useRealtimeSocket(handleWsEvent, true, reloadSilently);
+
+  const threadItems = useMemo(() => withDateSeparators(messages), [messages]);
 
   if (loading || !conversation) return <FullScreenLoader label="Loading conversation…" />;
   if (!conversationKey) return <FullScreenLoader label="Unlocking…" />;
@@ -448,27 +452,35 @@ export function ConversationView({ conversationId, onChanged }: Props) {
           </div>
         ) : (
           <div className="space-y-3">
-            {messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                isOwn={message.senderType === "ADMIN"}
-                conversationKey={conversationKey}
-                attachmentUrlFor={(id) => adminAttachmentUrl(conversationId, id)}
-                canEdit={
-                  site
-                    ? Date.now() - new Date(message.createdAt).getTime() <=
-                      site.limits.messageEditWindowMinutes * 60_000
-                    : false
-                }
-                replyPreview={message.replyToId ? messages.find((m) => m.id === message.replyToId)?.text : undefined}
-                onReply={() => setReplyTo(message)}
-                onEdit={() => setEditing(message)}
-                onDelete={() => handleDelete(message)}
-                onReact={(emoji) => handleReact(message, emoji)}
-                onRetry={() => handleRetry(message)}
-              />
-            ))}
+            {threadItems.map((item) =>
+              item.kind === "separator" ? (
+                <DateSeparator key={item.key} label={item.label} />
+              ) : (
+                <MessageBubble
+                  key={item.key}
+                  message={item.message}
+                  isOwn={item.message.senderType === "ADMIN"}
+                  conversationKey={conversationKey}
+                  attachmentUrlFor={(id) => adminAttachmentUrl(conversationId, id)}
+                  canEdit={
+                    site
+                      ? Date.now() - new Date(item.message.createdAt).getTime() <=
+                        site.limits.messageEditWindowMinutes * 60_000
+                      : false
+                  }
+                  replyPreview={
+                    item.message.replyToId
+                      ? messages.find((m) => m.id === item.message.replyToId)?.text
+                      : undefined
+                  }
+                  onReply={() => setReplyTo(item.message)}
+                  onEdit={() => setEditing(item.message)}
+                  onDelete={() => handleDelete(item.message)}
+                  onReact={(emoji) => handleReact(item.message, emoji)}
+                  onRetry={() => handleRetry(item.message)}
+                />
+              ),
+            )}
           </div>
         )}
         {userTyping && <TypingIndicator label="Typing…" />}

@@ -18,6 +18,8 @@ import { useTheme } from "../context/ThemeContext.js";
 import { useRealtimeSocket } from "../hooks/useRealtimeSocket.js";
 import { Composer } from "../components/chat/Composer.js";
 import { ConnectionBanner } from "../components/chat/ConnectionBanner.js";
+import { DateSeparator } from "../components/chat/DateSeparator.js";
+import { withDateSeparators } from "../components/chat/dateSeparators.js";
 import { MessageBubble } from "../components/chat/MessageBubble.js";
 import { TypingIndicator } from "../components/chat/TypingIndicator.js";
 import { FullScreenLoader } from "../components/common/Loader.js";
@@ -284,6 +286,8 @@ export default function Chat() {
     }
   }
 
+  const threadItems = useMemo(() => withDateSeparators(messages), [messages]);
+
   const isBlocked = session.conversationStatus === "BLOCKED";
   const canEdit = (message: DisplayMessage) => {
     if (!site.limits.messageEditWindowMinutes) return false;
@@ -324,23 +328,29 @@ export default function Chat() {
           </div>
         ) : (
           <div className="space-y-3">
-            {messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                isOwn={message.senderType === "USER"}
-                conversationKey={conversationKey}
-                attachmentUrlFor={attachmentUrl}
-                canEdit={canEdit(message)}
-                disableActions={isBlocked}
-                replyPreview={message.replyToId ? messages.find((m) => m.id === message.replyToId)?.text : undefined}
-                onReply={() => setReplyTo(message)}
-                onEdit={() => setEditing(message)}
-                onDelete={() => handleDelete(message)}
-                onReact={(emoji) => handleReact(message, emoji)}
-                onRetry={() => handleRetry(message)}
-              />
-            ))}
+            {threadItems.map((item) =>
+              item.kind === "separator" ? (
+                <DateSeparator key={item.key} label={item.label} />
+              ) : (
+                <MessageBubble
+                  key={item.key}
+                  message={item.message}
+                  isOwn={item.message.senderType === "USER"}
+                  conversationKey={conversationKey}
+                  attachmentUrlFor={attachmentUrl}
+                  canEdit={canEdit(item.message)}
+                  disableActions={isBlocked}
+                  replyPreview={
+                    item.message.replyToId ? messages.find((m) => m.id === item.message.replyToId)?.text : undefined
+                  }
+                  onReply={() => setReplyTo(item.message)}
+                  onEdit={() => setEditing(item.message)}
+                  onDelete={() => handleDelete(item.message)}
+                  onReact={(emoji) => handleReact(item.message, emoji)}
+                  onRetry={() => handleRetry(item.message)}
+                />
+              ),
+            )}
           </div>
         )}
         {adminTyping && <TypingIndicator label={`${site.displayName} is typing…`} />}
