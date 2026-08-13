@@ -3,6 +3,7 @@ import { formatDistanceToNowStrict } from "date-fns";
 import type { AdminSessionDto } from "@anonchat/shared";
 import { listAdminSessions, revokeAdminSession } from "../../api/admin.js";
 import { FullScreenLoader } from "../../components/common/Loader.js";
+import { parseUserAgent } from "./userAgentLabel.js";
 
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<AdminSessionDto[] | null>(null);
@@ -41,7 +42,7 @@ export default function SessionsPage() {
                 {session.ipAddress ?? "Unknown IP"}
               </p>
               <p className="text-xs text-[var(--text-muted)]">
-                {session.userAgent ?? "Unknown device"} · Last active{" "}
+                {parseUserAgent(session.userAgent)} · Last active{" "}
                 {formatDistanceToNowStrict(new Date(session.lastSeenAt), { addSuffix: true })}
               </p>
             </div>
