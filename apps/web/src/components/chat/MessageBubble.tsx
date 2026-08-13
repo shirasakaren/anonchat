@@ -6,9 +6,17 @@ import { decryptReaction } from "../../crypto/conversationCrypto.js";
 import { renderMessageMarkdown } from "./markdown.js";
 import { AttachmentPreview } from "./AttachmentPreview.js";
 import { ExpandableProse } from "./ExpandableProse.js";
+import { extractUrls } from "./embeds/urlExtraction.js";
+import { detectVideoEmbed } from "./embeds/videoEmbedDetection.js";
+import { VideoEmbed } from "./embeds/VideoEmbed.js";
+import { LinkPreviewCard } from "./embeds/LinkPreviewCard.js";
 import type { DisplayMessage } from "./types.js";
 
 const QUICK_EMOJI = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+
+/** Slack/Discord-style: a message can carry a few link embeds/previews,
+ *  not an unbounded wall of them if someone pastes a long list of URLs. */
+const MAX_EMBEDS_PER_MESSAGE = 3;
 
 interface Props {
   message: DisplayMessage;
@@ -60,6 +68,11 @@ export function MessageBubble({
   );
 
   const html = message.deleted ? null : renderMessageMarkdown(message.text);
+
+  const embedUrls = useMemo(
+    () => (message.deleted ? [] : extractUrls(message.text, MAX_EMBEDS_PER_MESSAGE)),
+    [message.deleted, message.text],
+  );
 
   return (
     <div className={clsx("group flex flex-col gap-1", isOwn ? "items-end" : "items-start")}>
@@ -114,6 +127,14 @@ export function MessageBubble({
                 </div>
               )}
               {html && <ExpandableProse html={html} />}
+              {embedUrls.length > 0 && (
+                <div className="mt-2 space-y-2">
+                  {embedUrls.map((url) => {
+                    const video = detectVideoEmbed(url);
+                    return video ? <VideoEmbed key={url} embed={video} /> : <LinkPreviewCard key={url} url={url} />;
+                  })}
+                </div>
+              )}
             </>
           )}
 

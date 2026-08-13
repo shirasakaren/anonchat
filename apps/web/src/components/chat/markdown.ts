@@ -1,13 +1,12 @@
 import DOMPurify from "dompurify";
 import { marked, type Tokens } from "marked";
 import { ensureLanguagesRegistered } from "./codeLanguages.js";
+import { BARE_URL_RE } from "./embeds/urlExtraction.js";
 
 marked.setOptions({ breaks: true, gfm: true });
 
-const BARE_URL = /(^|[\s(])((https?:\/\/)[^\s<)]+)/g;
-
 function linkify(raw: string): string {
-  return raw.replace(BARE_URL, (match, lead: string, url: string) => `${lead}[${url}](${url})`);
+  return raw.replace(new RegExp(BARE_URL_RE.source, "g"), (match, lead: string, url: string) => `${lead}[${url}](${url})`);
 }
 
 const renderer = new marked.Renderer();
