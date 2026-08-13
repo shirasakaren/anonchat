@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { encryptBlob } from "@anonchat/crypto";
-import type { ConversationDto, MessageDto, ServerWsEvent } from "@anonchat/shared";
+import { Pencil } from "lucide-react";
+import type { AdminConversationDto, MessageDto, ServerWsEvent } from "@anonchat/shared";
 import {
   archiveConversation,
   blockConversation,
@@ -17,6 +18,7 @@ import {
   softDeleteConversation,
   unarchiveConversation,
   unblockConversation,
+  updateConversationAlias,
   adminAttachmentUrl,
 } from "../../api/admin.js";
 import { ApiError } from "../../api/client.js";
@@ -47,12 +49,15 @@ interface Props {
 export function ConversationView({ conversationId, onChanged }: Props) {
   const { identity } = useAdminSession();
   const { site } = useSite();
-  const [conversation, setConversation] = useState<ConversationDto | null>(null);
+  const [conversation, setConversation] = useState<AdminConversationDto | null>(null);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [replyTo, setReplyTo] = useState<DisplayMessage | null>(null);
   const [editing, setEditing] = useState<DisplayMessage | null>(null);
   const [userTyping, setUserTyping] = useState(false);
+  const [editingAlias, setEditingAlias] = useState(false);
+  const [aliasDraft, setAliasDraft] = useState("");
+  const [aliasBusy, setAliasBusy] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pendingRef = useRef<Map<string, { text: string; files: File[]; replyToId: string | null }>>(new Map());
@@ -179,7 +184,10 @@ export function ConversationView({ conversationId, onChanged }: Props) {
           // Was unconditionally bumping the sidebar for ANY conversation's
           // update, even ones this admin wasn't currently viewing.
           if (event.conversation.id !== conversationId) return;
-          setConversation(event.conversation);
+          // The broadcast payload is the user-safe DTO without adminAlias -
+          // carry the alias already in state forward so it isn't wiped by
+          // this (or any other) conversation update.
+          setConversation((prev) => (prev ? { ...event.conversation, adminAlias: prev.adminAlias } : prev));
           onChanged();
           break;
         case "typing":
@@ -334,11 +342,110 @@ export function ConversationView({ conversationId, onChanged }: Props) {
     onChanged();
   }
 
+  function startAliasEdit() {
+    setAliasDraft(conversation?.adminAlias ?? "");
+    setEditingAlias(true);
+  }
+
+  async function saveAlias() {
+    if (aliasBusy) return;
+    setAliasBusy(true);
+    try {
+      const updated = await updateConversationAlias(conversationId, aliasDraft);
+      setConversation(updated);
+      onChanged();
+    } catch {
+      // Leave the previous value in place; the input just closes.
+    } finally {
+      setAliasBusy(false);
+      setEditingAlias(false);
+    }
+  }
+
+  async function clearAlias() {
+    if (aliasBusy) return;
+    setAliasBusy(true);
+    try {
+      const updated = await updateConversationAlias(conversationId, "");
+      setConversation(updated);
+      onChanged();
+    } catch {
+      // best-effort
+    } finally {
+      setAliasBusy(false);
+      setEditingAlias(false);
+    }
+  }
+
   return (
     <div className="flex h-full flex-col">
       <header className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b border-[var(--border)] px-4 py-2.5">
         <div className="flex min-w-0 items-center gap-2">
-          <h2 className="truncate text-sm font-semibold">Anonymous #{conversation.publicId}</h2>
+          {editingAlias ? (
+            <form
+              className="flex min-w-0 items-center gap-1.5"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void saveAlias();
+              }}
+            >
+              <input
+                autoFocus
+                value={aliasDraft}
+                onChange={(e) => setAliasDraft(e.target.value)}
+                onBlur={() => void saveAlias()}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setEditingAlias(false);
+                    setAliasDraft(conversation?.adminAlias ?? "");
+                  }
+                }}
+                maxLength={60}
+                placeholder="Nickname…"
+                aria-label="Nickname for this conversation"
+                className="w-40 rounded-md border border-[var(--border-strong)] bg-transparent px-2 py-1 text-sm font-semibold"
+              />
+              <button
+                type="submit"
+                disabled={aliasBusy}
+                onMouseDown={(e) => e.preventDefault()}
+                className="rounded-md bg-[var(--btn-bg)] px-2 py-1 text-xs font-semibold text-[var(--btn-fg)] disabled:opacity-50"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                disabled={aliasBusy}
+                onMouseDown={(e) => {
+                  // Keep focus in the input so its onBlur save doesn't race
+                  // (and win over) the clear action - mousedown fires before
+                  // the blur, so preventDefault here stops the blur entirely.
+                  e.preventDefault();
+                  void clearAlias();
+                }}
+                className="rounded-md border border-[var(--border)] px-2 py-1 text-xs disabled:opacity-50"
+              >
+                Clear
+              </button>
+            </form>
+          ) : (
+            <button
+              type="button"
+              onClick={startAliasEdit}
+              title={conversation.adminAlias ? "Edit nickname" : "Set a nickname for this contact"}
+              className="group flex min-w-0 items-center gap-1.5 rounded-md px-1 py-0.5 hover:bg-[var(--surface-muted)]"
+            >
+              <h2 className="truncate text-sm font-semibold">
+                {conversation.adminAlias || `Anonymous #${conversation.publicId}`}
+              </h2>
+              {conversation.adminAlias && (
+                <span className="shrink-0 text-[11px] text-[var(--text-muted)]">
+                  #{conversation.publicId}
+                </span>
+              )}
+              <Pencil size={12} aria-hidden className="shrink-0 text-[var(--text-muted)] group-hover:text-[var(--text)]" />
+            </button>
+          )}
           <span
             className={clsx(
               "shrink-0 rounded-full px-2 py-0.5 text-xs",

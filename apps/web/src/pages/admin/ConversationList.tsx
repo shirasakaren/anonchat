@@ -126,7 +126,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by ID…"
+          placeholder="Search by ID or nickname…"
           className="w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-1.5 text-sm"
         />
         <div className="mt-2 flex flex-wrap gap-1">
@@ -168,14 +168,19 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
               )}
             >
               <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-sm font-medium">
+                <span className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
                   <span
                     className={clsx(
-                      "h-2 w-2 rounded-full",
+                      "h-2 w-2 shrink-0 rounded-full",
                       conv.unreadCount > 0 ? "bg-[var(--color-accent-500)]" : "bg-transparent",
                     )}
                   />
-                  Anonymous #{conv.publicId}
+                  <span className="truncate">{conv.adminAlias || `Anonymous #${conv.publicId}`}</span>
+                  {conv.adminAlias && (
+                    <span className="shrink-0 text-[11px] font-normal text-[var(--text-muted)]">
+                      #{conv.publicId}
+                    </span>
+                  )}
                 </span>
                 {conv.lastMessageAt && (
                   <span className="text-xs text-[var(--text-muted)]">

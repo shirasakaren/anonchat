@@ -1,6 +1,7 @@
 import { bytesToBase64url, signChallenge, type EncryptedPayload, type Identity } from "@anonchat/crypto";
 import { buildRegistrationProofMessage } from "@anonchat/shared";
 import type {
+  AdminConversationDto,
   AdminConversationSummaryDto,
   AdminSessionDto,
   AdminSummaryDto,
@@ -112,8 +113,13 @@ export function listConversations(query: {
   return api.get(`/admin/conversations${qs ? `?${qs}` : ""}`);
 }
 
-export function getAdminConversation(id: string): Promise<ConversationDto> {
-  return api.get<ConversationDto>(`/admin/conversations/${id}`);
+export function getAdminConversation(id: string): Promise<AdminConversationDto> {
+  return api.get<AdminConversationDto>(`/admin/conversations/${id}`);
+}
+
+/** Sets the admin's private alias for a conversation; "" clears it. */
+export function updateConversationAlias(id: string, alias: string): Promise<AdminConversationDto> {
+  return api.patch<AdminConversationDto>(`/admin/conversations/${id}/alias`, { alias });
 }
 
 export function getAdminMessages(conversationId: string, cursor?: string): Promise<MessagePage> {
@@ -169,20 +175,20 @@ export function markAdminRead(
   return api.post(`/admin/conversations/${conversationId}/read`, { upToMessageId });
 }
 
-export function archiveConversation(id: string): Promise<ConversationDto> {
-  return api.post<ConversationDto>(`/admin/conversations/${id}/archive`);
+export function archiveConversation(id: string): Promise<AdminConversationDto> {
+  return api.post<AdminConversationDto>(`/admin/conversations/${id}/archive`);
 }
 
-export function unarchiveConversation(id: string): Promise<ConversationDto> {
-  return api.post<ConversationDto>(`/admin/conversations/${id}/unarchive`);
+export function unarchiveConversation(id: string): Promise<AdminConversationDto> {
+  return api.post<AdminConversationDto>(`/admin/conversations/${id}/unarchive`);
 }
 
-export function blockConversation(id: string): Promise<ConversationDto> {
-  return api.post<ConversationDto>(`/admin/conversations/${id}/block`);
+export function blockConversation(id: string): Promise<AdminConversationDto> {
+  return api.post<AdminConversationDto>(`/admin/conversations/${id}/block`);
 }
 
-export function unblockConversation(id: string): Promise<ConversationDto> {
-  return api.post<ConversationDto>(`/admin/conversations/${id}/unblock`);
+export function unblockConversation(id: string): Promise<AdminConversationDto> {
+  return api.post<AdminConversationDto>(`/admin/conversations/${id}/unblock`);
 }
 
 export function softDeleteConversation(id: string): Promise<void> {
