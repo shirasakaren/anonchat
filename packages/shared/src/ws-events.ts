@@ -29,4 +29,6 @@ export type ServerWsEvent =
     }
   | { type: "typing"; conversationId: string; from: SenderType; isTyping: boolean }
   | { type: "presence"; who: "ADMIN"; online: boolean }
+  /** Admin-only: the anonymous user's live-socket state for one conversation. */
+  | { type: "user.presence"; conversationId: string; online: boolean }
   | { type: "error"; message: string; code?: string };

@@ -55,3 +55,11 @@ export function publishToAllAnonymousUsers(event: ServerWsEvent): void {
 export function isAdminOnline(): boolean {
   return adminSockets.size > 0;
 }
+
+/** Whether the anonymous user of a conversation has a live socket. Only
+ *  anonymous users subscribe per-conversation (admins subscribe globally),
+ *  so this set is exactly the user's connections. */
+export function isUserOnline(conversationId: string): boolean {
+  const set = conversationSubscribers.get(conversationId);
+  return (set?.size ?? 0) > 0;
+}

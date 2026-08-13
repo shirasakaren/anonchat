@@ -112,6 +112,8 @@ export interface AdminConversationSummaryDto {
   publicId: string;
   /** Admin's private nickname for this contact ("" / null = none yet). */
   adminAlias: string | null;
+  /** When set, new messages from this conversation don't fire admin notifications. */
+  mutedAt: string | null;
   status: ConversationStatus;
   unreadCount: number;
   createdAt: string;

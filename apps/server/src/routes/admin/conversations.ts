@@ -21,6 +21,7 @@ import {
   markRead,
   restoreConversation,
   setConversationAlias,
+  setConversationMuted,
   setConversationStatus,
   softDeleteConversation,
 } from "../../services/conversation.service.js";
@@ -207,6 +208,22 @@ export function registerAdminConversationRoutes(app: FastifyInstance): void {
     const body = ConversationAliasRequestSchema.parse(request.body);
     const dto = await setConversationAlias(params.id, body.alias);
     await recordAudit(admin.id, "conversation.alias_updated", { type: "Conversation", id: params.id });
+    reply.send(dto);
+  });
+
+  app.post("/admin/conversations/:id/mute", { preHandler: requireAdmin }, async (request, reply) => {
+    const { admin } = request.adminAuth!;
+    const params = ConversationIdParam.parse(request.params);
+    const dto = await setConversationMuted(params.id, true);
+    await recordAudit(admin.id, "conversation.muted", { type: "Conversation", id: params.id });
+    reply.send(dto);
+  });
+
+  app.post("/admin/conversations/:id/unmute", { preHandler: requireAdmin }, async (request, reply) => {
+    const { admin } = request.adminAuth!;
+    const params = ConversationIdParam.parse(request.params);
+    const dto = await setConversationMuted(params.id, false);
+    await recordAudit(admin.id, "conversation.unmuted", { type: "Conversation", id: params.id });
     reply.send(dto);
   });
 

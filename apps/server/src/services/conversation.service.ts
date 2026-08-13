@@ -3,7 +3,7 @@ import { bytesToBase64url } from "@anonchat/crypto";
 import type { AdminConversationDto, AdminConversationSummaryDto, ConversationDto, MessagePage } from "@anonchat/shared";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@anonchat/shared";
 import { prisma } from "../db.js";
-import { publishToConversation } from "../realtime/hub.js";
+import { isUserOnline, publishToConversation } from "../realtime/hub.js";
 import { getStorageAdapter } from "../storage/index.js";
 import { Errors } from "../utils/errors.js";
 import { MESSAGE_INCLUDE, toMessageDto } from "../utils/dto.js";
@@ -37,16 +37,21 @@ export function toConversationDto(
   };
 }
 
-/** Admin-only variant: adds the admin's private nickname. Deliberately kept
+/** Admin-only variant: adds the admin's private metadata. Deliberately kept
  *  out of toConversationDto (and therefore out of every user-facing REST
- *  response and WebSocket payload) so the alias can never reach the
+ *  response and WebSocket payload) so none of it can ever reach the
  *  anonymous user's client. */
 export function toAdminConversationDto(
   conversation: Conversation,
   anonymousUser: { publicId: string; exchangePublicKey: Uint8Array },
   unreadCount: number,
 ): AdminConversationDto {
-  return { ...toConversationDto(conversation, anonymousUser, unreadCount), adminAlias: conversation.adminAlias };
+  return {
+    ...toConversationDto(conversation, anonymousUser, unreadCount),
+    adminAlias: conversation.adminAlias,
+    mutedAt: conversation.mutedAt ? conversation.mutedAt.toISOString() : null,
+    userOnline: isUserOnline(conversation.id),
+  };
 }
 
 export async function getMessagesPage(
@@ -116,8 +121,15 @@ export async function listConversationsForAdmin(query: {
     where.messages = { some: { senderType: "USER", readAt: null, deletedAt: null } };
   } else if (query.status === "READ") {
     where.messages = { none: { senderType: "USER", readAt: null, deletedAt: null } };
-  } else if (query.status && query.status !== "ALL") {
-    where.status = query.status as ConversationStatus;
+  }
+
+  // Archived conversations are their own view: every filter EXCEPT the
+  // explicit ARCHIVED (and BLOCKED, which is its own list) hides them,
+  // the way WhatsApp hides archived chats from the main list.
+  if (query.status === "BLOCKED") {
+    where.status = "BLOCKED";
+  } else {
+    where.status = query.status === "ARCHIVED" ? "ARCHIVED" : { not: "ARCHIVED" };
   }
 
   if (query.q) {
@@ -149,6 +161,7 @@ export async function listConversationsForAdmin(query: {
       id: c.id,
       publicId: c.anonymousUser.publicId,
       adminAlias: c.adminAlias,
+      mutedAt: c.mutedAt ? c.mutedAt.toISOString() : null,
       status: c.status,
       unreadCount: unreadCounts[i]!,
       createdAt: c.createdAt.toISOString(),
@@ -210,6 +223,24 @@ export async function setConversationAlias(
   const conversation = await prisma.conversation.update({
     where: { id: conversationId },
     data: { adminAlias: alias && alias.trim().length > 0 ? alias.trim() : null },
+    include: { anonymousUser: { select: ANONYMOUS_USER_SELECT } },
+  });
+  const unreadCount = await countUnread(conversationId, "ADMIN");
+  const userSafeDto = toConversationDto(conversation, conversation.anonymousUser, unreadCount);
+  publishToConversation(conversationId, { type: "conversation.updated", conversation: userSafeDto });
+  return toAdminConversationDto(conversation, conversation.anonymousUser, unreadCount);
+}
+
+/** Mutes or unmutes a conversation for the admin: while muted, new user
+ *  messages don't fire the admin's notification sound/popup. Same
+ *  admin-only/private-metadata rules as the alias. */
+export async function setConversationMuted(
+  conversationId: string,
+  muted: boolean,
+): Promise<AdminConversationDto> {
+  const conversation = await prisma.conversation.update({
+    where: { id: conversationId },
+    data: { mutedAt: muted ? new Date() : null },
     include: { anonymousUser: { select: ANONYMOUS_USER_SELECT } },
   });
   const unreadCount = await countUnread(conversationId, "ADMIN");

@@ -16,6 +16,8 @@ const LABELS: Record<string, string> = {
   "conversation.deleted.permanent": "Permanently deleted a conversation",
   "conversation.restored": "Restored a conversation from trash",
   "conversation.alias_updated": "Updated a conversation alias",
+  "conversation.muted": "Muted a conversation",
+  "conversation.unmuted": "Unmuted a conversation",
   "message.edited": "Edited a message",
   "message.deleted": "Deleted a message",
   "message.reaction.set": "Reacted to a message",

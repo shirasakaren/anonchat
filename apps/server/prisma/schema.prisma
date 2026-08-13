@@ -78,6 +78,9 @@ model Conversation {
   deletedAt       DateTime?
   /// Admin-only nickname for this contact. Never sent to the anonymous user.
   adminAlias      String?
+  /// Admin-only mute state: when set, new messages from this conversation
+  /// don't fire admin notifications. Never sent to the anonymous user.
+  mutedAt         DateTime?
 
   messages Message[]
 

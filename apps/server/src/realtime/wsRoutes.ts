@@ -4,6 +4,8 @@ import { corsOrigins, loadEnv } from "../env.js";
 import { getSiteSettings } from "../services/siteSettings.service.js";
 import {
   isAdminOnline,
+  isUserOnline,
+  publishToAdmins,
   publishToAllAnonymousUsers,
   publishToConversation,
   subscribeAdmin,
@@ -63,8 +65,15 @@ export function registerWsRoutes(fastify: FastifyInstance): void {
       return;
     }
 
+    const wasOnline = isUserOnline(conversation.id);
     const unsubscribe = subscribeToConversation(conversation.id, socket);
     socket.send(JSON.stringify({ type: "connected" }));
+
+    // First socket for this conversation flips the user's presence to
+    // online for every connected admin; the mirror image happens on close.
+    if (!wasOnline) {
+      publishToAdmins({ type: "user.presence", conversationId: conversation.id, online: true });
+    }
 
     const settings = await getSiteSettings();
     if (settings.presenceEnabled) {
@@ -86,6 +95,9 @@ export function registerWsRoutes(fastify: FastifyInstance): void {
 
     socket.on("close", () => {
       unsubscribe();
+      if (!isUserOnline(conversation.id)) {
+        publishToAdmins({ type: "user.presence", conversationId: conversation.id, online: false });
+      }
     });
   });
 }
