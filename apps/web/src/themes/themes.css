@@ -23,6 +23,11 @@
      accent color mixed into the raised surface, always distinct from the
      surface it's laid over and always compatible with --text. */
   --selected-bg: color-mix(in srgb, var(--color-accent-500) 16%, var(--surface-raised));
+  /* Row hover highlight, same trick: the theme's own text color mixed into
+     its surface at 10% - brightens dark themes, darkens light ones, and
+     follows each theme's hue. --surface-muted was ~1.05-1.10:1 against
+     --surface in every theme, which made hovers essentially invisible. */
+  --row-hover: color-mix(in srgb, var(--text) 10%, var(--surface));
   /* Danger and warning are deliberate fixed hues (not derived from the
      accent scale) so an error or destructive action reads as a danger
      signal in every theme. Defaults target dark surfaces; the light

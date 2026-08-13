@@ -242,7 +242,11 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                   onClick={() => onSelect(conv.id)}
                   className={clsx(
                     "flex w-full flex-col gap-0.5 px-4 py-3 text-left transition-colors",
-                    selectedId === conv.id ? "bg-[var(--selected-bg)]" : "hover:bg-[var(--surface-muted)]",
+                    // The selected row keeps its accent tint on hover instead
+                    // of swapping to the generic highlight.
+                    selectedId === conv.id
+                      ? "bg-[var(--selected-bg)]"
+                      : "hover:bg-[var(--row-hover)]",
                   )}
                 >
                   <div className="flex items-start justify-between gap-2">

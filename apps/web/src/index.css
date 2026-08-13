@@ -42,6 +42,8 @@
   --chip-bg: #5a5f6a;
   --chip-fg: #ffffff;
   --selected-bg: color-mix(in srgb, #5a5f6a 16%, #1a1d22);
+  /* 10% of #f4f5f7 over #0a0a0a (the same formula as themes.css). */
+  --row-hover: #212224;
   --danger-fg: #f87171;
   --danger-bg: color-mix(in srgb, #f87171 14%, #1a1d22);
   --warning-fg: #fbbf24;
