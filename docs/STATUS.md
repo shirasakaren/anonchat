@@ -1,6 +1,6 @@
 # Project status / handoff
 
-Last updated: 2026-08-12. Read this first if you're picking up this project
+Last updated: 2026-08-13. Read this first if you're picking up this project
 in a new session - it's the durable source of truth for what's done, what's
 verified, and what's next. (Don't rely solely on an in-session task list -
 this file is what's meant to survive across sessions.)
@@ -9,10 +9,110 @@ this file is what's meant to survive across sessions.)
 
 Every planned feature is built, the full stack has been exercised in a real
 headless browser (Playwright) against a real Postgres instance in Docker,
-and a dedicated security review pass has since been done and its findings
-fixed (see "Security review" below). There is no "immediate next step" -
-the project is feature-complete, tested, and reviewed. Anything further is
-a deliberately deferred follow-up (see "Known gaps").
+a dedicated security review pass was done and fixed (see "Security review"
+below), and a full UI/UX + WCAG 2.2 AA pass has since been done and fixed
+too (see "UI/UX and accessibility audit" below). There is no "immediate
+next step" - the project is feature-complete, tested, and reviewed.
+Anything further is a deliberately deferred follow-up (see "Known gaps").
+
+## UI/UX and accessibility audit (2026-08-13)
+
+A full pass across the public chat and the admin dashboard - both tested
+at mobile/tablet/desktop widths in headless Chromium against a real
+Postgres instance, informed by researched Zendesk/Chatwoot/Intercom/
+Signal/WhatsApp conventions where they translate to a 1:1 E2EE product.
+
+### Real bugs found and fixed (severity order)
+
+1. **CRITICAL - admin key-unlock screen was unreachable on a genuinely new
+   device.** `needsKeyUnlock` only became true when a wrapped key was
+   already cached in this browser's IndexedDB; on a device that had never
+   cached one (the exact "log in, then paste your recovery phrase" flow
+   `docs/SECURITY.md` describes as supported), it stayed false and the
+   admin fell through to a dashboard where every conversation hung forever
+   on "Unlocking…" with no error and no way to reach the import screen.
+   Fixed in `AdminSessionContext.tsx`; verified end-to-end with a freshly
+   onboarded admin and a brand-new browser profile.
+2. **Message actions (react/reply/edit/delete) were unreachable on touch
+   and invisible on keyboard focus.** They lived behind `opacity-0` +
+   `group-hover`, which has no touch equivalent - unclickable on phone/
+   tablet, not just hard to find. Fixed in `MessageBubble.tsx`: always
+   visible below the `md` breakpoint, hover-or-focus-reveal above it.
+3. **WCAG AA contrast failures in every one of the 25 themes** - 121
+   failing text/border/button/chip/bubble pairs total, found by a from-
+   scratch contrast-ratio audit against the live rendered CSS (axe-core
+   alone caught only whichever theme happened to be active). Fixed by
+   nudging each failing color's lightness by the smallest amount that
+   clears the threshold, and adding two new tokens (`--link-fg`,
+   `--border-strong`) for roles `--color-accent-600`/`--border` can't
+   safely serve at every lightness.
+4. **Default focus ring below 3:1 contrast in 5 themes**, including
+   monochrome-dark (the default). Switched to `--border-strong`.
+5. **Missing `<main>` landmarks and `<h1>`/`<h2>` headings** on admin
+   sign-in, the onboarding wizard, the public landing page, the chat view,
+   the recovery-key screen, and the admin inbox/conversation view.
+6. **Conversation list clipped to a fixed 320px column below the tablet
+   breakpoint**, leaving a dead strip down the right edge on phone-width
+   viewports instead of filling the screen.
+7. **Several icon buttons sat below the 24×24px WCAG 2.2 target-size
+   minimum** (message actions, the attachment-remove button, the reply/
+   edit-cancel button) - bumped to comply.
+8. **Canned replies page had no empty state** - a brand-new admin with
+   zero saved replies saw only the "add new" form, no indication canned
+   replies are a real, working feature.
+
+### Features added
+
+- **Unread badge on the Inbox nav item** (and a dot on the mobile
+  hamburger), kept live over the same WebSocket feed already in use -
+  previously a new message gave no visual signal at all if the admin was
+  on Settings/Sessions/etc. with the tab focused (only a sound + an OS
+  notification that skips focused tabs).
+- **Human-readable audit log labels** (`admin.login` → "Signed in", etc.)
+  instead of raw action codes.
+- **Friendly device/browser labels on the Sessions page** ("Chrome on
+  macOS" instead of the raw user-agent string).
+
+### Tooling (not committed - scratchpad only)
+
+A reusable Playwright driver, an axe-core runner (injected via
+`Runtime.evaluate` to get around the app's `script-src 'self'` CSP - see
+`page.evaluate((src) => (0, eval)(src), axeSource)` in the audit scripts
+if this needs redoing), and a from-scratch WCAG contrast-ratio calculator
+that reads live `getComputedStyle` values per theme rather than
+hand-parsing `themes.css` (needed to correctly resolve `color-mix()` and
+named-color serialization like `#c0c0c0` → `"silver"`).
+
+### Researched but not yet implemented (deferred, roughly ranked)
+
+Full research notes (Zendesk/Chatwoot/Intercom/Front/Crisp inbox
+conventions, Signal/WhatsApp/MetaMask/1Password trust-UX patterns) lived
+in-session only; the ranked list below is what survived:
+
+1. Date separators + consecutive-message grouping in the message thread
+   (UI-only, operates on already-decrypted messages).
+2. A client-side decrypted-message cache - fixes `ConversationList`'s
+   current N+1 (it re-fetches a full message page per conversation just
+   to render the last-message preview) and is the only honest E2EE analog
+   to server-side search (search over messages the browser has already
+   decrypted, never sent to the server).
+3. Retype/reselect confirmation on the recovery-phrase screen instead of
+   a bare "I've saved it" checkbox, which proves nothing.
+4. A downloadable/printable recovery-phrase artifact alongside the
+   existing copy button.
+5. `/`-triggered inline canned-reply autocomplete (fill-not-send, still
+   editable before sending) instead of the separate toggle-and-chip-list
+   picker.
+6. A conversation snooze ("remind me at X") - the E2EE-compatible
+   reimagining of ticket status/SLA for a solo admin.
+7. A small command palette (`⌘K`) + `?` shortcut cheatsheet, scoped to
+   this app's actual 1:1 action set (no assign/team actions apply).
+8. Draft persistence per conversation, scoped to this device
+   (`localStorage`/IndexedDB) - not cross-device sync, which would need
+   storing draft plaintext server-side.
+9. An "encryption verified" indicator (Signal Automatic Key Verification
+   analog) - easier here than for Signal, since the admin has exactly one
+   long-lived key; only needs to alert loudly if that key ever changes.
 
 ### Done and verified
 
@@ -200,17 +300,22 @@ config apply` for each is still an unknown - budget time to debug on
 ## Suggested next steps
 
 Nothing is blocking or required - the project is feature-complete, tested,
-and has been through a security review pass. If picking this up further,
-reasonable follow-ups in rough priority order:
+and has been through both a security review pass and a UI/UX + WCAG 2.2 AA
+pass. If picking this up further, reasonable follow-ups in rough priority
+order:
 
-1. Route-based code-splitting for the web bundle (quick, low-risk).
-2. A minimal PWA service worker if installability matters to the user.
-3. Streaming attachment upload/download instead of full in-memory
+1. The ranked, researched feature list at the end of "UI/UX and
+   accessibility audit" above - a client-side decrypted-message cache
+   (item 2 there) is the single highest-leverage one, since it fixes a
+   real performance issue and unlocks client-side search at the same time.
+2. Route-based code-splitting for the web bundle (quick, low-risk).
+3. A minimal PWA service worker if installability matters to the user.
+4. Streaming attachment upload/download instead of full in-memory
    buffering, if this instance expects heavy attachment traffic (see
    "Security review" above for why this was deliberately left as-is).
-4. Actually implementing Turnstile/CAPTCHA verification if bot signups
+5. Actually implementing Turnstile/CAPTCHA verification if bot signups
    become a real problem (today's mitigation is the per-IP rate limit).
-5. Actually deploy-test one of the five cloud templates against a real
+6. Actually deploy-test one of the five cloud templates against a real
    account, if/when the user wants that validated for real (ask first -
    each one provisions real, billable infrastructure).
 
