@@ -99,11 +99,17 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
       type="button"
       onClick={load}
       disabled={state.kind === "loading"}
-      className="flex w-full items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-left text-sm hover:bg-[var(--surface-muted)] disabled:opacity-60"
+      className="flex w-full items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-left text-sm hover:ring-1 hover:ring-inset hover:ring-[var(--border-strong)] disabled:opacity-60"
     >
       <IconForMime mimetype={meta.mimetype} />
       <span className="min-w-0 flex-1 truncate">{meta.filename}</span>
-      <span className="text-xs text-[var(--text-muted)]">{formatBytes(meta.size)}</span>
+      {/* Both spans below inherit the ambient bubble text color (set by the
+          parent MessageBubble) rather than a page-level token like
+          --text-muted, since this button renders on the message bubble's own
+          background - a color per-theme that page-level tokens were never
+          checked against. See the same reasoning on .prose-message a in
+          index.css. */}
+      <span className="text-xs">{formatBytes(meta.size)}</span>
       <span className="text-xs underline">
         {state.kind === "loading" ? "Loading…" : state.kind === "error" ? "Retry" : "Preview"}
       </span>
