@@ -204,7 +204,7 @@ function MessageActions({
         aria-label="React"
         disabled={disableActions}
         onClick={() => setShowReactionPicker(!showReactionPicker)}
-        className="rounded p-1.5 text-xs hover:bg-[var(--surface-muted)] disabled:pointer-events-none disabled:opacity-40"
+        className="rounded p-1.5 text-xs hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
       >
         <SmilePlus size={14} aria-hidden />
       </button>
@@ -224,7 +224,7 @@ function MessageActions({
           aria-label="Edit"
           disabled={disableActions}
           onClick={onEdit}
-          className="rounded p-1.5 text-xs hover:bg-[var(--surface-muted)] disabled:pointer-events-none disabled:opacity-40"
+          className="rounded p-1.5 text-xs hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
         >
           <Pencil size={14} aria-hidden />
         </button>
@@ -236,7 +236,7 @@ function MessageActions({
           aria-label="Delete"
           disabled={disableActions}
           onClick={onDelete}
-          className="rounded p-1.5 text-xs hover:bg-[var(--surface-muted)] disabled:pointer-events-none disabled:opacity-40"
+          className="rounded p-1.5 text-xs hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
         >
           <Trash2 size={14} aria-hidden />
         </button>

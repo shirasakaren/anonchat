@@ -90,6 +90,24 @@ body {
   outline-offset: 2px;
 }
 
+/* ── Cursors on interactive elements ─────────────────────────────────
+   Tailwind v4's preflight matches the browser default, which leaves
+   <button> at `cursor: default` (not `pointer`) - every clickable
+   control in this app needs an explicit override, and every disabled
+   one needs `not-allowed` instead of inheriting whatever's underneath. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+summary,
+select:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"],
+select:disabled {
+  cursor: not-allowed;
+}
+
 /* ── Themed scrollbars ────────────────────────────────────────────────
    Every scrollable pane (conversation list, message thread, admin pages)
    otherwise falls back to the OS scrollbar, which ignores the theme. */
