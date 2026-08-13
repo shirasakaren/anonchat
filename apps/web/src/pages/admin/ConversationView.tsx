@@ -1,24 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import clsx from "clsx";
 import { formatDistanceToNowStrict } from "date-fns";
 import { encryptBlob } from "@anonchat/crypto";
 import { Pencil } from "lucide-react";
 import type { AdminConversationDto, MessageDto, ServerWsEvent } from "@anonchat/shared";
 import {
-  archiveConversation,
-  blockConversation,
   deleteAdminMessage,
   editAdminMessage,
   getAdminConversation,
   getAdminMessages,
   markAdminRead,
-  permanentlyDeleteConversation,
   sendAdminMessage,
   setAdminReaction,
   clearAdminReaction,
-  softDeleteConversation,
-  unarchiveConversation,
-  unblockConversation,
   updateConversationAlias,
   adminAttachmentUrl,
 } from "../../api/admin.js";
@@ -59,6 +52,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   const [editingAlias, setEditingAlias] = useState(false);
   const [aliasDraft, setAliasDraft] = useState("");
   const [aliasBusy, setAliasBusy] = useState(false);
+  const [userOnline, setUserOnline] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pendingRef = useRef<Map<string, { text: string; files: File[]; replyToId: string | null }>>(new Map());
@@ -88,6 +82,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   const fetchConversation = useCallback(async () => {
     const conv = await getAdminConversation(conversationId);
     setConversation(conv);
+    setUserOnline(conv.userOnline);
     const all: MessageDto[] = [];
     let cursor: string | undefined;
     do {
@@ -187,11 +182,24 @@ export function ConversationView({ conversationId, onChanged }: Props) {
           // Was unconditionally bumping the sidebar for ANY conversation's
           // update, even ones this admin wasn't currently viewing.
           if (event.conversation.id !== conversationId) return;
-          // The broadcast payload is the user-safe DTO without adminAlias -
-          // carry the alias already in state forward so it isn't wiped by
-          // this (or any other) conversation update.
-          setConversation((prev) => (prev ? { ...event.conversation, adminAlias: prev.adminAlias } : prev));
+          // The broadcast payload is the user-safe DTO without the
+          // admin-private fields - carry them forward so they aren't wiped
+          // by this (or any other) conversation update.
+          setConversation((prev) =>
+            prev
+              ? {
+                  ...event.conversation,
+                  adminAlias: prev.adminAlias,
+                  mutedAt: prev.mutedAt,
+                  userOnline: prev.userOnline,
+                }
+              : prev,
+          );
           onChanged();
+          break;
+        case "user.presence":
+          if (event.conversationId !== conversationId) return;
+          setUserOnline(event.online);
           break;
         case "typing":
           if (belongsHere(event.conversationId) && event.from === "USER") {
@@ -315,36 +323,6 @@ export function ConversationView({ conversationId, onChanged }: Props) {
     }
   }
 
-  async function handleArchiveToggle() {
-    const updated =
-      conversation!.status === "ARCHIVED"
-        ? await unarchiveConversation(conversationId)
-        : await archiveConversation(conversationId);
-    setConversation(updated);
-    onChanged();
-  }
-
-  async function handleBlockToggle() {
-    const updated =
-      conversation!.status === "BLOCKED"
-        ? await unblockConversation(conversationId)
-        : await blockConversation(conversationId);
-    setConversation(updated);
-    onChanged();
-  }
-
-  async function handleSoftDelete() {
-    if (!confirm("Move this conversation to trash? You can still permanently delete it later.")) return;
-    await softDeleteConversation(conversationId);
-    onChanged();
-  }
-
-  async function handlePermanentDelete() {
-    if (!confirm("Permanently delete this conversation and all its messages? This cannot be undone.")) return;
-    await permanentlyDeleteConversation(conversationId);
-    onChanged();
-  }
-
   function startAliasEdit() {
     setAliasDraft(conversation?.adminAlias ?? "");
     setEditingAlias(true);
@@ -450,61 +428,19 @@ export function ConversationView({ conversationId, onChanged }: Props) {
                 <Pencil size={12} aria-hidden className="shrink-0 text-[var(--text-muted)] group-hover:text-[var(--text)]" />
               </button>
             )}
-            <p className="mt-0.5 truncate text-[11px] text-[var(--text-muted)]">
-              {conversation.lastMessageAt
-                ? `Last seen ${formatDistanceToNowStrict(new Date(conversation.lastMessageAt), { addSuffix: true })}`
-                : "No messages yet"}
+            <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-[var(--text-muted)]">
+              {userOnline ? (
+                <>
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" aria-hidden />
+                  Online
+                </>
+              ) : conversation.lastMessageAt ? (
+                `Last seen ${formatDistanceToNowStrict(new Date(conversation.lastMessageAt), { addSuffix: true })}`
+              ) : (
+                "No messages yet"
+              )}
             </p>
           </div>
-          <span
-            className={clsx(
-              "shrink-0 rounded-full px-2 py-0.5 text-xs",
-              conversation.status === "BLOCKED"
-                ? "bg-[var(--danger-bg)] text-[var(--danger-fg)]"
-                : "bg-[var(--surface-muted)] text-[var(--text-muted)]",
-            )}
-          >
-            {conversation.status === "ACTIVE"
-              ? "Active"
-              : conversation.status === "ARCHIVED"
-                ? "Archived"
-                : "Blocked"}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleArchiveToggle}
-            className="rounded-md border border-[var(--border)] px-2.5 py-1 text-xs"
-          >
-            {conversation.status === "ARCHIVED" ? "Unarchive" : "Archive"}
-          </button>
-          <button
-            type="button"
-            onClick={handleBlockToggle}
-            className="rounded-md border border-[var(--border)] px-2.5 py-1 text-xs"
-          >
-            {conversation.status === "BLOCKED" ? "Unblock" : "Block"}
-          </button>
-          {/* Divider: destructive actions are deliberately set apart from the
-              routine Archive/Block toggles, and the irreversible one is the
-              heaviest - a filled danger button rather than another bordered
-              row-mate one misclick away. */}
-          <span className="mx-1 h-4 w-px bg-[var(--border)]" aria-hidden />
-          <button
-            type="button"
-            onClick={handleSoftDelete}
-            className="rounded-md border border-[var(--border)] px-2.5 py-1 text-xs text-[var(--danger-fg)]"
-          >
-            Delete
-          </button>
-          <button
-            type="button"
-            onClick={handlePermanentDelete}
-            className="rounded-md bg-[var(--danger-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--danger-fg)]"
-          >
-            Delete permanently
-          </button>
         </div>
       </header>
 

@@ -1,18 +1,32 @@
 import { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
-import { Paperclip } from "lucide-react";
+import { format } from "date-fns";
+import { MoreVertical, Paperclip } from "lucide-react";
 import type { AdminConversationSummaryDto, ServerWsEvent } from "@anonchat/shared";
 
 /** Sentinel stored in `previews` for an attachment-only last message, so the
  *  render can show a real Paperclip icon instead of baking one into the string. */
 const ATTACHMENT_PREVIEW = "__ATTACHMENT_PREVIEW__";
-import { listConversations } from "../../api/admin.js";
+import {
+  archiveConversation,
+  blockConversation,
+  listConversations,
+  muteConversation,
+  softDeleteConversation,
+  unarchiveConversation,
+  unblockConversation,
+  unmuteConversation,
+} from "../../api/admin.js";
 import { decryptMessageText, getConversationKey } from "../../crypto/conversationCrypto.js";
 import { getAdminMessages } from "../../api/admin.js";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
 import { useRealtimeSocket } from "../../hooks/useRealtimeSocket.js";
+import {
+  setConversationMutedLocally,
+  syncMutedConversationIds,
+} from "./mutedConversations.js";
 
-type StatusFilter = "ALL" | "UNREAD" | "READ" | "ACTIVE" | "ARCHIVED" | "BLOCKED";
+type StatusFilter = "ALL" | "UNREAD" | "READ" | "ARCHIVED" | "BLOCKED";
 
 const FILTERS: { value: StatusFilter; label: string }[] = [
   { value: "ALL", label: "All" },
@@ -28,6 +42,14 @@ interface Props {
   refreshToken: number;
 }
 
+/** WhatsApp-style compact timestamp: clock time today, "MMM d" otherwise. */
+function formatMessageTime(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const now = new Date();
+  return d.toDateString() === now.toDateString() ? format(d, "p") : format(d, "MMM d");
+}
+
 export function ConversationList({ selectedId, onSelect, refreshToken }: Props) {
   const { identity } = useAdminSession();
   const [conversations, setConversations] = useState<AdminConversationSummaryDto[]>([]);
@@ -36,6 +58,23 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [liveToken, setLiveToken] = useState(0);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  // Keep the muted-conversation registry (used by GlobalNotifications) in
+  // sync with whatever the list currently knows.
+  useEffect(() => {
+    syncMutedConversationIds(conversations.filter((c) => c.mutedAt).map((c) => c.id));
+  }, [conversations]);
+
+  // Close the row dropdown on any outside click.
+  useEffect(() => {
+    if (!openMenuId) return;
+    function handleDown(e: MouseEvent) {
+      if (!(e.target as Element | null)?.closest("[data-row-menu]")) setOpenMenuId(null);
+    }
+    document.addEventListener("mousedown", handleDown);
+    return () => document.removeEventListener("mousedown", handleDown);
+  }, [openMenuId]);
 
   // Filter/search changes are the only case where there's genuinely nothing
   // to show yet, so only they show the "Loading…" placeholder.
@@ -118,6 +157,38 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
     };
   }, [conversations, identity]);
 
+  async function runRowAction(conv: AdminConversationSummaryDto, action: string) {
+    setOpenMenuId(null);
+    try {
+      switch (action) {
+        case "archive":
+          if (conv.status === "ARCHIVED") await unarchiveConversation(conv.id);
+          else await archiveConversation(conv.id);
+          break;
+        case "block":
+          if (conv.status === "BLOCKED") await unblockConversation(conv.id);
+          else await blockConversation(conv.id);
+          break;
+        case "mute": {
+          const next = !conv.mutedAt;
+          if (next) await muteConversation(conv.id);
+          else await unmuteConversation(conv.id);
+          // Local registry first so a message racing the list refetch
+          // doesn't slip through as a notification.
+          setConversationMutedLocally(conv.id, next);
+          break;
+        }
+        case "delete":
+          if (!confirm("Move this conversation to trash?")) return;
+          await softDeleteConversation(conv.id);
+          break;
+      }
+    } catch {
+      // best-effort: the list refetch below will show the unchanged state
+    }
+    setLiveToken((n) => n + 1);
+  }
+
   return (
     <div className="flex h-full w-full flex-col border-r border-[var(--border)] md:w-80">
       <h1 className="sr-only">Inbox</h1>
@@ -135,10 +206,10 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
               type="button"
               onClick={() => setFilter(f.value)}
               className={clsx(
-                "rounded-full px-2.5 py-1 text-xs",
+                "rounded-full px-2.5 py-1 text-xs transition-colors",
                 filter === f.value
                   ? "bg-[var(--btn-bg)] text-[var(--btn-fg)]"
-                  : "bg-[var(--surface-muted)] text-[var(--text-muted)]",
+                  : "bg-[var(--surface-muted)] text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]",
               )}
             >
               {f.label}
@@ -156,72 +227,162 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
             <p className="mt-1">When someone sends you an anonymous message, their conversation will appear here.</p>
           </div>
         ) : (
-          conversations.map((conv) => (
-            <button
-              key={conv.id}
-              type="button"
-              onClick={() => onSelect(conv.id)}
-              className={clsx(
-                "flex w-full flex-col gap-0.5 border-b border-[var(--border)] px-4 py-3 text-left",
-                selectedId === conv.id ? "bg-[var(--selected-bg)]" : "hover:bg-[var(--surface-muted)]",
-              )}
-            >
-              <div className="flex items-center justify-between gap-3">
-                {/* Name and preview share the same left edge (both start at the
-                    row's padding - no unread dot indent), and the unread count
-                    badge takes the far-right slot. WhatsApp/Chatwoot-style
-                    unread signalling: bold name + count badge + darker
-                    preview text, all relaxing to muted once read. */}
-                <span
+          conversations.map((conv) => {
+            const unread = conv.unreadCount > 0;
+            return (
+              <div key={conv.id} className="conversation-row group relative border-b border-[var(--border)]">
+                <button
+                  type="button"
+                  onClick={() => onSelect(conv.id)}
                   className={clsx(
-                    "flex min-w-0 items-center gap-1.5 truncate text-sm",
-                    conv.unreadCount > 0 ? "font-semibold" : "font-normal",
+                    "flex w-full flex-col gap-0.5 px-4 py-3 text-left transition-colors",
+                    selectedId === conv.id ? "bg-[var(--selected-bg)]" : "hover:bg-[var(--surface-muted)]",
                   )}
                 >
-                  <span className="truncate">{conv.adminAlias || `Anonymous #${conv.publicId}`}</span>
-                  {conv.adminAlias && (
-                    <span className="shrink-0 text-[11px] font-normal text-[var(--text-muted)]">
-                      #{conv.publicId}
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={clsx(
+                        "flex min-w-0 items-center gap-1.5 truncate text-sm",
+                        unread ? "font-semibold" : "font-normal",
+                      )}
+                    >
+                      <span className="truncate">{conv.adminAlias || `Anonymous #${conv.publicId}`}</span>
+                      {conv.adminAlias && (
+                        <span className="shrink-0 text-[11px] font-normal text-[var(--text-muted)]">
+                          #{conv.publicId}
+                        </span>
+                      )}
                     </span>
+                    {conv.lastMessageAt && (
+                      <span className="shrink-0 text-[11px] text-[var(--text-muted)]">
+                        {formatMessageTime(conv.lastMessageAt)}
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    className={clsx(
+                      "flex min-w-0 items-center gap-1.5 text-xs",
+                      unread ? "font-medium text-[var(--text)]" : "text-[var(--text-muted)]",
+                    )}
+                  >
+                    <span className="flex min-w-0 items-center gap-1 truncate">
+                      {previews[conv.id] === ATTACHMENT_PREVIEW ? (
+                        <>
+                          <Paperclip size={11} className="shrink-0" aria-hidden />
+                          Attachment
+                        </>
+                      ) : (
+                        (previews[conv.id] ?? "…")
+                      )}
+                    </span>
+                    {unread && (
+                      <span
+                        className={clsx(
+                          // The shift on hover is handled by .conversation-badge
+                          // in index.css (plain CSS wins the cascade against
+                          // Tailwind's responsive resets deterministically).
+                          "conversation-badge shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold",
+                          conv.mutedAt
+                            ? "bg-[var(--surface-muted)] text-[var(--text-muted)]"
+                            : "bg-[var(--btn-bg)] text-[var(--btn-fg)]",
+                        )}
+                      >
+                        {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {conv.status === "ARCHIVED" && (
+                      <span className="rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-xs text-[var(--text-muted)]">
+                        Archived
+                      </span>
+                    )}
+                    {conv.status === "BLOCKED" && (
+                      <span className="rounded-full bg-[var(--danger-bg)] px-2 py-0.5 text-xs text-[var(--danger-fg)]">
+                        Blocked
+                      </span>
+                    )}
+                    {conv.mutedAt && (
+                      <span className="rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-xs text-[var(--text-muted)]">
+                        Muted
+                      </span>
+                    )}
+                  </div>
+                </button>
+
+                {/* Hover-revealed row actions (always visible on touch sizes,
+                    where hover doesn't exist - the only other access path, the
+                    old header buttons, is gone). The dropdown opens on click. */}
+                <div
+                  data-row-menu
+                  className={clsx(
+                    "absolute right-2 top-1/2 z-10 -translate-y-1/2 flex-col",
+                    openMenuId === conv.id
+                      ? "flex"
+                      : "flex md:hidden md:group-hover:flex md:group-focus-within:flex",
                   )}
-                </span>
-                {conv.unreadCount > 0 && (
-                  <span className="shrink-0 rounded-full bg-[var(--btn-bg)] px-2 py-0.5 text-xs font-semibold text-[var(--btn-fg)]">
-                    {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
-                  </span>
-                )}
+                >
+                  <button
+                    type="button"
+                    aria-label="Conversation actions"
+                    aria-expanded={openMenuId === conv.id}
+                    onClick={() => setOpenMenuId(openMenuId === conv.id ? null : conv.id)}
+                    className="rounded-md bg-[var(--surface-raised)] p-1.5 text-[var(--text-muted)] shadow-sm ring-1 ring-[var(--border)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
+                  >
+                    <MoreVertical size={16} aria-hidden />
+                  </button>
+                  {openMenuId === conv.id && (
+                    <div
+                      role="menu"
+                      className="absolute right-0 top-full mt-1 w-40 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] py-1 shadow-lg"
+                    >
+                      <RowMenuItem onClick={() => runRowAction(conv, "archive")}>
+                        {conv.status === "ARCHIVED" ? "Unarchive" : "Archive"}
+                      </RowMenuItem>
+                      <RowMenuItem onClick={() => runRowAction(conv, "block")}>
+                        {conv.status === "BLOCKED" ? "Unblock" : "Block"}
+                      </RowMenuItem>
+                      <RowMenuItem onClick={() => runRowAction(conv, "mute")}>
+                        {conv.mutedAt ? "Unmute" : "Mute"}
+                      </RowMenuItem>
+                      <div className="my-1 h-px bg-[var(--border)]" role="separator" />
+                      <RowMenuItem destructive onClick={() => runRowAction(conv, "delete")}>
+                        Delete
+                      </RowMenuItem>
+                    </div>
+                  )}
+                </div>
               </div>
-              <p
-                className={clsx(
-                  "flex min-w-0 items-center gap-1 truncate text-xs",
-                  conv.unreadCount > 0 ? "font-medium text-[var(--text)]" : "text-[var(--text-muted)]",
-                )}
-              >
-                {previews[conv.id] === ATTACHMENT_PREVIEW ? (
-                  <>
-                    <Paperclip size={11} className="shrink-0" aria-hidden />
-                    Attachment
-                  </>
-                ) : (
-                  (previews[conv.id] ?? "…")
-                )}
-              </p>
-              <div className="flex items-center gap-1.5">
-                {conv.status === "ARCHIVED" && (
-                  <span className="rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-xs text-[var(--text-muted)]">
-                    Archived
-                  </span>
-                )}
-                {conv.status === "BLOCKED" && (
-                  <span className="rounded-full bg-[var(--danger-bg)] px-2 py-0.5 text-xs text-[var(--danger-fg)]">
-                    Blocked
-                  </span>
-                )}
-              </div>
-            </button>
-          ))
+            );
+          })
         )}
       </div>
     </div>
+  );
+}
+
+function RowMenuItem({
+  children,
+  destructive = false,
+  onClick,
+}: {
+  children: React.ReactNode;
+  destructive?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      className={clsx(
+        "block w-full px-3 py-1.5 text-left text-sm transition-colors",
+        destructive
+          ? "text-[var(--danger-fg)] hover:bg-[var(--danger-bg)]"
+          : "hover:bg-[var(--surface-muted)]",
+      )}
+    >
+      {children}
+    </button>
   );
 }

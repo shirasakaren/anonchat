@@ -190,6 +190,14 @@ export function unblockConversation(id: string): Promise<AdminConversationDto> {
   return api.post<AdminConversationDto>(`/admin/conversations/${id}/unblock`);
 }
 
+export function muteConversation(id: string): Promise<AdminConversationDto> {
+  return api.post<AdminConversationDto>(`/admin/conversations/${id}/mute`);
+}
+
+export function unmuteConversation(id: string): Promise<AdminConversationDto> {
+  return api.post<AdminConversationDto>(`/admin/conversations/${id}/unmute`);
+}
+
 export function softDeleteConversation(id: string): Promise<void> {
   return api.delete<void>(`/admin/conversations/${id}`);
 }

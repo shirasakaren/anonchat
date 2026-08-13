@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import type { ServerWsEvent } from "@anonchat/shared";
 import { useRealtimeSocket } from "../../hooks/useRealtimeSocket.js";
 import { useAdminNotifications } from "../../hooks/useAdminNotifications.js";
+import { isConversationMuted } from "./mutedConversations.js";
 
 /**
  * Mounted once at the AdminApp level (not inside Inbox) so a new-message
@@ -14,6 +15,9 @@ export function GlobalNotifications() {
   const handleEvent = useCallback(
     (event: ServerWsEvent) => {
       if (event.type === "message.created" && event.message.senderType === "USER") {
+        // Muted conversations stay quiet (sound AND popup) while their
+        // unread counts still accumulate in the inbox.
+        if (isConversationMuted(event.conversationId)) return;
         notify("New anonymous message", "You have a new message in your inbox.");
       }
     },
