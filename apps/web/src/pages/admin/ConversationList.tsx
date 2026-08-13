@@ -306,7 +306,13 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                           type="button"
                           aria-label="Conversation actions"
                           aria-expanded={openMenuId === conv.id}
-                          onClick={() => setOpenMenuId(openMenuId === conv.id ? null : conv.id)}
+                          onClick={(e) => {
+                            // The chevron sits inside the row's open-chat
+                            // button - stop the click from bubbling up so
+                            // opening the menu never navigates into the chat.
+                            e.stopPropagation();
+                            setOpenMenuId(openMenuId === conv.id ? null : conv.id);
+                          }}
                           className={clsx(
                             "rounded p-1 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]",
                             openMenuId === conv.id
@@ -319,6 +325,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                         {openMenuId === conv.id && (
                           <div
                             role="menu"
+                            onClick={(e) => e.stopPropagation()}
                             className="absolute right-0 top-full mt-1 w-40 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] py-1 shadow-lg"
                           >
                             <RowMenuItem onClick={() => runRowAction(conv, "archive")}>
@@ -379,7 +386,10 @@ function RowMenuItem({
     <button
       type="button"
       role="menuitem"
-      onClick={onClick}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
       className={clsx(
         "block w-full px-3 py-1.5 text-left text-sm transition-colors",
         destructive
