@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { encryptBlob } from "@anonchat/crypto";
 import { Pencil } from "lucide-react";
-import type { AdminConversationDto, MessageDto, ServerWsEvent } from "@anonchat/shared";
+import { DEFAULT_MAX_MESSAGE_LENGTH, type AdminConversationDto, type MessageDto, type ServerWsEvent } from "@anonchat/shared";
 import {
   deleteAdminMessage,
   editAdminMessage,
@@ -501,7 +501,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
       <CannedReplyPicker onPick={(body) => handleSend(body, [])} />
 
       <Composer
-        maxLength={site?.limits.maxMessageLength ?? 100_000}
+        maxLength={site?.limits.maxMessageLength ?? DEFAULT_MAX_MESSAGE_LENGTH}
         maxAttachments={site?.limits.maxAttachmentsPerMessage ?? 5}
         disabled={false}
         replyPreview={replyTo?.text}

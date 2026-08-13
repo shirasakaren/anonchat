@@ -204,3 +204,29 @@ select:disabled {
 .prose-message p + p {
   margin-top: 0.5rem;
 }
+
+.prose-message h1,
+.prose-message h2,
+.prose-message h3 {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.prose-message * + h1,
+.prose-message * + h2,
+.prose-message * + h3 {
+  margin-top: 0.5rem;
+}
+
+.prose-message h1 {
+  font-size: 1.4em;
+}
+
+.prose-message h2 {
+  font-size: 1.2em;
+}
+
+.prose-message h3 {
+  font-size: 1.05em;
+}
