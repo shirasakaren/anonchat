@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
-import { formatDistanceToNowStrict } from "date-fns";
 import { Paperclip } from "lucide-react";
 import type { AdminConversationSummaryDto, ServerWsEvent } from "@anonchat/shared";
 
