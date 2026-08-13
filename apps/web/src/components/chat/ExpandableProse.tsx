@@ -1,5 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import clsx from "clsx";
+import { enhanceCodeBlocks } from "./codeBlockActions.js";
+import { sanitizeLinkAttributes } from "./markdown.js";
 
 const COLLAPSED_MAX_HEIGHT_PX = 320;
 
@@ -16,11 +18,26 @@ export function ExpandableProse({ html }: { html: string }) {
   const [expanded, setExpanded] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
 
+  // No dependency array (not `[html]`): React can reset this element's
+  // innerHTML on a re-render even when `html` is the same string value as
+  // last time (e.g. a WS-triggered refetch produces new message objects
+  // for unchanged content) - verified empirically via MutationObserver, a
+  // `[html]`-keyed effect missed exactly that case and silently lost the
+  // enhancements below. Re-running every commit is safe: both functions
+  // below are idempotent (see their own guards) against DOM that's already
+  // enhanced, so a same-content re-run is just a cheap early return.
   useLayoutEffect(() => {
     const el = contentRef.current;
     if (!el) return;
+    // Both DOM-enhancement passes below run outside dangerouslySetInnerHTML
+    // (see codeBlockActions.ts / markdown.ts) and must happen before the
+    // height measurement - they add real height (the code-block header
+    // bar), so measuring first would under-count it right at the clamp
+    // boundary.
+    sanitizeLinkAttributes(el);
+    enhanceCodeBlocks(el);
     setOverflowing(el.scrollHeight > COLLAPSED_MAX_HEIGHT_PX + 1);
-  }, [html]);
+  });
 
   const clamped = !expanded && overflowing;
 

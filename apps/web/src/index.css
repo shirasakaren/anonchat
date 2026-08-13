@@ -192,6 +192,52 @@ select:disabled {
   overflow-x: auto;
 }
 
+/* ── Code block header (language label + copy button) ────────────────
+   Injected by codeBlockActions.ts as real DOM nodes, not part of the
+   sanitized markdown HTML - see that file for why. color-mix() against
+   currentColor (the bubble/page text color already guaranteed to contrast
+   here) keeps the tint theme-agnostic without 25 new per-theme tokens,
+   the same technique themes.css already uses for --selected-bg etc. */
+.prose-message .code-block-wrapper {
+  margin: 0.375rem 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.prose-message .code-block-wrapper pre {
+  margin: 0;
+  border-radius: 0;
+}
+
+.prose-message .code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.25rem 0.625rem;
+  background: color-mix(in srgb, currentColor 8%, var(--surface-muted));
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+}
+
+.prose-message .code-copy-btn {
+  border-radius: 0.25rem;
+  padding: 0.0625rem 0.5rem;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.prose-message .code-copy-btn:hover {
+  background: color-mix(in srgb, currentColor 24%, transparent);
+}
+
 .prose-message code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.875em;
