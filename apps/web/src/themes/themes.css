@@ -91,6 +91,10 @@
   --btn-fg: #ffffff;
   --chip-bg: #5a5f6a;
   --chip-fg: #ffffff;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #e2e4e9;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #636c83;
 }
 
 /* 2. Forest Dark — Deep evergreen, green accents. */
@@ -101,7 +105,7 @@
   --border: #243a30;
   --text: #dce8e0;
   --text-muted: #7a9a82;
-  --bubble-user: #2d8a4e;
+  --bubble-user: #2b844b;
   --bubble-user-text: #ffffff;
   --bubble-admin: #1c2e24;
   --bubble-admin-text: #dce8e0;
@@ -112,6 +116,10 @@
   --color-accent-500: #2d8a4e;
   --color-accent-600: #267a42;
   --color-accent-700: #1e6335;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #329f56;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #4c7b65;
 }
 
 /* 3. Ocean Dark — Deep navy, blue accents. */
@@ -133,6 +141,10 @@
   --color-accent-500: #3b6fb6;
   --color-accent-600: #3360a0;
   --color-accent-700: #2a4e82;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #5a89ca;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #566ca7;
 }
 
 /* 4. Crimson Dark — Deep burgundy, rose accents. */
@@ -154,6 +166,10 @@
   --color-accent-500: #b63b4a;
   --color-accent-600: #a03240;
   --color-accent-700: #822836;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #d06875;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #a8526d;
 }
 
 /* 5. Amethyst Dark — Deep plum, purple accents. */
@@ -163,7 +179,7 @@
   --surface-raised: #261834;
   --border: #3c2650;
   --text: #e4d8f8;
-  --text-muted: #9078b8;
+  --text-muted: #947dbb;
   --bubble-user: #7b3bb6;
   --bubble-user-text: #ffffff;
   --bubble-admin: #2c1c3c;
@@ -175,6 +191,10 @@
   --color-accent-500: #7b3bb6;
   --color-accent-600: #6a32a0;
   --color-accent-700: #562882;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #a372d3;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #875ab0;
 }
 
 /* 6. Teal Dark — Deep teal waters. */
@@ -185,7 +205,7 @@
   --border: #264644;
   --text: #d0f0ee;
   --text-muted: #72a09c;
-  --bubble-user: #2d8a82;
+  --bubble-user: #2a8079;
   --bubble-user-text: #ffffff;
   --bubble-admin: #1c3432;
   --bubble-admin-text: #d0f0ee;
@@ -196,6 +216,10 @@
   --color-accent-500: #2d8a82;
   --color-accent-600: #267870;
   --color-accent-700: #1e6058;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #33a398;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #46827e;
 }
 
 /* 7. Amber Dark — Warm earth, gold accents. */
@@ -221,6 +245,11 @@
      Use the darker accent-700 gold as the button fill instead. */
   --btn-bg: #8a5c1e;
   --btn-bg-hover: #6f4a18;
+  --chip-fg: #84581d;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #c18427;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #8f7045;
 }
 
 /* 8. Slate Dark — Cool blue-gray. */
@@ -230,7 +259,7 @@
   --surface-raised: #1c202c;
   --border: #2c3242;
   --text: #dce0e8;
-  --text-muted: #788098;
+  --text-muted: #81889f;
   --bubble-user: #5a6e8a;
   --bubble-user-text: #ffffff;
   --bubble-admin: #222838;
@@ -242,6 +271,10 @@
   --color-accent-500: #5a6e8a;
   --color-accent-600: #4e6078;
   --color-accent-700: #3e4e62;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #768ba6;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #616e92;
 }
 
 /* 9. Emerald Dark — Rich gemstone green. */
@@ -252,7 +285,7 @@
   --border: #244232;
   --text: #d0f0d8;
   --text-muted: #6aaa7a;
-  --bubble-user: #2a8a4a;
+  --bubble-user: #288447;
   --bubble-user-text: #ffffff;
   --bubble-admin: #1c3424;
   --bubble-admin-text: #d0f0d8;
@@ -263,6 +296,10 @@
   --color-accent-500: #2a8a4a;
   --color-accent-600: #247840;
   --color-accent-700: #1e6032;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #31a357;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #468162;
 }
 
 /* 10. Graphite Dark — Neutral gray, balanced. */
@@ -292,6 +329,10 @@
   --btn-fg: #ffffff;
   --chip-bg: #6a6a6a;
   --chip-fg: #ffffff;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #c0c0c0;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #717171;
 }
 
 /* --------------------------------------------------------------------------
@@ -305,7 +346,7 @@
   --surface-raised: #ffffff;
   --border: #ebebeb;
   --text: #171717;
-  --text-muted: #7d7d7d;
+  --text-muted: #6e6e6e;
   --bubble-user: #171717;
   --bubble-user-text: #fafafa;
   --bubble-admin: #f0f0f0;
@@ -317,6 +358,10 @@
   --color-accent-500: #4d4d4d;
   --color-accent-600: #171717;
   --color-accent-700: #000000;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #171717;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #8b8b8b;
 }
 
 /* 12. Forest Light — Fresh green morning. */
@@ -326,7 +371,7 @@
   --surface-raised: #ffffff;
   --border: #d4e5d8;
   --text: #1a2a1e;
-  --text-muted: #6a8a70;
+  --text-muted: #59745e;
   --bubble-user: #2d6b3a;
   --bubble-user-text: #ffffff;
   --bubble-admin: #edf5ef;
@@ -338,6 +383,10 @@
   --color-accent-500: #2d6b3a;
   --color-accent-600: #255a30;
   --color-accent-700: #1c4524;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #255a30;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #5c986a;
 }
 
 /* 13. Ocean Light — Open sky blue. */
@@ -347,7 +396,7 @@
   --surface-raised: #ffffff;
   --border: #d4dce8;
   --text: #1a2430;
-  --text-muted: #6a7890;
+  --text-muted: #606d83;
   --bubble-user: #3b6fb6;
   --bubble-user-text: #ffffff;
   --bubble-admin: #edf2f8;
@@ -359,6 +408,10 @@
   --color-accent-500: #3b6fb6;
   --color-accent-600: #3260a0;
   --color-accent-700: #284c80;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #3260a0;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #728cb4;
 }
 
 /* 14. Rose Light — Soft floral pink. */
@@ -368,7 +421,7 @@
   --surface-raised: #ffffff;
   --border: #e8d4d8;
   --text: #2a1a1e;
-  --text-muted: #906a70;
+  --text-muted: #866268;
   --bubble-user: #b64a5a;
   --bubble-user-text: #ffffff;
   --bubble-admin: #f8edef;
@@ -380,6 +433,11 @@
   --color-accent-500: #b64a5a;
   --color-accent-600: #a0384a;
   --color-accent-700: #802c3a;
+  --danger-fg: #da2323;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #a0384a;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #b77985;
 }
 
 /* 15. Lavender Light — Calm purple fields. */
@@ -389,7 +447,7 @@
   --surface-raised: #ffffff;
   --border: #dcd4e8;
   --text: #201a2a;
-  --text-muted: #786a90;
+  --text-muted: #726589;
   --bubble-user: #6a4ab6;
   --bubble-user-text: #ffffff;
   --bubble-admin: #f2edf8;
@@ -401,6 +459,11 @@
   --color-accent-500: #6a4ab6;
   --color-accent-600: #5a3ca0;
   --color-accent-700: #482e80;
+  --danger-fg: #d82323;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #5a3ca0;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #967eba;
 }
 
 /* 16. Mint Light — Refreshing cool green. */
@@ -410,7 +473,7 @@
   --surface-raised: #ffffff;
   --border: #d4e8e0;
   --text: #1a2824;
-  --text-muted: #6a9082;
+  --text-muted: #557469;
   --bubble-user: #2d7a6a;
   --bubble-user-text: #ffffff;
   --bubble-admin: #edf6f2;
@@ -422,6 +485,10 @@
   --color-accent-500: #2d7a6a;
   --color-accent-600: #256a5a;
   --color-accent-700: #1c5044;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #256a5a;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #52997d;
 }
 
 /* 17. Honey Light — Warm golden morning. */
@@ -431,8 +498,8 @@
   --surface-raised: #ffffff;
   --border: #e8e0d4;
   --text: #2a2418;
-  --text-muted: #908268;
-  --bubble-user: #b68a2a;
+  --text-muted: #786d57;
+  --bubble-user: #936f22;
   --bubble-user-text: #ffffff;
   --bubble-admin: #f8f4ed;
   --bubble-admin-text: #2a2418;
@@ -443,6 +510,12 @@
   --color-accent-500: #b68a2a;
   --color-accent-600: #a07624;
   --color-accent-700: #805e1c;
+  --chip-fg: #7c5b1b;
+  --btn-bg: #966e22;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #916b21;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #a68759;
 }
 
 /* 18. Cloud Light — Cool high-altitude gray. */
@@ -452,7 +525,7 @@
   --surface-raised: #ffffff;
   --border: #d8dae0;
   --text: #1a1c22;
-  --text-muted: #6a6e78;
+  --text-muted: #686c75;
   --bubble-user: #5a6a8a;
   --bubble-user-text: #ffffff;
   --bubble-admin: #eff0f4;
@@ -464,6 +537,10 @@
   --color-accent-500: #5a6a8a;
   --color-accent-600: #4e5e78;
   --color-accent-700: #3c4a60;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #4e5e78;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #848a9d;
 }
 
 /* --------------------------------------------------------------------------
@@ -478,7 +555,7 @@
   --border: #4a3024;
   --text: #f4e0d0;
   --text-muted: #b08a70;
-  --bubble-user: #d4733a;
+  --bubble-user: #b65c28;
   --bubble-user-text: #ffffff;
   --bubble-admin: #38281c;
   --bubble-admin-text: #f4e0d0;
@@ -489,6 +566,11 @@
   --color-accent-500: #cc6633;
   --color-accent-600: #b8582a;
   --color-accent-700: #944420;
+  --chip-fg: #90421f;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #d47141;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #9b644b;
 }
 
 /* 20. Aurora — Dark canvas, cool green/cyan gradient accents. */
@@ -499,7 +581,7 @@
   --border: #264044;
   --text: #d0f0f2;
   --text-muted: #70a0a6;
-  --bubble-user: #3a9e8a;
+  --bubble-user: #308272;
   --bubble-user-text: #ffffff;
   --bubble-admin: #1c3438;
   --bubble-admin-text: #d0f0f2;
@@ -510,6 +592,11 @@
   --color-accent-500: #2d9e82;
   --color-accent-600: #268a70;
   --color-accent-700: #1e7058;
+  --btn-bg: #24826a;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #2da485;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #4b7f87;
 }
 
 /* 21. Midnight — Ultra-dark blue-black, stark contrast. */
@@ -519,7 +606,7 @@
   --surface-raised: #12182c;
   --border: #1e2850;
   --text: #d8e0ff;
-  --text-muted: #6a78b0;
+  --text-muted: #7481b5;
   --bubble-user: #4a5eb6;
   --bubble-user-text: #ffffff;
   --bubble-admin: #182038;
@@ -531,6 +618,10 @@
   --color-accent-500: #3a4eb6;
   --color-accent-600: #3242a0;
   --color-accent-700: #283680;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #6e7cd2;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #4d63bc;
 }
 
 /* 22. Matcha — Soft earthy green-cream (light). */
@@ -540,7 +631,7 @@
   --surface-raised: #ffffff;
   --border: #dce4d4;
   --text: #1e2418;
-  --text-muted: #7a8268;
+  --text-muted: #697059;
   --bubble-user: #5a7a3a;
   --bubble-user-text: #ffffff;
   --bubble-admin: #f0f4ea;
@@ -552,6 +643,10 @@
   --color-accent-500: #5a7a3a;
   --color-accent-600: #4c6830;
   --color-accent-700: #3c5226;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #4c6830;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #79945d;
 }
 
 /* 23. Sepia — Warm vintage brown/cream (light). */
@@ -561,7 +656,7 @@
   --surface-raised: #ffffff;
   --border: #e0d8c8;
   --text: #2c2014;
-  --text-muted: #908060;
+  --text-muted: #786a50;
   --bubble-user: #8a6a3a;
   --bubble-user-text: #ffffff;
   --bubble-admin: #f4efe6;
@@ -573,6 +668,10 @@
   --color-accent-500: #8a6a3a;
   --color-accent-600: #745a30;
   --color-accent-700: #5c4624;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #745a30;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #9f8859;
 }
 
 /* 24. Cherry — Dark canvas with pink cherry blossom accents. */
@@ -582,7 +681,7 @@
   --surface-raised: #301c26;
   --border: #4a2c3a;
   --text: #f4d8e4;
-  --text-muted: #b07890;
+  --text-muted: #b37d94;
   --bubble-user: #c44a7a;
   --bubble-user-text: #ffffff;
   --bubble-admin: #38202c;
@@ -594,6 +693,10 @@
   --color-accent-500: #c44a7a;
   --color-accent-600: #aa3a6a;
   --color-accent-700: #882c54;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #cd6d96;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #9e5e7c;
 }
 
 /* 25. Glacier — Light with cold icy blue accents. */
@@ -603,8 +706,8 @@
   --surface-raised: #ffffff;
   --border: #d4dfea;
   --text: #18222c;
-  --text-muted: #68788c;
-  --bubble-user: #5a82a4;
+  --text-muted: #5e6d7f;
+  --bubble-user: #527796;
   --bubble-user-text: #ffffff;
   --bubble-admin: #eef3f8;
   --bubble-admin-text: #18222c;
@@ -615,4 +718,8 @@
   --color-accent-500: #5a82a4;
   --color-accent-600: #4a7090;
   --color-accent-700: #3a5a74;
+  /* WCAG AA text-on-surface variant of accent-600 (2026-08 contrast audit) */
+  --link-fg: #4a7090;
+  /* WCAG AA (3:1) border for form-control boundaries (2026-08 contrast audit) */
+  --border-strong: #658cb4;
 }
