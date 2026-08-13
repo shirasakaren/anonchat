@@ -423,7 +423,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
                 <Pencil size={12} aria-hidden className="shrink-0 text-[var(--text-muted)] group-hover:text-[var(--text)]" />
               </button>
             )}
-            <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-[var(--text-muted)]">
+            <p className="mt-0.5 flex items-center gap-1.5 truncate px-1 text-[11px] text-[var(--text-muted)]">
               {userOnline ? (
                 <>
                   <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" aria-hidden />
