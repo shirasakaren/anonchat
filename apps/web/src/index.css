@@ -130,26 +130,6 @@ body {
   }
 }
 
-/* ── Inbox row: hover-revealed actions vs unread badge ──────────────── */
-
-/* The row's action button overlays the right edge on hover (always on
-   touch sizes), so the unread badge shifts left to stay visible. Plain
-   CSS rather than Tailwind utilities: the hover variant needs to win
-   over the responsive reset deterministically. */
-.conversation-badge {
-  margin-right: 1.75rem;
-  transition: margin 150ms ease;
-}
-@media (min-width: 768px) {
-  .conversation-badge {
-    margin-right: 0;
-  }
-  .conversation-row:hover .conversation-badge,
-  .conversation-row:focus-within .conversation-badge {
-    margin-right: 1.75rem;
-  }
-}
-
 /* ── Message prose ─────────────────────────────────────────────────── */
 
 .prose-message a {

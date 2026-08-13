@@ -420,11 +420,6 @@ export function ConversationView({ conversationId, onChanged }: Props) {
                 <h2 className="min-w-0 truncate text-sm font-semibold">
                   {conversation.adminAlias || `Anonymous #${conversation.publicId}`}
                 </h2>
-                {conversation.adminAlias && (
-                  <span className="shrink-0 text-[11px] text-[var(--text-muted)]">
-                    #{conversation.publicId}
-                  </span>
-                )}
                 <Pencil size={12} aria-hidden className="shrink-0 text-[var(--text-muted)] group-hover:text-[var(--text)]" />
               </button>
             )}

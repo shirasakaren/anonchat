@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
 import { format } from "date-fns";
-import { MoreVertical, Paperclip } from "lucide-react";
+import { ChevronDown, Paperclip } from "lucide-react";
 import type { AdminConversationSummaryDto, ServerWsEvent } from "@anonchat/shared";
 
 /** Sentinel stored in `previews` for an attachment-only last message, so the
@@ -230,7 +230,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
           conversations.map((conv) => {
             const unread = conv.unreadCount > 0;
             return (
-              <div key={conv.id} className="conversation-row group relative border-b border-[var(--border)]">
+              <div key={conv.id} className="group relative border-b border-[var(--border)]">
                 <button
                   type="button"
                   onClick={() => onSelect(conv.id)}
@@ -239,29 +239,67 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                     selectedId === conv.id ? "bg-[var(--selected-bg)]" : "hover:bg-[var(--surface-muted)]",
                   )}
                 >
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-start justify-between gap-2">
                     <span
                       className={clsx(
-                        "flex min-w-0 items-center gap-1.5 truncate text-sm",
+                        "flex min-w-0 items-center truncate text-sm",
                         unread ? "font-semibold" : "font-normal",
                       )}
                     >
-                      <span className="truncate">{conv.adminAlias || `Anonymous #${conv.publicId}`}</span>
-                      {conv.adminAlias && (
-                        <span className="shrink-0 text-[11px] font-normal text-[var(--text-muted)]">
-                          #{conv.publicId}
+                      {conv.adminAlias || `Anonymous #${conv.publicId}`}
+                    </span>
+                    <div data-row-menu className="relative flex shrink-0 flex-col items-end">
+                      {conv.lastMessageAt && (
+                        <span className="text-[11px] text-[var(--text-muted)]">
+                          {formatMessageTime(conv.lastMessageAt)}
                         </span>
                       )}
-                    </span>
-                    {conv.lastMessageAt && (
-                      <span className="shrink-0 text-[11px] text-[var(--text-muted)]">
-                        {formatMessageTime(conv.lastMessageAt)}
-                      </span>
-                    )}
+                      {/* Small chevron directly below the time (hover-revealed
+                          on mouse sizes, always shown on touch sizes where
+                          hover doesn't exist). Opens the row action menu. */}
+                      <button
+                        type="button"
+                        aria-label="Conversation actions"
+                        aria-expanded={openMenuId === conv.id}
+                        onClick={() => setOpenMenuId(openMenuId === conv.id ? null : conv.id)}
+                        className={clsx(
+                          "rounded p-0.5 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]",
+                          openMenuId === conv.id
+                            ? "flex"
+                            : "flex md:hidden md:group-hover:flex md:group-focus-within:flex",
+                        )}
+                      >
+                        <ChevronDown size={13} aria-hidden />
+                      </button>
+                      {openMenuId === conv.id && (
+                        <div
+                          role="menu"
+                          className="absolute right-0 top-full z-10 mt-1 w-40 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] py-1 shadow-lg"
+                        >
+                          <RowMenuItem onClick={() => runRowAction(conv, "archive")}>
+                            {conv.status === "ARCHIVED" ? "Unarchive" : "Archive"}
+                          </RowMenuItem>
+                          <RowMenuItem onClick={() => runRowAction(conv, "block")}>
+                            {conv.status === "BLOCKED" ? "Unblock" : "Block"}
+                          </RowMenuItem>
+                          <RowMenuItem onClick={() => runRowAction(conv, "mute")}>
+                            {conv.mutedAt ? "Unmute" : "Mute"}
+                          </RowMenuItem>
+                          <div className="my-1 h-px bg-[var(--border)]" role="separator" />
+                          <RowMenuItem destructive onClick={() => runRowAction(conv, "delete")}>
+                            Delete
+                          </RowMenuItem>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div
                     className={clsx(
-                      "flex min-w-0 items-center gap-1.5 text-xs",
+                      // The unread badge sits right beside the preview text
+                      // (not anchored to the row's right edge), and the whole
+                      // line keeps clear of the right side so truncation
+                      // happens further left.
+                      "flex min-w-0 items-center gap-1.5 pr-10 text-xs",
                       unread ? "font-medium text-[var(--text)]" : "text-[var(--text-muted)]",
                     )}
                   >
@@ -278,10 +316,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                     {unread && (
                       <span
                         className={clsx(
-                          // The shift on hover is handled by .conversation-badge
-                          // in index.css (plain CSS wins the cascade against
-                          // Tailwind's responsive resets deterministically).
-                          "conversation-badge shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold",
+                          "shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold",
                           conv.mutedAt
                             ? "bg-[var(--surface-muted)] text-[var(--text-muted)]"
                             : "bg-[var(--btn-bg)] text-[var(--btn-fg)]",
@@ -309,49 +344,6 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                     )}
                   </div>
                 </button>
-
-                {/* Hover-revealed row actions (always visible on touch sizes,
-                    where hover doesn't exist - the only other access path, the
-                    old header buttons, is gone). The dropdown opens on click. */}
-                <div
-                  data-row-menu
-                  className={clsx(
-                    "absolute right-2 top-1/2 z-10 -translate-y-1/2 flex-col",
-                    openMenuId === conv.id
-                      ? "flex"
-                      : "flex md:hidden md:group-hover:flex md:group-focus-within:flex",
-                  )}
-                >
-                  <button
-                    type="button"
-                    aria-label="Conversation actions"
-                    aria-expanded={openMenuId === conv.id}
-                    onClick={() => setOpenMenuId(openMenuId === conv.id ? null : conv.id)}
-                    className="rounded-md bg-[var(--surface-raised)] p-1.5 text-[var(--text-muted)] shadow-sm ring-1 ring-[var(--border)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
-                  >
-                    <MoreVertical size={16} aria-hidden />
-                  </button>
-                  {openMenuId === conv.id && (
-                    <div
-                      role="menu"
-                      className="absolute right-0 top-full mt-1 w-40 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] py-1 shadow-lg"
-                    >
-                      <RowMenuItem onClick={() => runRowAction(conv, "archive")}>
-                        {conv.status === "ARCHIVED" ? "Unarchive" : "Archive"}
-                      </RowMenuItem>
-                      <RowMenuItem onClick={() => runRowAction(conv, "block")}>
-                        {conv.status === "BLOCKED" ? "Unblock" : "Block"}
-                      </RowMenuItem>
-                      <RowMenuItem onClick={() => runRowAction(conv, "mute")}>
-                        {conv.mutedAt ? "Unmute" : "Mute"}
-                      </RowMenuItem>
-                      <div className="my-1 h-px bg-[var(--border)]" role="separator" />
-                      <RowMenuItem destructive onClick={() => runRowAction(conv, "delete")}>
-                        Delete
-                      </RowMenuItem>
-                    </div>
-                  )}
-                </div>
               </div>
             );
           })
