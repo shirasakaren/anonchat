@@ -5,6 +5,7 @@ import { SmilePlus, Reply, Pencil, Trash2 } from "lucide-react";
 import { decryptReaction } from "../../crypto/conversationCrypto.js";
 import { renderMessageMarkdown } from "./markdown.js";
 import { AttachmentPreview } from "./AttachmentPreview.js";
+import { ExpandableProse } from "./ExpandableProse.js";
 import type { DisplayMessage } from "./types.js";
 
 const QUICK_EMOJI = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
@@ -112,7 +113,7 @@ export function MessageBubble({
                   ))}
                 </div>
               )}
-              {html && <div className="prose-message" dangerouslySetInnerHTML={{ __html: html }} />}
+              {html && <ExpandableProse html={html} />}
             </>
           )}
 

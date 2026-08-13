@@ -501,7 +501,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
       <CannedReplyPicker onPick={(body) => handleSend(body, [])} />
 
       <Composer
-        maxLength={site?.limits.maxMessageLength ?? 8000}
+        maxLength={site?.limits.maxMessageLength ?? 100_000}
         maxAttachments={site?.limits.maxAttachmentsPerMessage ?? 5}
         disabled={false}
         replyPreview={replyTo?.text}

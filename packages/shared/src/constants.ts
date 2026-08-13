@@ -5,10 +5,17 @@
  * ceiling on the encrypted envelope size, as a DoS/storage guard - this is
  * intentionally generous to comfortably fit MAX_MESSAGE_LENGTH plaintext
  * plus JSON envelope, nonce, and base64 overhead.
+ *
+ * Sized for DEFAULT_MAX_MESSAGE_LENGTH (100,000 chars): worst case is
+ * 100,000 chars x 4 bytes (UTF-8) = ~400,000 bytes of plaintext, plus the
+ * small JSON envelope (`{"text":"..."}`) and AEAD tag, then base64url
+ * inflates that by ~4/3 -> ~535,000 characters. 600,000 leaves headroom.
+ * `fieldSize` in apps/server/src/app.ts's multipart config must stay >=
+ * this (it bounds the same field when a message ships with attachments).
  */
-export const MAX_CIPHERTEXT_ENVELOPE_BYTES = 131_072; // 128 KiB
+export const MAX_CIPHERTEXT_ENVELOPE_BYTES = 600_000;
 
-export const DEFAULT_MAX_MESSAGE_LENGTH = 8000;
+export const DEFAULT_MAX_MESSAGE_LENGTH = 100_000;
 export const DEFAULT_MAX_ATTACHMENT_SIZE_MB = 25;
 export const DEFAULT_MAX_ATTACHMENTS_PER_MESSAGE = 5;
 export const DEFAULT_MESSAGE_EDIT_WINDOW_MINUTES = 15;

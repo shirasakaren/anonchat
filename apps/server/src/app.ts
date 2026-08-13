@@ -7,6 +7,7 @@ import helmet from "@fastify/helmet";
 import multipart from "@fastify/multipart";
 import staticPlugin from "@fastify/static";
 import websocketPlugin from "@fastify/websocket";
+import { MAX_CIPHERTEXT_ENVELOPE_BYTES } from "@anonchat/shared";
 import authPlugin from "./auth/plugin.js";
 import { corsOrigins, loadEnv } from "./env.js";
 import { buildLoggerOptions } from "./logger.js";
@@ -62,9 +63,13 @@ export async function buildApp(): Promise<FastifyInstance> {
       // Non-file fields on a send-message request: content, replyToId, and
       // one attachmentMeta per attachment - bound these explicitly too, or
       // busboy's unbounded defaults let a client pad a request with huge
-      // non-file fields before ever reaching a file part.
+      // non-file fields before ever reaching a file part. Must stay >=
+      // MAX_CIPHERTEXT_ENVELOPE_BYTES + margin for the JSON wrapper/nonce -
+      // it caps the same "content" field's raw string length, and a message
+      // sent with an attachment goes through this multipart path rather
+      // than the plain-JSON bodyLimit above.
       fields: env.MAX_ATTACHMENTS_PER_MESSAGE + 2,
-      fieldSize: 200_000,
+      fieldSize: MAX_CIPHERTEXT_ENVELOPE_BYTES + 4_096,
       parts: env.MAX_ATTACHMENTS_PER_MESSAGE * 2 + 4,
     },
   });
