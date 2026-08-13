@@ -118,4 +118,4 @@ If you're using local disk storage for attachments, also back up the
 
 ## License
 
-MIT
+MIT License
