@@ -277,6 +277,22 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                         (invisible when hidden, never display:none) so
                         revealing it on hover cannot move the text. */}
                     <div className="ml-auto flex shrink-0 items-center gap-1">
+                      {unread && (
+                        <span
+                          className={clsx(
+                            "shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold",
+                            conv.mutedAt
+                              ? "bg-[var(--surface-muted)] text-[var(--text-muted)]"
+                              : "bg-[var(--btn-bg)] text-[var(--btn-fg)]",
+                          )}
+                        >
+                          {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
+                        </span>
+                      )}
+                      {/* The chevron keeps the far-right slot: its space is
+                          always reserved (visibility toggling, never display)
+                          so the badge simply sits left of it and nothing
+                          moves when the chevron reveals on hover. */}
                       <div data-row-menu className="relative">
                         <button
                           type="button"
@@ -313,18 +329,6 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                           </div>
                         )}
                       </div>
-                      {unread && (
-                        <span
-                          className={clsx(
-                            "shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold",
-                            conv.mutedAt
-                              ? "bg-[var(--surface-muted)] text-[var(--text-muted)]"
-                              : "bg-[var(--btn-bg)] text-[var(--btn-fg)]",
-                          )}
-                        >
-                          {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
-                        </span>
-                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
