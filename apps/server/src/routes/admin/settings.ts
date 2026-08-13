@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { SiteSettingsRequestSchema, type SiteSettingsDto } from "@anonchat/shared";
 import { requireAdmin } from "../../auth/plugin.js";
 import { prisma } from "../../db.js";
+import { publishToAllAnonymousUsers, publishToAdmins } from "../../realtime/hub.js";
 import { adminExists, getAdminPublicKeys } from "../../services/admin.service.js";
 import { recordAudit } from "../../services/auditLog.service.js";
 import { getSiteSettings } from "../../services/siteSettings.service.js";
@@ -48,6 +49,13 @@ export function registerAdminSettingsRoutes(app: FastifyInstance): void {
       },
     });
     await recordAudit(admin.id, "settings.updated");
+    // Push the new theme live to every open tab (anonymous visitors and any
+    // other admin session) instead of making them wait for their next load.
+    if (body.theme !== undefined && body.theme !== settings.theme) {
+      const event = { type: "site.updated" as const, theme: body.theme };
+      publishToAllAnonymousUsers(event);
+      publishToAdmins(event);
+    }
     reply.send(await toSettingsDto());
   });
 

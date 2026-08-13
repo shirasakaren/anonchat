@@ -31,4 +31,6 @@ export type ServerWsEvent =
   | { type: "presence"; who: "ADMIN"; online: boolean }
   /** Admin-only: the anonymous user's live-socket state for one conversation. */
   | { type: "user.presence"; conversationId: string; online: boolean }
+  /** Broadcast to every connected socket (anonymous and admin) when the admin changes the site-wide theme. */
+  | { type: "site.updated"; theme: string }
   | { type: "error"; message: string; code?: string };

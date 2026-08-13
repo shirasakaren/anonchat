@@ -14,6 +14,7 @@ import {
 import { ApiError } from "../api/client.js";
 import { useAnonymousSession } from "../context/AnonymousSessionContext.js";
 import { useSite } from "../context/SiteContext.js";
+import { useTheme } from "../context/ThemeContext.js";
 import { useRealtimeSocket } from "../hooks/useRealtimeSocket.js";
 import { Composer } from "../components/chat/Composer.js";
 import { ConnectionBanner } from "../components/chat/ConnectionBanner.js";
@@ -36,6 +37,7 @@ export default function Chat() {
   // early-returned so every hook below stays unconditional.
   const { session: activeSession, setConversationStatus, logout } = useAnonymousSession();
   const { site: activeSite } = useSite();
+  const { syncFromServer } = useTheme();
   const session = activeSession!;
   const site = activeSite!;
 
@@ -155,9 +157,13 @@ export default function Chat() {
           setAdminOnline(event.online);
           break;
         }
+        case "site.updated": {
+          syncFromServer(event.theme);
+          break;
+        }
       }
     },
-    [decryptDto, setConversationStatus],
+    [decryptDto, setConversationStatus, syncFromServer],
   );
 
   const handleReconnected = useCallback(() => {
