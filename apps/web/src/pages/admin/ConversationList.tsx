@@ -167,7 +167,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                 selectedId === conv.id ? "bg-[var(--selected-bg)]" : "hover:bg-[var(--surface-muted)]",
               )}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <span className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
                   <span
                     className={clsx(
@@ -182,11 +182,11 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                     </span>
                   )}
                 </span>
-                {conv.lastMessageAt && (
-                  <span className="text-xs text-[var(--text-muted)]">
-                    {formatDistanceToNowStrict(new Date(conv.lastMessageAt), { addSuffix: true })}
-                  </span>
-                )}
+                <span className="shrink-0 text-right text-xs text-[var(--text-muted)]">
+                  {conv.lastMessageAt
+                    ? formatDistanceToNowStrict(new Date(conv.lastMessageAt), { addSuffix: true })
+                    : `Started ${formatDistanceToNowStrict(new Date(conv.createdAt), { addSuffix: true })}`}
+                </span>
               </div>
               <p className="flex items-center gap-1 truncate text-xs text-[var(--text-muted)]">
                 {previews[conv.id] === ATTACHMENT_PREVIEW ? (

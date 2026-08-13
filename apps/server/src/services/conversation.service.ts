@@ -131,7 +131,11 @@ export async function listConversationsForAdmin(query: {
 
   const rows = await prisma.conversation.findMany({
     where,
-    orderBy: [{ lastMessageAt: "desc" }, { createdAt: "desc" }],
+    // nulls: "last" is essential here: Postgres sorts NULLs FIRST for DESC,
+    // so without it every conversation that has no messages yet (a visitor
+    // who created an identity but never sent anything) crowds the top of
+    // the inbox ahead of every real conversation.
+    orderBy: [{ lastMessageAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
     take: limit + 1,
     ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
     include: { anonymousUser: { select: ANONYMOUS_USER_SELECT } },
