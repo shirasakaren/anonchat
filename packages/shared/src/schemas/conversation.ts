@@ -66,6 +66,14 @@ export interface ConversationDto {
   anonymousExchangePublicKey: string;
 }
 
+/** Admin-only view of a conversation. `adminAlias` is deliberately NOT part
+ *  of the user-facing ConversationDto above: it's the admin's private
+ *  nickname for this contact and must never reach the anonymous user's
+ *  client, including inside WebSocket payloads. */
+export interface AdminConversationDto extends ConversationDto {
+  adminAlias: string | null;
+}
+
 export interface MessagePage {
   messages: MessageDto[];
   nextCursor: string | null;

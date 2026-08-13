@@ -66,6 +66,12 @@ export const AdminConversationsQuerySchema = PaginationQuerySchema.extend({
 });
 export type AdminConversationsQueryInput = z.infer<typeof AdminConversationsQuerySchema>;
 
+/** Setting an alias to "" clears it. */
+export const ConversationAliasRequestSchema = z.object({
+  alias: z.string().trim().max(60),
+});
+export type ConversationAliasRequestInput = z.infer<typeof ConversationAliasRequestSchema>;
+
 export interface AdminSummaryDto {
   id: string;
   username: string;
@@ -104,6 +110,8 @@ export interface CannedReplyDto {
 export interface AdminConversationSummaryDto {
   id: string;
   publicId: string;
+  /** Admin's private nickname for this contact ("" / null = none yet). */
+  adminAlias: string | null;
   status: ConversationStatus;
   unreadCount: number;
   createdAt: string;
