@@ -230,7 +230,13 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
           conversations.map((conv) => {
             const unread = conv.unreadCount > 0;
             return (
-              <div key={conv.id} className="group relative border-b border-[var(--border)]">
+              <div
+                key={conv.id}
+                className={clsx(
+                  "conversation-row group relative border-b border-[var(--border)]",
+                  openMenuId === conv.id && "row-menu-open",
+                )}
+              >
                 <button
                   type="button"
                   onClick={() => onSelect(conv.id)}
@@ -276,11 +282,17 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                         the far right. The chevron's slot is always reserved
                         (invisible when hidden, never display:none) so
                         revealing it on hover cannot move the text. */}
-                    <div className="ml-auto flex shrink-0 items-center gap-1">
+                    {/* Right side, below the time: unhovered, the unread badge
+                        holds the far-right edge; hovering (or opening the
+                        menu) shifts the badge left (.conversation-badge in
+                        index.css) and reveals the chevron overlay in the
+                        vacated rightmost slot. The group keeps a fixed
+                        height so the preview line never reflows. */}
+                    <div className="relative ml-auto flex h-6 shrink-0 items-center gap-1">
                       {unread && (
                         <span
                           className={clsx(
-                            "shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold",
+                            "conversation-badge shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold",
                             conv.mutedAt
                               ? "bg-[var(--surface-muted)] text-[var(--text-muted)]"
                               : "bg-[var(--btn-bg)] text-[var(--btn-fg)]",
@@ -289,11 +301,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                           {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
                         </span>
                       )}
-                      {/* The chevron keeps the far-right slot: its space is
-                          always reserved (visibility toggling, never display)
-                          so the badge simply sits left of it and nothing
-                          moves when the chevron reveals on hover. */}
-                      <div data-row-menu className="relative">
+                      <div data-row-menu className="absolute right-0 top-1/2 z-10 -translate-y-1/2">
                         <button
                           type="button"
                           aria-label="Conversation actions"
@@ -311,7 +319,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                         {openMenuId === conv.id && (
                           <div
                             role="menu"
-                            className="absolute right-0 top-full z-10 mt-1 w-40 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] py-1 shadow-lg"
+                            className="absolute right-0 top-full mt-1 w-40 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] py-1 shadow-lg"
                           >
                             <RowMenuItem onClick={() => runRowAction(conv, "archive")}>
                               {conv.status === "ARCHIVED" ? "Unarchive" : "Archive"}
