@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, Video, Music, FileText, Paperclip } from "lucide-react";
+import { Image as ImageIcon, Video, Music, FileText, FileCode, FileSpreadsheet, Paperclip, ZoomIn, Download } from "lucide-react";
 import { decryptBlob } from "@anonchat/crypto";
 import type { AttachmentDto } from "@anonchat/shared";
 import { decryptAttachmentMeta, toBlobPart, type AttachmentMetaEnvelope } from "../../crypto/conversationCrypto.js";
+import { DocxPreview } from "./preview/DocxPreview.js";
+import { CsvPreview } from "./preview/CsvPreview.js";
+import { TextCodePreview } from "./preview/TextCodePreview.js";
+import { ImageLightbox } from "./preview/ImageLightbox.js";
+import { detectTextLanguage, isCsv, DOCX_MIMETYPE } from "./preview/textFileTypes.js";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -10,11 +15,13 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function IconForMime({ mimetype }: { mimetype: string }) {
+function IconForMime({ mimetype, filename }: { mimetype: string; filename: string }) {
   if (mimetype.startsWith("image/")) return <ImageIcon size={16} aria-hidden />;
   if (mimetype.startsWith("video/")) return <Video size={16} aria-hidden />;
   if (mimetype.startsWith("audio/")) return <Music size={16} aria-hidden />;
-  if (mimetype === "application/pdf") return <FileText size={16} aria-hidden />;
+  if (mimetype === "application/pdf" || mimetype === DOCX_MIMETYPE) return <FileText size={16} aria-hidden />;
+  if (isCsv(mimetype, filename)) return <FileSpreadsheet size={16} aria-hidden />;
+  if (detectTextLanguage(mimetype, filename)) return <FileCode size={16} aria-hidden />;
   return <Paperclip size={16} aria-hidden />;
 }
 
@@ -25,11 +32,34 @@ interface Props {
 }
 
 type LoadState =
-  { kind: "idle" } | { kind: "loading" } | { kind: "loaded"; url: string; mimetype: string } | { kind: "error" };
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "loaded"; url: string; mimetype: string; bytes: Uint8Array<ArrayBuffer> }
+  | { kind: "error" };
+
+/** Shared filename/size/Download row under every previewed (non-fallback)
+ *  attachment - the E2EE promise is that the client already has the
+ *  decrypted bytes once loaded, so "download" here is just handing the
+ *  browser the same blob: URL already used for the preview above it, not a
+ *  second server round-trip. */
+function PreviewFooter({ filename, size, url }: { filename: string; size: number; url: string }) {
+  return (
+    <div className="mt-1 flex items-center justify-between gap-2 text-xs opacity-70">
+      <span className="min-w-0 truncate">
+        {filename} · {formatBytes(size)}
+      </span>
+      <a href={url} download={filename} className="flex shrink-0 items-center gap-1 underline hover:opacity-100">
+        <Download size={12} aria-hidden />
+        Download
+      </a>
+    </div>
+  );
+}
 
 export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: Props) {
   const [meta, setMeta] = useState<AttachmentMetaEnvelope | null>(null);
   const [state, setState] = useState<LoadState>({ kind: "idle" });
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     setMeta(decryptAttachmentMeta(conversationKey, attachment.meta));
@@ -37,9 +67,10 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
 
   // Images render inline in a chat by convention - decrypt and display them
   // as soon as their metadata arrives instead of waiting for a manual
-  // "Preview" click. Videos/audio/PDFs still load on demand (they're heavy
-  // and shouldn't auto-start). The idle-guard makes this a one-shot: once
-  // load() flips the state to "loading" this effect never re-fires.
+  // "Preview" click. Everything else still loads on demand (some of these
+  // - video, docx, csv, large text files - can be heavy and shouldn't
+  // auto-start). The idle-guard makes this a one-shot: once load() flips
+  // the state to "loading" this effect never re-fires.
   useEffect(() => {
     if (meta && meta.mimetype.startsWith("image/") && state.kind === "idle") {
       void load();
@@ -61,7 +92,7 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
       const raw = new Uint8Array(await res.arrayBuffer());
       const plaintext = toBlobPart(decryptBlob(conversationKey, raw));
       const blob = new Blob([plaintext], { type: meta.mimetype });
-      setState({ kind: "loaded", url: URL.createObjectURL(blob), mimetype: meta.mimetype });
+      setState({ kind: "loaded", url: URL.createObjectURL(blob), mimetype: meta.mimetype, bytes: plaintext });
     } catch {
       setState({ kind: "error" });
     }
@@ -71,25 +102,82 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
 
   if (state.kind === "loaded") {
     if (state.mimetype.startsWith("image/")) {
-      return <img src={state.url} alt={meta.filename} className="max-h-64 rounded-lg" />;
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => setLightboxOpen(true)}
+            aria-label={`Expand ${meta.filename}`}
+            className="group relative block"
+          >
+            <img src={state.url} alt={meta.filename} className="max-h-64 rounded-lg" />
+            <span className="absolute right-1.5 bottom-1.5 rounded-md bg-black/60 p-1 text-white opacity-0 group-hover:opacity-100">
+              <ZoomIn size={14} aria-hidden />
+            </span>
+          </button>
+          {lightboxOpen && (
+            <ImageLightbox url={state.url} filename={meta.filename} onClose={() => setLightboxOpen(false)} />
+          )}
+        </>
+      );
     }
     if (state.mimetype.startsWith("video/")) {
-      return <video src={state.url} controls className="max-h-64 rounded-lg" />;
+      return (
+        <div>
+          <video src={state.url} controls className="max-h-64 rounded-lg" />
+          <PreviewFooter filename={meta.filename} size={meta.size} url={state.url} />
+        </div>
+      );
     }
     if (state.mimetype.startsWith("audio/")) {
-      return <audio src={state.url} controls className="w-full" />;
+      return (
+        <div>
+          <audio src={state.url} controls className="w-full" />
+          <PreviewFooter filename={meta.filename} size={meta.size} url={state.url} />
+        </div>
+      );
     }
     if (state.mimetype === "application/pdf") {
       return (
-        <div className="space-y-1">
+        <div>
+          {/* The browser's own PDF viewer (Chrome/Firefox/Edge) already
+              provides zoom/pan/print/search inside this iframe - not
+              re-implemented via pdf.js, which would add a large dependency
+              this already-bundle-size-conscious app doesn't need for
+              functionality most browsers give for free. Safari's inline
+              PDF viewer is more limited, but the Download button below
+              covers that gap. */}
           <iframe
             title={meta.filename}
             src={state.url}
             className="h-64 w-full rounded-lg border border-[var(--border)]"
           />
-          <a href={state.url} download={meta.filename} className="text-xs underline">
-            Download {meta.filename}
-          </a>
+          <PreviewFooter filename={meta.filename} size={meta.size} url={state.url} />
+        </div>
+      );
+    }
+    if (state.mimetype === DOCX_MIMETYPE) {
+      return (
+        <div>
+          <DocxPreview bytes={state.bytes} />
+          <PreviewFooter filename={meta.filename} size={meta.size} url={state.url} />
+        </div>
+      );
+    }
+    if (isCsv(state.mimetype, meta.filename)) {
+      return (
+        <div>
+          <CsvPreview bytes={state.bytes} />
+          <PreviewFooter filename={meta.filename} size={meta.size} url={state.url} />
+        </div>
+      );
+    }
+    const textLanguage = detectTextLanguage(state.mimetype, meta.filename);
+    if (textLanguage) {
+      return (
+        <div>
+          <TextCodePreview bytes={state.bytes} language={textLanguage} />
+          <PreviewFooter filename={meta.filename} size={meta.size} url={state.url} />
         </div>
       );
     }
@@ -99,7 +187,7 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
         download={meta.filename}
         className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
       >
-        <IconForMime mimetype={state.mimetype} />
+        <IconForMime mimetype={state.mimetype} filename={meta.filename} />
         <span className="truncate">{meta.filename}</span>
       </a>
     );
@@ -112,7 +200,7 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
       disabled={state.kind === "loading"}
       className="flex w-full items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-left text-sm hover:ring-1 hover:ring-inset hover:ring-[var(--border-strong)] disabled:opacity-60"
     >
-      <IconForMime mimetype={meta.mimetype} />
+      <IconForMime mimetype={meta.mimetype} filename={meta.filename} />
       <span className="min-w-0 flex-1 truncate">{meta.filename}</span>
       {/* Both spans below inherit the ambient bubble text color (set by the
           parent MessageBubble) rather than a page-level token like
