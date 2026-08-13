@@ -17,6 +17,11 @@ interface Props {
   replyPreview?: string;
   canEdit: boolean;
   disableActions?: boolean;
+  /** Only the single most-recent read own-message in the thread should show
+   *  "Read" - the parent computes which one that is (see Chat.tsx /
+   *  ConversationView.tsx) since it requires looking across all messages,
+   *  not just this one. */
+  showReadReceipt?: boolean;
   onReply: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -32,6 +37,7 @@ export function MessageBubble({
   replyPreview,
   canEdit,
   disableActions = false,
+  showReadReceipt = false,
   onReply,
   onEdit,
   onDelete,
@@ -109,6 +115,19 @@ export function MessageBubble({
               {html && <div className="prose-message" dangerouslySetInnerHTML={{ __html: html }} />}
             </>
           )}
+
+          {/* Anchored bottom-right inside the bubble, low-opacity. Inherits
+              the bubble's own text color (via `opacity` on the ambient
+              color) rather than a page-level muted token - a page-level
+              token is only contrast-checked against --surface, not against
+              the bubble backgrounds this renders on (same reasoning as
+              .prose-message a and the attachment file-size label). */}
+          <div className="mt-1 flex items-center justify-end gap-1 text-[10px] leading-none opacity-70">
+            <span>{format(new Date(message.createdAt), "p")}</span>
+            {message.edited && !message.deleted && <span>· edited</span>}
+            {isOwn && message.status === "sending" && <span>· Sending…</span>}
+            {isOwn && showReadReceipt && <span>· Read</span>}
+          </div>
         </div>
 
         {!isOwn && (
@@ -136,17 +155,19 @@ export function MessageBubble({
         </div>
       )}
 
-      <div className="flex items-center gap-1.5 px-1 text-[11px] text-[var(--text-muted)]">
-        <span>{format(new Date(message.createdAt), "p")}</span>
-        {message.edited && !message.deleted && <span>· edited</span>}
-        {isOwn && message.status === "sending" && <span>· Sending…</span>}
-        {isOwn && message.status === "failed" && (
-          <button type="button" onClick={onRetry} className="text-[var(--danger-fg)] underline hover:opacity-80">
-            Failed · Retry
-          </button>
-        )}
-        {isOwn && message.status === "sent" && message.readAt && <span>· Read</span>}
-      </div>
+      {/* Kept outside the bubble (unlike the time/edited/read row above): a
+          send failure needs the page-contrast-checked danger color, which
+          isn't guaranteed against every theme's bubble background. Only
+          takes up space while actually failed, so it never leaves a gap. */}
+      {isOwn && message.status === "failed" && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="px-1 text-[11px] text-[var(--danger-fg)] underline hover:opacity-80"
+        >
+          Failed · Retry
+        </button>
+      )}
 
       {showReactionPicker && (
         <div className="flex gap-1 rounded-full border border-[var(--border)] bg-[var(--surface-raised)] px-2 py-1 shadow-sm">

@@ -288,6 +288,17 @@ export default function Chat() {
 
   const threadItems = useMemo(() => withDateSeparators(messages), [messages]);
 
+  // Only the single most-recently-read own message should show "Read" -
+  // find its id once per messages change rather than inside MessageBubble
+  // (which only ever sees one message at a time).
+  const lastReadOwnMessageId = useMemo(() => {
+    let id: string | null = null;
+    for (const m of messages) {
+      if (m.senderType === "USER" && !m.deleted && m.status === "sent" && m.readAt) id = m.id;
+    }
+    return id;
+  }, [messages]);
+
   const isBlocked = session.conversationStatus === "BLOCKED";
   const canEdit = (message: DisplayMessage) => {
     if (!site.limits.messageEditWindowMinutes) return false;
@@ -340,6 +351,7 @@ export default function Chat() {
                   attachmentUrlFor={attachmentUrl}
                   canEdit={canEdit(item.message)}
                   disableActions={isBlocked}
+                  showReadReceipt={item.message.id === lastReadOwnMessageId}
                   replyPreview={
                     item.message.replyToId ? messages.find((m) => m.id === item.message.replyToId)?.text : undefined
                   }

@@ -219,6 +219,16 @@ export function ConversationView({ conversationId, onChanged }: Props) {
 
   const threadItems = useMemo(() => withDateSeparators(messages), [messages]);
 
+  // Only the single most-recently-read own (ADMIN) message should show
+  // "Read" - computed once per messages change, not per-bubble.
+  const lastReadOwnMessageId = useMemo(() => {
+    let id: string | null = null;
+    for (const m of messages) {
+      if (m.senderType === "ADMIN" && !m.deleted && m.status === "sent" && m.readAt) id = m.id;
+    }
+    return id;
+  }, [messages]);
+
   if (loading || !conversation) return <FullScreenLoader label="Loading conversation…" />;
   if (!conversationKey) return <FullScreenLoader label="Unlocking…" />;
 
@@ -468,6 +478,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
                         site.limits.messageEditWindowMinutes * 60_000
                       : false
                   }
+                  showReadReceipt={item.message.id === lastReadOwnMessageId}
                   replyPreview={
                     item.message.replyToId
                       ? messages.find((m) => m.id === item.message.replyToId)?.text
