@@ -168,13 +168,17 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
               )}
             >
               <div className="flex items-center justify-between gap-3">
-                <span className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
-                  <span
-                    className={clsx(
-                      "h-2 w-2 shrink-0 rounded-full",
-                      conv.unreadCount > 0 ? "bg-[var(--color-accent-500)]" : "bg-transparent",
-                    )}
-                  />
+                {/* Name and preview share the same left edge (both start at the
+                    row's padding - no unread dot indent), and the unread count
+                    badge takes the far-right slot. WhatsApp/Chatwoot-style
+                    unread signalling: bold name + count badge + darker
+                    preview text, all relaxing to muted once read. */}
+                <span
+                  className={clsx(
+                    "flex min-w-0 items-center gap-1.5 truncate text-sm",
+                    conv.unreadCount > 0 ? "font-semibold" : "font-normal",
+                  )}
+                >
                   <span className="truncate">{conv.adminAlias || `Anonymous #${conv.publicId}`}</span>
                   {conv.adminAlias && (
                     <span className="shrink-0 text-[11px] font-normal text-[var(--text-muted)]">
@@ -182,13 +186,18 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                     </span>
                   )}
                 </span>
-                <span className="shrink-0 text-right text-xs text-[var(--text-muted)]">
-                  {conv.lastMessageAt
-                    ? formatDistanceToNowStrict(new Date(conv.lastMessageAt), { addSuffix: true })
-                    : `Started ${formatDistanceToNowStrict(new Date(conv.createdAt), { addSuffix: true })}`}
-                </span>
+                {conv.unreadCount > 0 && (
+                  <span className="shrink-0 rounded-full bg-[var(--btn-bg)] px-2 py-0.5 text-xs font-semibold text-[var(--btn-fg)]">
+                    {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
+                  </span>
+                )}
               </div>
-              <p className="flex items-center gap-1 truncate text-xs text-[var(--text-muted)]">
+              <p
+                className={clsx(
+                  "flex min-w-0 items-center gap-1 truncate text-xs",
+                  conv.unreadCount > 0 ? "font-medium text-[var(--text)]" : "text-[var(--text-muted)]",
+                )}
+              >
                 {previews[conv.id] === ATTACHMENT_PREVIEW ? (
                   <>
                     <Paperclip size={11} className="shrink-0" aria-hidden />
@@ -207,11 +216,6 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                 {conv.status === "BLOCKED" && (
                   <span className="rounded-full bg-[var(--danger-bg)] px-2 py-0.5 text-xs text-[var(--danger-fg)]">
                     Blocked
-                  </span>
-                )}
-                {conv.unreadCount > 0 && (
-                  <span className="rounded-full bg-[var(--btn-bg)] px-1.5 py-0.5 text-xs text-[var(--btn-fg)]">
-                    {conv.unreadCount}
                   </span>
                 )}
               </div>
