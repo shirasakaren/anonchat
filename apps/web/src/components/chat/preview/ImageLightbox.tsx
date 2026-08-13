@@ -4,6 +4,14 @@ import { X, ZoomIn, ZoomOut, RotateCcw, Download } from "lucide-react";
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 5;
 const ZOOM_STEP = 0.5;
+/** Click-to-zoom toggles to this level (Twitter/X, Google Photos convention)
+ *  - the toolbar +/- buttons and wheel still offer finer continuous control
+ *  up to MAX_ZOOM for anyone who wants more than the click default. */
+const CLICK_ZOOM_LEVEL = 2;
+/** Pointer movement below this (px) between mousedown and mouseup still
+ *  counts as a click, not a pan-drag - without this, releasing a genuine
+ *  drag would also fire a click and immediately undo the zoom/pan. */
+const DRAG_THRESHOLD_PX = 4;
 
 interface Props {
   url: string;
@@ -11,13 +19,21 @@ interface Props {
   onClose: () => void;
 }
 
-/** Full-screen click-to-expand viewer: wheel/button zoom, drag-to-pan once
- *  zoomed in. Pan resets whenever zoom returns to 1x, since there's nothing
- *  to pan around at the image's natural size. */
+/**
+ * Full-screen click-to-expand viewer. Clicking anywhere outside the image
+ * itself (the backdrop, the empty space around it) closes the viewer -
+ * clicking the image toggles zoom instead, matching the native
+ * `cursor: zoom-in`/`zoom-out` affordance shown while hovering it. Wheel/
+ * toolbar buttons still zoom continuously; drag-to-pan still works once
+ * zoomed in. Pan resets whenever zoom returns to 1x, since there's nothing
+ * to pan around at the image's natural size.
+ */
 export function ImageLightbox({ url, filename, onClose }: Props) {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const dragState = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null);
+  const dragState = useRef<{ startX: number; startY: number; panX: number; panY: number; dragged: boolean } | null>(
+    null,
+  );
 
   function clampZoom(z: number): number {
     return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
@@ -35,17 +51,28 @@ export function ImageLightbox({ url, filename, onClose }: Props) {
   }
 
   function handlePointerDown(e: ReactMouseEvent<HTMLImageElement>) {
-    if (zoom <= MIN_ZOOM) return;
-    dragState.current = { startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y };
+    // Stops here, not just at the container level - clicking the image
+    // itself must never close the viewer, only the space around it should.
+    e.stopPropagation();
+    dragState.current = { startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y, dragged: false };
   }
 
   function handlePointerMove(e: ReactMouseEvent<HTMLImageElement>) {
     if (!dragState.current) return;
     const { startX, startY, panX, panY } = dragState.current;
-    setPan({ x: panX + (e.clientX - startX), y: panY + (e.clientY - startY) });
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if (Math.abs(dx) > DRAG_THRESHOLD_PX || Math.abs(dy) > DRAG_THRESHOLD_PX) dragState.current.dragged = true;
+    if (zoom > MIN_ZOOM) setPan({ x: panX + dx, y: panY + dy });
   }
 
-  function stopDragging() {
+  function handlePointerUp() {
+    const wasClick = !dragState.current?.dragged;
+    dragState.current = null;
+    if (wasClick) applyZoom(zoom > MIN_ZOOM ? MIN_ZOOM : CLICK_ZOOM_LEVEL);
+  }
+
+  function cancelDrag() {
     dragState.current = null;
   }
 
@@ -108,24 +135,25 @@ export function ImageLightbox({ url, filename, onClose }: Props) {
         </div>
       </div>
 
-      <div
-        className="flex flex-1 items-center justify-center overflow-hidden"
-        onMouseDown={(e) => e.stopPropagation()}
-        onWheel={handleWheel}
-      >
+      {/* No onMouseDown/stopPropagation here (unlike the header above) -
+          this is deliberately the "off area" the backdrop's onClose should
+          still catch. Only the <img> itself stops propagation, so clicking
+          the empty space around the image closes the viewer while clicking
+          the image toggles zoom instead. */}
+      <div className="flex flex-1 items-center justify-center overflow-hidden" onWheel={handleWheel}>
         <img
           src={url}
           alt={filename}
           draggable={false}
           onMouseDown={handlePointerDown}
           onMouseMove={handlePointerMove}
-          onMouseUp={stopDragging}
-          onMouseLeave={stopDragging}
+          onMouseUp={handlePointerUp}
+          onMouseLeave={cancelDrag}
           className="max-h-full max-w-full select-none"
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
             transition: dragState.current ? "none" : "transform 100ms ease-out",
-            cursor: zoom > MIN_ZOOM ? "grab" : "default",
+            cursor: zoom > MIN_ZOOM ? "zoom-out" : "zoom-in",
           }}
         />
       </div>
