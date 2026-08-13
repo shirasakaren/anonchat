@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
+import { formatDistanceToNowStrict } from "date-fns";
 import { encryptBlob } from "@anonchat/crypto";
 import { Pencil } from "lucide-react";
 import type { AdminConversationDto, MessageDto, ServerWsEvent } from "@anonchat/shared";
@@ -144,6 +145,8 @@ export function ConversationView({ conversationId, onChanged }: Props) {
       switch (event.type) {
         case "message.created":
           if (!belongsHere(event.conversationId)) return;
+          // Keep the header's "Last seen" line current as messages land.
+          setConversation((prev) => (prev ? { ...prev, lastMessageAt: event.message.createdAt } : prev));
           setMessages((prev) => {
             const dto = decryptDto(event.message);
             if (prev.some((m) => m.id === dto.id)) return prev;
@@ -381,71 +384,78 @@ export function ConversationView({ conversationId, onChanged }: Props) {
     <div className="flex h-full flex-col">
       <header className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b border-[var(--border)] px-4 py-2.5">
         <div className="flex min-w-0 items-center gap-2">
-          {editingAlias ? (
-            <form
-              className="flex min-w-0 items-center gap-1.5"
-              onSubmit={(e) => {
-                e.preventDefault();
-                void saveAlias();
-              }}
-            >
-              <input
-                autoFocus
-                value={aliasDraft}
-                onChange={(e) => setAliasDraft(e.target.value)}
-                onBlur={() => void saveAlias()}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") {
-                    setEditingAlias(false);
-                    setAliasDraft(conversation?.adminAlias ?? "");
-                  }
+          <div className="flex min-w-0 flex-col">
+            {editingAlias ? (
+              <form
+                className="flex min-w-0 items-center gap-1.5"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void saveAlias();
                 }}
-                maxLength={60}
-                placeholder="Nickname…"
-                aria-label="Nickname for this conversation"
-                className="w-40 rounded-md border border-[var(--border-strong)] bg-transparent px-2 py-1 text-sm font-semibold"
-              />
-              <button
-                type="submit"
-                disabled={aliasBusy}
-                onMouseDown={(e) => e.preventDefault()}
-                className="rounded-md bg-[var(--btn-bg)] px-2 py-1 text-xs font-semibold text-[var(--btn-fg)] disabled:opacity-50"
               >
-                Save
-              </button>
+                <input
+                  autoFocus
+                  value={aliasDraft}
+                  onChange={(e) => setAliasDraft(e.target.value)}
+                  onBlur={() => void saveAlias()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      setEditingAlias(false);
+                      setAliasDraft(conversation?.adminAlias ?? "");
+                    }
+                  }}
+                  maxLength={60}
+                  placeholder="Nickname…"
+                  aria-label="Nickname for this conversation"
+                  className="w-40 rounded-md border border-[var(--border-strong)] bg-transparent px-2 py-1 text-sm font-semibold"
+                />
+                <button
+                  type="submit"
+                  disabled={aliasBusy}
+                  onMouseDown={(e) => e.preventDefault()}
+                  className="rounded-md bg-[var(--btn-bg)] px-2 py-1 text-xs font-semibold text-[var(--btn-fg)] disabled:opacity-50"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  disabled={aliasBusy}
+                  onMouseDown={(e) => {
+                    // Keep focus in the input so its onBlur save doesn't race
+                    // (and win over) the clear action - mousedown fires before
+                    // the blur, so preventDefault here stops the blur entirely.
+                    e.preventDefault();
+                    void clearAlias();
+                  }}
+                  className="rounded-md border border-[var(--border)] px-2 py-1 text-xs disabled:opacity-50"
+                >
+                  Clear
+                </button>
+              </form>
+            ) : (
               <button
                 type="button"
-                disabled={aliasBusy}
-                onMouseDown={(e) => {
-                  // Keep focus in the input so its onBlur save doesn't race
-                  // (and win over) the clear action - mousedown fires before
-                  // the blur, so preventDefault here stops the blur entirely.
-                  e.preventDefault();
-                  void clearAlias();
-                }}
-                className="rounded-md border border-[var(--border)] px-2 py-1 text-xs disabled:opacity-50"
+                onClick={startAliasEdit}
+                title={conversation.adminAlias ? "Edit nickname" : "Set a nickname for this contact"}
+                className="group flex max-w-full min-w-0 items-center gap-1.5 rounded-md px-1 py-0.5 hover:bg-[var(--surface-muted)]"
               >
-                Clear
+                <h2 className="min-w-0 truncate text-sm font-semibold">
+                  {conversation.adminAlias || `Anonymous #${conversation.publicId}`}
+                </h2>
+                {conversation.adminAlias && (
+                  <span className="shrink-0 text-[11px] text-[var(--text-muted)]">
+                    #{conversation.publicId}
+                  </span>
+                )}
+                <Pencil size={12} aria-hidden className="shrink-0 text-[var(--text-muted)] group-hover:text-[var(--text)]" />
               </button>
-            </form>
-          ) : (
-            <button
-              type="button"
-              onClick={startAliasEdit}
-              title={conversation.adminAlias ? "Edit nickname" : "Set a nickname for this contact"}
-              className="group flex min-w-0 items-center gap-1.5 rounded-md px-1 py-0.5 hover:bg-[var(--surface-muted)]"
-            >
-              <h2 className="truncate text-sm font-semibold">
-                {conversation.adminAlias || `Anonymous #${conversation.publicId}`}
-              </h2>
-              {conversation.adminAlias && (
-                <span className="shrink-0 text-[11px] text-[var(--text-muted)]">
-                  #{conversation.publicId}
-                </span>
-              )}
-              <Pencil size={12} aria-hidden className="shrink-0 text-[var(--text-muted)] group-hover:text-[var(--text)]" />
-            </button>
-          )}
+            )}
+            <p className="mt-0.5 truncate text-[11px] text-[var(--text-muted)]">
+              {conversation.lastMessageAt
+                ? `Last seen ${formatDistanceToNowStrict(new Date(conversation.lastMessageAt), { addSuffix: true })}`
+                : "No messages yet"}
+            </p>
+          </div>
           <span
             className={clsx(
               "shrink-0 rounded-full px-2 py-0.5 text-xs",
