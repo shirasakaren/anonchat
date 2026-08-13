@@ -35,6 +35,18 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
     setMeta(decryptAttachmentMeta(conversationKey, attachment.meta));
   }, [attachment.meta, conversationKey]);
 
+  // Images render inline in a chat by convention - decrypt and display them
+  // as soon as their metadata arrives instead of waiting for a manual
+  // "Preview" click. Videos/audio/PDFs still load on demand (they're heavy
+  // and shouldn't auto-start). The idle-guard makes this a one-shot: once
+  // load() flips the state to "loading" this effect never re-fires.
+  useEffect(() => {
+    if (meta && meta.mimetype.startsWith("image/") && state.kind === "idle") {
+      void load();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load() is recreated per render; the state guard makes re-runs harmless.
+  }, [meta, state.kind]);
+
   useEffect(() => {
     return () => {
       if (state.kind === "loaded") URL.revokeObjectURL(state.url);
