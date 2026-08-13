@@ -133,7 +133,12 @@ body {
 /* ── Message prose ─────────────────────────────────────────────────── */
 
 .prose-message a {
-  color: var(--color-accent-600);
+  /* Links render on the message bubble's own background (user or admin),
+     which is a different color per-theme and not guaranteed to contrast
+     with --color-accent-600 - inherit the bubble's own text color instead,
+     which is guaranteed >=4.5:1 against its bubble, and rely on the
+     underline (not color) to signal "this is a link". */
+  color: inherit;
   text-decoration: underline;
 }
 

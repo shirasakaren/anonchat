@@ -104,7 +104,7 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
       <IconForMime mimetype={meta.mimetype} />
       <span className="min-w-0 flex-1 truncate">{meta.filename}</span>
       <span className="text-xs text-[var(--text-muted)]">{formatBytes(meta.size)}</span>
-      <span className="text-xs text-[var(--link-fg)]">
+      <span className="text-xs underline">
         {state.kind === "loading" ? "Loading…" : state.kind === "error" ? "Retry" : "Preview"}
       </span>
     </button>
