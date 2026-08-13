@@ -13,8 +13,9 @@ export default function RecoveryConfirm({
   const [acknowledged, setAcknowledged] = useState(false);
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-12">
+    <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-12">
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-raised)] p-6 shadow-sm">
+        <h1 className="mb-2 text-lg font-semibold">Save your recovery key</h1>
         <p className="text-sm">
           Your anonymous identity has been created: <span className="font-mono font-semibold">#{publicId}</span>
         </p>
@@ -43,6 +44,6 @@ export default function RecoveryConfirm({
           Continue to chat
         </button>
       </div>
-    </div>
+    </main>
   );
 }

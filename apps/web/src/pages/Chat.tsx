@@ -286,12 +286,12 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex h-screen flex-col">
+    <main className="flex h-screen flex-col">
       <header className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface-raised)] px-4 py-2.5">
         <div className="flex items-center gap-2.5">
           {site.avatarUrl && <img src={site.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />}
           <div>
-            <p className="text-sm font-semibold leading-tight">{site.displayName}</p>
+            <h1 className="text-sm font-semibold leading-tight">{site.displayName}</h1>
             {site.presenceEnabled && adminOnline !== null && (
               <p className="text-xs leading-tight text-[var(--text-muted)]">{adminOnline ? "Online" : "Offline"}</p>
             )}
@@ -354,6 +354,6 @@ export default function Chat() {
         onSend={handleSend}
         onTypingChange={handleTypingChange}
       />
-    </div>
+    </main>
   );
 }

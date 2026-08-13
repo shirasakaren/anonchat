@@ -338,7 +338,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
     <div className="flex h-full flex-col">
       <header className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b border-[var(--border)] px-4 py-2.5">
         <div className="flex min-w-0 items-center gap-2">
-          <p className="truncate text-sm font-semibold">Anonymous #{conversation.publicId}</p>
+          <h2 className="truncate text-sm font-semibold">Anonymous #{conversation.publicId}</h2>
           <span
             className={clsx(
               "shrink-0 rounded-full px-2 py-0.5 text-xs",
