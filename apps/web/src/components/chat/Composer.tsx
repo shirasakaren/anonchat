@@ -7,9 +7,16 @@ import {
   type DragEvent,
   type KeyboardEvent,
 } from "react";
-import EmojiPicker from "emoji-picker-react";
+import EmojiPicker, { EmojiStyle, Theme } from "emoji-picker-react";
 import { X, Paperclip, Smile, File as FileIcon } from "lucide-react";
-import { expandEmojiShortcuts } from "./emojiShortcuts.js";
+import {
+  expandEmojiShortcuts,
+  findActiveShortcodeQuery,
+  matchCompletedShortcode,
+  searchShortcodes,
+  type ShortcodeMatch,
+} from "./emojiShortcuts.js";
+import { useTheme } from "../../context/ThemeContext.js";
 
 export interface PendingFile {
   file: File;
@@ -46,7 +53,13 @@ export function Composer({
   const [text, setText] = useState(initialText ?? "");
   const [files, setFiles] = useState<PendingFile[]>([]);
   const [showEmoji, setShowEmoji] = useState(false);
+  const [shortcodeQuery, setShortcodeQuery] = useState<{ start: number; query: string } | null>(null);
+  const [selectedSuggestion, setSelectedSuggestion] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const pickerWrapperRef = useRef<HTMLDivElement>(null);
+  const { meta } = useTheme();
+
+  const suggestions = shortcodeQuery ? searchShortcodes(shortcodeQuery.query) : [];
 
   useEffect(() => {
     if (initialText !== undefined) {
@@ -55,9 +68,63 @@ export function Composer({
     }
   }, [initialText]);
 
+  // Close the emoji picker on an outside click - it has no built-in
+  // dismiss-on-blur behavior of its own.
+  useEffect(() => {
+    if (!showEmoji) return;
+    function handlePointerDown(e: MouseEvent) {
+      if (pickerWrapperRef.current && !pickerWrapperRef.current.contains(e.target as Node)) {
+        setShowEmoji(false);
+      }
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [showEmoji]);
+
   function updateText(value: string) {
     setText(value);
     onTypingChange?.(value.length > 0);
+  }
+
+  /** Re-derives the in-progress ":partial" shortcode (if any) from the
+   *  textarea's current value and cursor position - called after every text
+   *  change and every cursor move, since moving the cursor away from a
+   *  half-typed shortcode should close the suggestion list too. */
+  function syncShortcodeQuery(el: HTMLTextAreaElement) {
+    const cursor = el.selectionStart ?? el.value.length;
+    const active = findActiveShortcodeQuery(el.value.slice(0, cursor));
+    setShortcodeQuery(active);
+    setSelectedSuggestion(0);
+  }
+
+  function handleTextChange(e: ChangeEvent<HTMLTextAreaElement>) {
+    const el = e.currentTarget;
+    const cursor = el.selectionStart ?? el.value.length;
+    const completed = matchCompletedShortcode(el.value.slice(0, cursor));
+    if (completed) {
+      // The closing ":" was just typed on a known shortcode - convert it to
+      // the real emoji immediately instead of waiting for send.
+      const newValue = el.value.slice(0, completed.start) + completed.emoji + el.value.slice(completed.end);
+      const newCursor = completed.start + completed.emoji.length;
+      updateText(newValue);
+      setShortcodeQuery(null);
+      requestAnimationFrame(() => el.setSelectionRange(newCursor, newCursor));
+      return;
+    }
+    updateText(el.value);
+    syncShortcodeQuery(el);
+  }
+
+  function applySuggestion(match: ShortcodeMatch) {
+    const el = textareaRef.current;
+    if (!el || !shortcodeQuery) return;
+    const cursor = el.selectionStart ?? text.length;
+    const newValue = text.slice(0, shortcodeQuery.start) + match.emoji + text.slice(cursor);
+    const newCursor = shortcodeQuery.start + match.emoji.length;
+    updateText(newValue);
+    setShortcodeQuery(null);
+    el.focus();
+    requestAnimationFrame(() => el.setSelectionRange(newCursor, newCursor));
   }
 
   function addFiles(newFiles: File[]) {
@@ -95,6 +162,29 @@ export function Composer({
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (shortcodeQuery && suggestions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedSuggestion((i) => (i + 1) % suggestions.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedSuggestion((i) => (i - 1 + suggestions.length) % suggestions.length);
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        const picked = suggestions[selectedSuggestion];
+        if (picked) applySuggestion(picked);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setShortcodeQuery(null);
+        return;
+      }
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -173,6 +263,35 @@ export function Composer({
         </div>
       )}
 
+      {shortcodeQuery && suggestions.length > 0 && (
+        <div
+          role="listbox"
+          aria-label="Emoji suggestions"
+          className="mb-2 flex flex-wrap gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] p-2"
+        >
+          {suggestions.map((match, i) => (
+            <button
+              key={match.code}
+              type="button"
+              role="option"
+              aria-selected={i === selectedSuggestion}
+              onMouseDown={(e) => {
+                // mousedown fires before the textarea blur, so it beats the
+                // suggestion-dismiss-on-cursor-move path and can't race it.
+                e.preventDefault();
+                applySuggestion(match);
+              }}
+              className={`flex items-center gap-1 rounded-md border px-2 py-1 text-sm hover:bg-[var(--surface-muted)] ${
+                i === selectedSuggestion ? "border-[var(--border-strong)]" : "border-transparent"
+              }`}
+            >
+              <span>{match.emoji}</span>
+              <span className="text-xs text-[var(--text-muted)]">:{match.code}:</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="flex items-end gap-2">
         <input id="attachment-input" type="file" multiple className="hidden" onChange={handleFilePick} />
         <label
@@ -183,21 +302,33 @@ export function Composer({
           <Paperclip size={18} aria-hidden />
         </label>
 
-        <div className="relative">
+        <div ref={pickerWrapperRef} className="relative">
           <button
             type="button"
             onClick={() => setShowEmoji((v) => !v)}
             className="rounded-lg p-2 hover:bg-[var(--surface-muted)]"
             title="Emoji"
+            aria-label="Open emoji picker"
           >
             <Smile size={18} aria-hidden />
           </button>
           {showEmoji && (
             <div className="absolute bottom-full left-0 mb-2 z-10">
+              {/* EmojiStyle.NATIVE renders system emoji glyphs instead of the
+                  library's default CDN-hosted Apple sprite images - those
+                  requests get blocked by this app's img-src 'self' CSP,
+                  which left the picker an empty grid of broken images. */}
               <EmojiPicker
+                emojiStyle={EmojiStyle.NATIVE}
+                theme={meta.variant === "dark" ? Theme.DARK : Theme.LIGHT}
+                width={300}
+                height={380}
+                searchPlaceholder="Search emoji"
+                previewConfig={{ showPreview: true }}
                 onEmojiClick={(emojiData) => {
                   setText((prev) => prev + emojiData.emoji);
                   setShowEmoji(false);
+                  textareaRef.current?.focus();
                 }}
               />
             </div>
@@ -207,9 +338,11 @@ export function Composer({
         <textarea
           ref={textareaRef}
           value={text}
-          onChange={(e) => updateText(e.target.value)}
+          onChange={handleTextChange}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
+          onSelect={(e) => syncShortcodeQuery(e.currentTarget)}
+          onClick={(e) => syncShortcodeQuery(e.currentTarget)}
           placeholder="Type a message… (Enter to send, Shift+Enter for a new line)"
           rows={1}
           disabled={disabled}
