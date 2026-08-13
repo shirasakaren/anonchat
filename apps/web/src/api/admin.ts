@@ -7,7 +7,6 @@ import type {
   AdminSummaryDto,
   AuditLogEntryDto,
   CannedReplyDto,
-  ConversationDto,
   MessageDto,
   MessagePage,
   SiteSettingsDto,

@@ -44,7 +44,6 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
     if (meta && meta.mimetype.startsWith("image/") && state.kind === "idle") {
       void load();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- load() is recreated per render; the state guard makes re-runs harmless.
   }, [meta, state.kind]);
 
   useEffect(() => {
