@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { MAX_CIPHERTEXT_ENVELOPE_BYTES } from "../constants.js";
 import { EncryptedPayloadSchema, PaginationQuerySchema, PublicIdSchema } from "./common.js";
 
 describe("PublicIdSchema", () => {
@@ -28,9 +29,14 @@ describe("EncryptedPayloadSchema", () => {
     expect(EncryptedPayloadSchema.safeParse(input).success).toBe(false);
   });
 
-  it("rejects an oversized ciphertext (DoS guard)", () => {
-    const huge = { nonce: "abc", ciphertext: "a".repeat(200_000) };
-    expect(EncryptedPayloadSchema.safeParse(huge).success).toBe(false);
+  it("accepts a ciphertext right up to the configured ceiling", () => {
+    const atLimit = { nonce: "abc", ciphertext: "a".repeat(MAX_CIPHERTEXT_ENVELOPE_BYTES) };
+    expect(EncryptedPayloadSchema.safeParse(atLimit).success).toBe(true);
+  });
+
+  it("rejects a ciphertext over the configured ceiling (DoS guard)", () => {
+    const overLimit = { nonce: "abc", ciphertext: "a".repeat(MAX_CIPHERTEXT_ENVELOPE_BYTES + 1) };
+    expect(EncryptedPayloadSchema.safeParse(overLimit).success).toBe(false);
   });
 
   it("rejects missing fields", () => {
