@@ -21,6 +21,7 @@ import { registerAdminSettingsRoutes } from "./routes/admin/settings.js";
 import { registerAnonymousRoutes } from "./routes/anonymous.js";
 import { registerConversationRoutes } from "./routes/conversation.js";
 import { registerHealthRoutes } from "./routes/health.js";
+import { registerLinkPreviewRoutes } from "./routes/linkPreview.js";
 import { registerSiteRoutes } from "./routes/site.js";
 import { ensureCsrfCookie, verifyCsrf } from "./security/csrf.js";
 import { handleError } from "./utils/errors.js";
@@ -50,6 +51,13 @@ export async function buildApp(): Promise<FastifyInstance> {
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
         frameAncestors: ["'none'"],
+        // Only the two platforms whose embeds this app actually renders as
+        // iframes (VideoEmbed.tsx) - a shared link to any other site never
+        // gets an inline-playable iframe, only a same-origin-fetched OG
+        // preview card (see /api/link-preview), which needed no CSP change
+        // at all since the browser only ever talks to this app's own
+        // origin for that.
+        frameSrc: ["'self'", "https://www.youtube-nocookie.com", "https://player.vimeo.com"],
       },
     },
     crossOriginResourcePolicy: { policy: "same-origin" },
@@ -86,6 +94,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       });
 
       registerSiteRoutes(api);
+      registerLinkPreviewRoutes(api);
       registerAnonymousRoutes(api);
       registerConversationRoutes(api);
       registerOnboardingRoutes(api);

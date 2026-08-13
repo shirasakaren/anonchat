@@ -22,6 +22,24 @@ export const DEFAULT_MESSAGE_EDIT_WINDOW_MINUTES = 15;
 
 export const DEFAULT_RATE_LIMIT_MESSAGES_PER_MINUTE = 20;
 export const DEFAULT_RATE_LIMIT_REGISTRATIONS_PER_HOUR = 10;
+export const DEFAULT_RATE_LIMIT_LINK_PREVIEWS_PER_MINUTE = 20;
+
+/**
+ * Rendering a rich preview for a shared link means the server fetches that
+ * URL's metadata on the caller's behalf - the one place in this app where
+ * the server makes an outbound request to a destination the client
+ * controls, and therefore a small, deliberate exception to "the server
+ * never learns what's inside a conversation" (see docs/ARCHITECTURE.md).
+ * It learns *that a URL was shared*, not the message it was shared in.
+ * Hard-capped and SSRF-guarded server-side (apps/server/src/security/ssrfGuard.ts)
+ * regardless of this value; this env var is only the operator's on/off switch.
+ */
+export const MAX_LINK_PREVIEW_RESPONSE_BYTES = 512_000;
+// 800 KB: sized against real-world OG images, not a round guess - GitHub's
+// own homepage og:image alone is ~620 KB, and a lower cap silently dropped
+// it (never truncated - see fetchLinkPreview.ts's readCapped "discard"
+// mode, which refuses to serve a corrupted partial image).
+export const MAX_LINK_PREVIEW_IMAGE_BYTES = 800_000;
 
 export const DEFAULT_PAGE_SIZE = 50;
 export const MAX_PAGE_SIZE = 200;

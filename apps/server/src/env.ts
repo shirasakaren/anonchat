@@ -4,6 +4,7 @@ import {
   DEFAULT_MAX_ATTACHMENTS_PER_MESSAGE,
   DEFAULT_MAX_MESSAGE_LENGTH,
   DEFAULT_MESSAGE_EDIT_WINDOW_MINUTES,
+  DEFAULT_RATE_LIMIT_LINK_PREVIEWS_PER_MINUTE,
   DEFAULT_RATE_LIMIT_MESSAGES_PER_MINUTE,
   DEFAULT_RATE_LIMIT_REGISTRATIONS_PER_HOUR,
 } from "@anonchat/shared";
@@ -35,6 +36,24 @@ const EnvSchema = z.object({
     .int()
     .positive()
     .default(DEFAULT_RATE_LIMIT_REGISTRATIONS_PER_HOUR),
+  RATE_LIMIT_LINK_PREVIEWS_PER_MINUTE: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(DEFAULT_RATE_LIMIT_LINK_PREVIEWS_PER_MINUTE),
+
+  /** Operator escape hatch: rendering a link preview means the server
+   *  fetches the shared URL on the caller's behalf (SSRF-guarded, see
+   *  security/ssrfGuard.ts) - a deliberate, narrow exception to this app's
+   *  "server never makes outbound requests based on message content" norm.
+   *  Off by default is arguably more consistent with the rest of this
+   *  app's stance, but on-by-default matches what every mainstream
+   *  messenger does and is what most self-hosters will expect; operators
+   *  who'd rather the server never originate outbound requests can disable it. */
+  LINK_PREVIEWS_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v !== "false" && v !== "0"),
 
   TURNSTILE_SITE_KEY: z.string().optional(),
   TURNSTILE_SECRET_KEY: z.string().optional(),

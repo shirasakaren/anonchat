@@ -44,3 +44,12 @@ export async function requireAnon(request: FastifyRequest, _reply: FastifyReply)
 export async function requireAdmin(request: FastifyRequest, _reply: FastifyReply): Promise<void> {
   if (!request.adminAuth) throw Errors.unauthorized("Admin sign-in required.");
 }
+
+/** For endpoints both sides of a conversation need (e.g. link previews) -
+ *  passes for either a valid anonymous session or an admin session, no
+ *  conversation-scoping implied either way. */
+export async function requireAnyAuth(request: FastifyRequest, _reply: FastifyReply): Promise<void> {
+  if (request.adminAuth) return;
+  if (request.anonUser && request.anonUser.status !== "BLOCKED" && request.anonUser.status !== "DELETED") return;
+  throw Errors.unauthorized();
+}
