@@ -79,8 +79,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* --border-strong (not --color-accent-500) because a contrast audit found
+   the accent color falls below the 3:1 UI-component minimum against its
+   own theme's surfaces in 5 of 25 themes (monochrome-dark - the default -
+   among them); --border-strong is computed per-theme to always clear it. */
 *:focus-visible {
-  outline: 2px solid var(--color-accent-500);
+  outline: 2px solid var(--border-strong);
   outline-offset: 2px;
 }
 
