@@ -60,6 +60,27 @@ Signal/WhatsApp conventions where they translate to a 1:1 E2EE product.
 8. **Canned replies page had no empty state** - a brand-new admin with
    zero saved replies saw only the "add new" form, no indication canned
    replies are a real, working feature.
+9. **Message links failed contrast in every theme** - `.prose-message a`
+   and the attachment preview/retry label used `--link-fg`/
+   `--color-accent-600`, which was only ever checked against `--surface`,
+   not against the message bubble background they actually render on
+   (ratios as low as 1.0:1 against `--bubble-user`). Fixed by having both
+   inherit the bubble's own text color (`--bubble-user-text`/
+   `--bubble-admin-text`, already >=4.5:1 against their bubble by
+   construction) with an underline for the link affordance instead of
+   relying on color alone.
+
+### Post-fix verification
+
+- Re-ran the axe-core scan against `UnlockKey` in import mode with a
+  genuinely fresh browser context (0 violations) - this screen was
+  unreachable before bug #1 was fixed, so it had never been scanned.
+- Visually confirmed the audit-log and session-list label features render
+  correctly end-to-end (not just type-checked) after the admin-login rate
+  limit reset on server restart.
+- Re-captured tablet (768px) screenshots of the public landing page and
+  admin inbox after all fixes landed - no layout regressions from the
+  contrast/link changes.
 
 ### Features added
 
