@@ -5,11 +5,12 @@ interface Props {
   url: string;
   filename: string;
   onClose: () => void;
+  onError?: () => void;
 }
 
 /** Full-screen video player. Playback only starts after the profile tile is
  * selected, and clicking the empty area around the player closes the view. */
-export function VideoLightbox({ url, filename, onClose }: Props) {
+export function VideoLightbox({ url, filename, onClose, onError }: Props) {
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -71,6 +72,7 @@ export function VideoLightbox({ url, filename, onClose }: Props) {
           aria-label={filename}
           className="h-full w-full max-w-6xl bg-black object-contain shadow-2xl"
           onMouseDown={(event) => event.stopPropagation()}
+          onError={onError}
         />
       </div>
     </div>

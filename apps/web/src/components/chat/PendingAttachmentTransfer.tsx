@@ -44,7 +44,7 @@ export function PendingAttachmentTransfer({
                 preload="metadata"
                 className="h-full w-full scale-105 object-cover opacity-60 blur-md"
               />
-              <span className="absolute left-1/2 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-black/65 text-white">
+              <span className="absolute left-1/2 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-white/20 bg-[var(--btn-bg)] text-[var(--btn-fg)] shadow-lg">
                 <Play size={21} fill="currentColor" aria-hidden />
               </span>
             </div>

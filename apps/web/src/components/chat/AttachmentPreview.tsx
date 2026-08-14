@@ -8,7 +8,6 @@ import {
   Maximize2,
   Music,
   Paperclip,
-  Play,
   Video,
   ZoomIn,
 } from "lucide-react";
@@ -22,9 +21,11 @@ import { ImageLightbox } from "./preview/ImageLightbox.js";
 import { MarkdownPreview } from "./preview/MarkdownPreview.js";
 import { TextCodePreview } from "./preview/TextCodePreview.js";
 import { ThemedAudioPlayer } from "./preview/ThemedAudioPlayer.js";
+import { VideoLightbox } from "./preview/VideoLightbox.js";
 import { readResponseBytes } from "./preview/readResponseBytes.js";
 import { detectTextLanguage, DOCX_MIMETYPE, isCsv, isMarkdown, resolveFileMimetype } from "./preview/textFileTypes.js";
 import { useToast } from "../../context/ToastContext.js";
+import { VideoPreviewTile } from "../common/VideoPreviewTile.js";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -114,40 +115,6 @@ function CompactFileCard({
   );
 }
 
-function VideoAttachmentPlayer({ url, filename, onError }: { url: string; filename: string; onError: () => void }) {
-  const [playing, setPlaying] = useState(false);
-
-  return (
-    <div className="relative aspect-video w-[32rem] min-w-0 max-w-full overflow-hidden rounded-lg bg-black">
-      <video
-        src={url}
-        controls
-        preload="metadata"
-        playsInline
-        aria-label={filename}
-        className="h-full w-full object-contain"
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
-        onEnded={() => setPlaying(false)}
-        onError={onError}
-      />
-      {!playing && (
-        <button
-          type="button"
-          onClick={(event) => {
-            const video = event.currentTarget.previousElementSibling;
-            if (video instanceof HTMLVideoElement) void video.play();
-          }}
-          aria-label={`Play ${filename}`}
-          className="absolute left-1/2 top-1/2 grid size-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-black/70 text-white shadow-lg transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-        >
-          <Play size={24} fill="currentColor" aria-hidden />
-        </button>
-      )}
-    </div>
-  );
-}
-
 function DocumentPreviewContent({
   kind,
   bytes,
@@ -232,6 +199,13 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
 
   if (!meta) return null;
 
+  function showVideoError() {
+    showToast({
+      title: "Video could not be played",
+      message: "This browser may not support the video's codec. You can still download the original file.",
+    });
+  }
+
   if (state.kind === "loaded") {
     if (kind === "image") {
       return (
@@ -257,17 +231,22 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
     if (kind === "video") {
       return (
         <div className="min-w-0 max-w-full overflow-hidden">
-          <VideoAttachmentPlayer
+          <VideoPreviewTile
             url={state.url}
             filename={meta.filename}
-            onError={() =>
-              showToast({
-                title: "Video could not be played",
-                message: "This browser may not support the video's codec. You can still download the original file.",
-              })
-            }
+            className="aspect-video w-[32rem] min-w-0 max-w-full rounded-lg"
+            onOpen={() => setLightboxOpen(true)}
+            onError={showVideoError}
           />
           <PreviewFooter filename={meta.filename} size={meta.size} url={state.url} />
+          {lightboxOpen && (
+            <VideoLightbox
+              url={state.url}
+              filename={meta.filename}
+              onClose={() => setLightboxOpen(false)}
+              onError={showVideoError}
+            />
+          )}
         </div>
       );
     }
