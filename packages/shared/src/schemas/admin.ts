@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Base64UrlSchema, PaginationQuerySchema, PublicKeysSchema } from "./common.js";
 import type { ConversationStatus } from "../enums.js";
-import type { MessagingLimitsDto } from "./site.js";
+import type { MessagingLimitsDto, ProfileMediaDto } from "./site.js";
 import { ABSOLUTE_MAX_ATTACHMENT_SIZE_MB, ABSOLUTE_MAX_ATTACHMENTS_PER_MESSAGE } from "../constants.js";
 
 export const UsernameSchema = z
@@ -89,8 +89,12 @@ export const GravatarImportRequestSchema = z.object({
 });
 export type GravatarImportRequestInput = z.infer<typeof GravatarImportRequestSchema>;
 
-export const ProfilePhotoParamsSchema = z.object({
-  index: z.coerce.number().int().min(0).max(7),
+export const ProfileMediaParamsSchema = z.object({
+  id: z
+    .string()
+    .min(1)
+    .max(64)
+    .regex(/^[a-zA-Z0-9_-]+$/),
 });
 
 /** No spaces - the title doubles as the "/name" typed in the composer to
@@ -179,7 +183,7 @@ export interface SiteSettingsDto {
   bio: string;
   welcomeMessage: string;
   avatarUrl: string | null;
-  profilePhotos: string[];
+  profileMedia: ProfileMediaDto[];
   contactLinks: { label: string; url: string }[];
   pgpPublicKey: string | null;
   privacyPolicyUrl: string | null;

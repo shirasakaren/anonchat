@@ -78,6 +78,11 @@ enum SenderType {
   ADMIN
 }
 
+enum ProfileMediaKind {
+  IMAGE
+  VIDEO
+}
+
 model Conversation {
   id              String             @id @default(cuid())
   anonymousUserId String             @unique
@@ -243,6 +248,24 @@ model AdminSession {
   @@map("admin_sessions")
 }
 
+/// Public images, animated GIFs, and videos shown in the admin's visitor-facing profile.
+/// New uploads live in the configured storage adapter. inlineDataUrl exists only so the
+/// migration can preserve gallery photos created before storage-backed profile media.
+model ProfileMedia {
+  id            String           @id @default(cuid())
+  kind          ProfileMediaKind
+  mimetype      String
+  filename      String
+  sizeBytes     Int
+  storageKey    String?          @unique
+  inlineDataUrl String?
+  position      Int
+  createdAt     DateTime         @default(now())
+
+  @@index([position, createdAt])
+  @@map("profile_media")
+}
+
 model SiteSettings {
   /// Singleton row - always id = 1.
   id                Int     @id @default(1)
@@ -255,8 +278,6 @@ model SiteSettings {
   /// without putting the admin's private key on the server.
   welcomeMessage    String  @default("Welcome! Send a message below to start an anonymous, end-to-end encrypted conversation.")
   avatarUrl         String?
-  /// Public gallery displayed in the visitor-facing admin profile panel.
-  profilePhotosJson Json    @default("[]")
   contactLinksJson  Json    @default("[]")
   pgpPublicKey      String?
   /// Public operator-authored notice covering controller identity, purposes,

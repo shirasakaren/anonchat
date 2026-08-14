@@ -18,6 +18,15 @@ export interface MessagingLimitsDto {
   attachmentSize: AttachmentSizeLimitsDto;
 }
 
+export interface ProfileMediaDto {
+  id: string;
+  kind: "image" | "video";
+  mimetype: string;
+  filename: string;
+  sizeBytes: number;
+  url: string;
+}
+
 export interface PublicSiteInfoDto {
   onboardingComplete: boolean;
   siteTitle: string;
@@ -25,7 +34,7 @@ export interface PublicSiteInfoDto {
   bio: string;
   welcomeMessage: string;
   avatarUrl: string | null;
-  profilePhotos: string[];
+  profileMedia: ProfileMediaDto[];
   contactLinks: { label: string; url: string }[];
   pgpPublicKey: string | null;
   privacyPolicyUrl: string | null;

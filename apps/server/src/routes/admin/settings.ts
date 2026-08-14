@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import {
   GravatarImportRequestSchema,
-  ProfilePhotoParamsSchema,
+  ProfileMediaParamsSchema,
   SiteSettingsRequestSchema,
   type SiteSettingsDto,
 } from "@anonchat/shared";
@@ -14,13 +14,24 @@ import { isEmailConfigured } from "../../email/index.js";
 import { isPushConfigured } from "../../push/index.js";
 import { ALLOWED_AVATAR_MIME_TYPES, MAX_AVATAR_BYTES, fetchGravatarAvatarDataUrl } from "../../services/gravatar.js";
 import { getSiteSettings, toMessagingLimits } from "../../services/siteSettings.service.js";
+import {
+  MAX_PROFILE_MEDIA_ITEMS,
+  addProfileMedia,
+  listProfileMedia,
+  profileMediaKindForMime,
+  readProfileMediaBuffer,
+  removeProfileMedia,
+} from "../../services/profileMedia.service.js";
 import { Errors } from "../../utils/errors.js";
 
+const BYTES_PER_MB = 1024 * 1024;
+
 async function toSettingsDto(): Promise<SiteSettingsDto> {
-  const [settings, onboardingComplete, adminPublicKeys] = await Promise.all([
+  const [settings, onboardingComplete, adminPublicKeys, profileMedia] = await Promise.all([
     getSiteSettings(),
     adminExists(),
     getAdminPublicKeys(),
+    listProfileMedia(),
   ]);
   return {
     onboardingComplete,
@@ -29,9 +40,7 @@ async function toSettingsDto(): Promise<SiteSettingsDto> {
     bio: settings.bio,
     welcomeMessage: settings.welcomeMessage,
     avatarUrl: settings.avatarUrl,
-    profilePhotos: Array.isArray(settings.profilePhotosJson)
-      ? settings.profilePhotosJson.filter((value): value is string => typeof value === "string")
-      : [],
+    profileMedia,
     contactLinks: (settings.contactLinksJson as { label: string; url: string }[]) ?? [],
     pgpPublicKey: settings.pgpPublicKey,
     privacyPolicyUrl: settings.privacyPolicyUrl,
@@ -194,44 +203,51 @@ export function registerAdminSettingsRoutes(app: FastifyInstance): void {
     reply.send(await toSettingsDto());
   });
 
-  app.post("/admin/profile-photos", { preHandler: requireAdmin }, async (request, reply) => {
+  app.post("/admin/profile-media", { preHandler: requireAdmin }, async (request, reply) => {
     const { admin } = request.adminAuth!;
     const settings = await getSiteSettings();
-    const current = Array.isArray(settings.profilePhotosJson)
-      ? settings.profilePhotosJson.filter((value): value is string => typeof value === "string")
-      : [];
-    if (current.length >= 8) throw Errors.badRequest("You can add up to 8 profile photos.");
-
-    const file = await request.file({ limits: { fileSize: MAX_AVATAR_BYTES } }).catch(() => null);
-    if (!file) throw Errors.badRequest("No image uploaded.");
-    if (!ALLOWED_AVATAR_MIME_TYPES.has(file.mimetype)) {
-      throw Errors.badRequest("Profile photos must be PNG, JPEG, WebP, or GIF images.");
+    const limits = toMessagingLimits(settings).attachmentSize;
+    const currentCount = await prisma.profileMedia.count();
+    if (currentCount >= MAX_PROFILE_MEDIA_ITEMS) {
+      throw Errors.badRequest(`You can add up to ${MAX_PROFILE_MEDIA_ITEMS} profile media items.`);
     }
-    const buffer = await file.toBuffer().catch(() => {
-      throw Errors.tooLarge("Profile photos must be 2MB or smaller.");
-    });
-    const dataUrl = `data:${file.mimetype};base64,${buffer.toString("base64")}`;
-    await prisma.siteSettings.update({
-      where: { id: settings.id },
-      data: { profilePhotosJson: [...current, dataUrl] },
-    });
-    await recordAudit(admin.id, "settings.profile_photo_added");
+
+    const file = await request
+      .file({ limits: { fileSize: limits.globalMb * BYTES_PER_MB, files: 1 } })
+      .catch((error: unknown) => {
+        if (error && typeof error === "object" && "code" in error && error.code === "FST_REQ_FILE_TOO_LARGE") {
+          throw Errors.tooLarge(`Profile media must be ${limits.globalMb} MB or smaller.`);
+        }
+        throw error;
+      });
+    if (!file) throw Errors.badRequest("No media uploaded.");
+    const kind = profileMediaKindForMime(file.mimetype);
+    if (!kind) {
+      throw Errors.badRequest("Media must be a PNG, JPEG, WebP, GIF, AVIF, MP4, WebM, OGG, or MOV file.");
+    }
+
+    const categoryLimitMb = kind === "VIDEO" ? limits.videoMb : limits.imageMb;
+    const buffer = await readProfileMediaBuffer(
+      file.file,
+      categoryLimitMb * BYTES_PER_MB,
+      `Profile ${kind === "VIDEO" ? "videos" : "images"} must be ${categoryLimitMb} MB or smaller.`,
+    );
+    const created = await addProfileMedia({ kind, mimetype: file.mimetype, filename: file.filename, buffer });
+    await recordAudit(
+      admin.id,
+      "settings.profile_media_added",
+      { type: "ProfileMedia", id: created.id },
+      { kind: kind.toLowerCase() },
+    );
     reply.send(await toSettingsDto());
   });
 
-  app.delete("/admin/profile-photos/:index", { preHandler: requireAdmin }, async (request, reply) => {
+  app.delete("/admin/profile-media/:id", { preHandler: requireAdmin }, async (request, reply) => {
     const { admin } = request.adminAuth!;
-    const { index } = ProfilePhotoParamsSchema.parse(request.params);
-    const settings = await getSiteSettings();
-    const current = Array.isArray(settings.profilePhotosJson)
-      ? settings.profilePhotosJson.filter((value): value is string => typeof value === "string")
-      : [];
-    if (index >= current.length) throw Errors.notFound("Profile photo not found.");
-    await prisma.siteSettings.update({
-      where: { id: settings.id },
-      data: { profilePhotosJson: current.filter((_, photoIndex) => photoIndex !== index) },
-    });
-    await recordAudit(admin.id, "settings.profile_photo_removed");
+    const { id } = ProfileMediaParamsSchema.parse(request.params);
+    const { storageCleanupFailed } = await removeProfileMedia(id);
+    if (storageCleanupFailed) request.log.warn({ profileMediaId: id }, "Profile media storage cleanup failed");
+    await recordAudit(admin.id, "settings.profile_media_removed", { type: "ProfileMedia", id });
     reply.status(204).send();
   });
 }

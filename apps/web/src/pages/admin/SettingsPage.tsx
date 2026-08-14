@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import clsx from "clsx";
-import { ImagePlus, Trash2, X } from "lucide-react";
-import type { SiteSettingsDto } from "@anonchat/shared";
+import { Plus, Trash2, X } from "lucide-react";
+import type { ProfileMediaDto, SiteSettingsDto } from "@anonchat/shared";
 import {
   getSettings,
   updateSettings,
@@ -12,8 +12,8 @@ import {
   disableTotp,
   subscribeAdminPush,
   unsubscribeAdminPush,
-  uploadProfilePhoto,
-  deleteProfilePhoto,
+  uploadProfileMedia,
+  deleteProfileMedia,
 } from "../../api/admin.js";
 import { ApiError } from "../../api/client.js";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
@@ -26,6 +26,8 @@ import { ThemePicker } from "../../components/common/ThemePicker.js";
 import { AvatarCropper } from "../../components/common/AvatarCropper.js";
 import { DefaultAvatar } from "../../components/common/DefaultAvatar.js";
 import { useToast } from "../../context/ToastContext.js";
+import { ProfileMediaTile } from "../../components/common/ProfileMediaTile.js";
+import { ImageLightbox } from "../../components/chat/preview/ImageLightbox.js";
 
 function NumberControl({
   label,
@@ -91,8 +93,9 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
   const [gravatarEmail, setGravatarEmail] = useState("");
   const [gravatarBusy, setGravatarBusy] = useState(false);
   const [gravatarError, setGravatarError] = useState<string | null>(null);
-  const [photoBusy, setPhotoBusy] = useState(false);
-  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [mediaBusy, setMediaBusy] = useState(false);
+  const [mediaError, setMediaError] = useState<string | null>(null);
+  const [openMediaImage, setOpenMediaImage] = useState<ProfileMediaDto | null>(null);
   const [digestEmail, setDigestEmail] = useState("");
   const [digestEnabled, setDigestEnabled] = useState(false);
   const [digestInterval, setDigestInterval] = useState(15);
@@ -410,37 +413,37 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
     }
   }
 
-  async function handleProfilePhotoUpload(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleProfileMediaUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
-    setPhotoBusy(true);
-    setPhotoError(null);
+    setMediaBusy(true);
+    setMediaError(null);
     try {
-      const updated = await uploadProfilePhoto(file);
+      const updated = await uploadProfileMedia(file);
       setSettings(updated);
       await refreshSite();
     } catch (error) {
-      setPhotoError(error instanceof ApiError ? error.message : "Could not upload that photo.");
-      notifyError("Profile photo upload failed", error);
+      setMediaError(error instanceof ApiError ? error.message : "Could not upload that media file.");
+      notifyError("Profile media upload failed", error);
     } finally {
-      setPhotoBusy(false);
+      setMediaBusy(false);
     }
   }
 
-  async function handleProfilePhotoDelete(index: number) {
-    setPhotoBusy(true);
-    setPhotoError(null);
+  async function handleProfileMediaDelete(id: string) {
+    setMediaBusy(true);
+    setMediaError(null);
     try {
-      await deleteProfilePhoto(index);
+      await deleteProfileMedia(id);
       const updated = await getSettings();
       setSettings(updated);
       await refreshSite();
     } catch (error) {
-      setPhotoError(error instanceof ApiError ? error.message : "Could not remove that photo.");
-      notifyError("Profile photo could not be removed", error);
+      setMediaError(error instanceof ApiError ? error.message : "Could not remove that media file.");
+      notifyError("Profile media could not be removed", error);
     } finally {
-      setPhotoBusy(false);
+      setMediaBusy(false);
     }
   }
 
@@ -617,43 +620,45 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
             <div className="mt-6 border-t border-[var(--border)] pt-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-medium">Profile photos</p>
+                  <p className="text-sm font-medium">Profile media</p>
                   <p className="mt-1 text-xs text-[var(--text-muted)]">
-                    Add up to 8 photos that give visitors more context about you.
+                    Add up to 8 images, animated GIFs, or videos. Upload limits follow System settings.
                   </p>
                 </div>
                 <label
                   className={clsx(
                     "inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border-strong)] px-3 py-2 text-xs font-semibold",
-                    photoBusy || settings.profilePhotos.length >= 8
+                    mediaBusy || settings.profileMedia.length >= 8
                       ? "pointer-events-none opacity-50"
                       : "cursor-pointer",
                   )}
                 >
-                  <ImagePlus size={14} aria-hidden />
-                  {photoBusy ? "Working…" : "Add photo"}
+                  <Plus size={14} aria-hidden />
+                  {mediaBusy ? "Working…" : "Add media"}
                   <input
                     type="file"
-                    accept="image/png,image/jpeg,image/webp,image/gif"
-                    disabled={photoBusy || settings.profilePhotos.length >= 8}
-                    onChange={(event) => void handleProfilePhotoUpload(event)}
+                    accept="image/png,image/jpeg,image/webp,image/gif,image/avif,video/mp4,video/webm,video/ogg,video/quicktime"
+                    disabled={mediaBusy || settings.profileMedia.length >= 8}
+                    onChange={(event) => void handleProfileMediaUpload(event)}
                     className="hidden"
                   />
                 </label>
               </div>
-              {settings.profilePhotos.length > 0 && (
+              {settings.profileMedia.length > 0 && (
                 <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {settings.profilePhotos.map((photo, index) => (
-                    <div
-                      key={`${photo.slice(-24)}-${index}`}
-                      className="group relative aspect-[4/3] overflow-hidden rounded-xl"
-                    >
-                      <img src={photo} alt={`Profile photo ${index + 1}`} className="h-full w-full object-cover" />
+                  {settings.profileMedia.map((media, index) => (
+                    <div key={media.id} className="group relative aspect-[4/3] overflow-hidden rounded-xl">
+                      <ProfileMediaTile
+                        media={media}
+                        alt={`Profile ${media.kind} ${index + 1}`}
+                        className="h-full w-full"
+                        onImageOpen={setOpenMediaImage}
+                      />
                       <button
                         type="button"
-                        disabled={photoBusy}
-                        onClick={() => void handleProfilePhotoDelete(index)}
-                        aria-label={`Remove profile photo ${index + 1}`}
+                        disabled={mediaBusy}
+                        onClick={() => void handleProfileMediaDelete(media.id)}
+                        aria-label={`Remove ${media.filename}`}
                         className="absolute right-2 top-2 rounded-full bg-black/70 p-2 text-white hover:bg-black disabled:opacity-50"
                       >
                         <Trash2 size={14} aria-hidden />
@@ -662,7 +667,7 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
                   ))}
                 </div>
               )}
-              {photoError && <p className="mt-2 text-xs text-[var(--danger-fg)]">{photoError}</p>}
+              {mediaError && <p className="mt-2 text-xs text-[var(--danger-fg)]">{mediaError}</p>}
             </div>
 
             <div className="mt-6 border-t border-[var(--border)] pt-4">
@@ -1181,6 +1186,13 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
           </>
         )}
       </div>
+      {openMediaImage && (
+        <ImageLightbox
+          url={openMediaImage.url}
+          filename={openMediaImage.filename}
+          onClose={() => setOpenMediaImage(null)}
+        />
+      )}
     </div>
   );
 }

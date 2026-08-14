@@ -101,14 +101,14 @@ export function importGravatarAvatar(email: string): Promise<SiteSettingsDto> {
   return api.post<SiteSettingsDto>("/admin/avatar/gravatar", { email });
 }
 
-export async function uploadProfilePhoto(file: File): Promise<SiteSettingsDto> {
+export async function uploadProfileMedia(file: File): Promise<SiteSettingsDto> {
   const form = new FormData();
   form.append("file", file, file.name);
-  return apiFetch<SiteSettingsDto>("/admin/profile-photos", { method: "POST", body: form });
+  return apiFetch<SiteSettingsDto>("/admin/profile-media", { method: "POST", body: form });
 }
 
-export function deleteProfilePhoto(index: number): Promise<void> {
-  return api.delete<void>(`/admin/profile-photos/${index}`);
+export function deleteProfileMedia(id: string): Promise<void> {
+  return api.delete<void>(`/admin/profile-media/${encodeURIComponent(id)}`);
 }
 
 export function subscribeAdminPush(subscription: PushSubscriptionKeys): Promise<void> {
