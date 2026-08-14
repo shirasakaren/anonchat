@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import type { RawData } from "ws";
 import { ClientWsMessageSchema } from "@anonchat/shared";
 import { corsOrigins, loadEnv } from "../env.js";
 import { getSiteSettings } from "../services/siteSettings.service.js";
@@ -37,7 +38,7 @@ export function registerWsRoutes(fastify: FastifyInstance): void {
       }
 
       socket.on("message", (raw) => {
-        const parsed = safeParseClientMessage(raw.toString());
+        const parsed = safeParseClientMessage(rawMessageToString(raw));
         if (!parsed) return;
         if (parsed.type === "typing.start" || parsed.type === "typing.stop") {
           if (!parsed.conversationId) return;
@@ -81,7 +82,7 @@ export function registerWsRoutes(fastify: FastifyInstance): void {
     }
 
     socket.on("message", (raw) => {
-      const parsed = safeParseClientMessage(raw.toString());
+      const parsed = safeParseClientMessage(rawMessageToString(raw));
       if (!parsed) return;
       if (parsed.type === "typing.start" || parsed.type === "typing.stop") {
         publishToConversation(conversation.id, {
@@ -100,6 +101,12 @@ export function registerWsRoutes(fastify: FastifyInstance): void {
       }
     });
   });
+}
+
+function rawMessageToString(raw: RawData): string {
+  if (Array.isArray(raw)) return Buffer.concat(raw).toString("utf8");
+  if (raw instanceof ArrayBuffer) return new TextDecoder().decode(raw);
+  return raw.toString("utf8");
 }
 
 function safeParseClientMessage(raw: string) {

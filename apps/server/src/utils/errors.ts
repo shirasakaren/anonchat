@@ -32,14 +32,8 @@ interface ClientFastifyError {
 
 /** Fastify's own built-in errors (bad JSON, empty body, oversized body, etc.) - their messages are already safe/generic to relay as-is. */
 function isClientFastifyError(error: unknown): error is ClientFastifyError {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "statusCode" in error &&
-    typeof (error as { statusCode: unknown }).statusCode === "number" &&
-    (error as { statusCode: number }).statusCode >= 400 &&
-    (error as { statusCode: number }).statusCode < 500
-  );
+  if (typeof error !== "object" || error === null || !("statusCode" in error)) return false;
+  return typeof error.statusCode === "number" && error.statusCode >= 400 && error.statusCode < 500;
 }
 
 /**
