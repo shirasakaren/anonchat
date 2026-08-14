@@ -1,13 +1,4 @@
 import { z } from "zod";
-import {
-  DEFAULT_MAX_ATTACHMENT_SIZE_MB,
-  DEFAULT_MAX_ATTACHMENTS_PER_MESSAGE,
-  DEFAULT_MAX_MESSAGE_LENGTH,
-  DEFAULT_MESSAGE_EDIT_WINDOW_MINUTES,
-  DEFAULT_RATE_LIMIT_LINK_PREVIEWS_PER_MINUTE,
-  DEFAULT_RATE_LIMIT_MESSAGES_PER_MINUTE,
-  DEFAULT_RATE_LIMIT_REGISTRATIONS_PER_HOUR,
-} from "@anonchat/shared";
 
 const boolFromEnv = z
   .string()
@@ -23,44 +14,6 @@ const EnvSchema = z.object({
     .min(32, "SESSION_SECRET must be at least 32 characters - generate with `openssl rand -hex 32`"),
   PUBLIC_URL: z.string().url().default("http://localhost:3000"),
   TRUST_PROXY: boolFromEnv,
-
-  STORE_IP_ADDRESSES: boolFromEnv,
-  // Optional IP-derived coarse geolocation. "ipwhois" sends the visitor's
-  // IP to ipwho.is only after that visitor consents and the admin enables
-  // visitor insights. "none" (default) keeps all geolocation offline.
-  VISITOR_GEOLOCATION_PROVIDER: z.enum(["none", "ipwhois"]).default("none"),
-  MAX_MESSAGE_LENGTH: z.coerce.number().int().positive().default(DEFAULT_MAX_MESSAGE_LENGTH),
-  MAX_ATTACHMENT_SIZE_MB: z.coerce.number().int().positive().default(DEFAULT_MAX_ATTACHMENT_SIZE_MB),
-  MAX_ATTACHMENTS_PER_MESSAGE: z.coerce.number().int().positive().default(DEFAULT_MAX_ATTACHMENTS_PER_MESSAGE),
-  MESSAGE_EDIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(DEFAULT_MESSAGE_EDIT_WINDOW_MINUTES),
-
-  RATE_LIMIT_MESSAGES_PER_MINUTE: z.coerce.number().int().positive().default(DEFAULT_RATE_LIMIT_MESSAGES_PER_MINUTE),
-  RATE_LIMIT_REGISTRATIONS_PER_HOUR: z.coerce
-    .number()
-    .int()
-    .positive()
-    .default(DEFAULT_RATE_LIMIT_REGISTRATIONS_PER_HOUR),
-  RATE_LIMIT_LINK_PREVIEWS_PER_MINUTE: z.coerce
-    .number()
-    .int()
-    .positive()
-    .default(DEFAULT_RATE_LIMIT_LINK_PREVIEWS_PER_MINUTE),
-
-  /** Operator escape hatch: rendering a link preview means the server
-   *  fetches the shared URL on the caller's behalf (SSRF-guarded, see
-   *  security/ssrfGuard.ts) - a deliberate, narrow exception to this app's
-   *  "server never makes outbound requests based on message content" norm.
-   *  Off by default is arguably more consistent with the rest of this
-   *  app's stance, but on-by-default matches what every mainstream
-   *  messenger does and is what most self-hosters will expect; operators
-   *  who'd rather the server never originate outbound requests can disable it. */
-  LINK_PREVIEWS_ENABLED: z
-    .string()
-    .optional()
-    .transform((v) => v !== "false" && v !== "0"),
-
-  TURNSTILE_SITE_KEY: z.string().optional(),
-  TURNSTILE_SECRET_KEY: z.string().optional(),
 
   STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
   UPLOAD_DIR: z.string().default("./data/uploads"),
@@ -85,16 +38,6 @@ const EnvSchema = z.object({
   SMTP_PASSWORD: z.string().optional(),
 
   RESEND_API_KEY: z.string().optional(),
-
-  // Floor on how often the admin digest can fire, regardless of the
-  // per-admin interval set in Settings - keeps a misconfigured very-low
-  // interval from turning into a mail flood.
-  ADMIN_DIGEST_MIN_INTERVAL_MINUTES: z.coerce.number().int().positive().default(5),
-
-  // Floor on how often a single visitor can be emailed "you have a reply" -
-  // a burst of consecutive admin replies collapses into one email instead
-  // of one per message.
-  REPLY_EMAIL_MIN_INTERVAL_MINUTES: z.coerce.number().int().positive().default(2),
 
   // Web Push is entirely inert without all three set - generate a keypair
   // with `pnpm run push:generate-vapid-keys` (apps/server/scripts). Subject

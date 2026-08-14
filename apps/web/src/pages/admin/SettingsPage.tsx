@@ -815,13 +815,13 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
               <div className="mb-3 rounded-lg bg-[var(--surface-muted)] p-3 text-xs text-[var(--text-muted)]">
                 <p>
                   IP storage:{" "}
-                  {settings.visitorIpStorageAvailable
+                  {settings.storeIpAddresses
                     ? "available when a visitor consents"
                     : "disabled by the server operator"}
                 </p>
                 <p className="mt-1">
                   Coarse IP geolocation:{" "}
-                  {settings.visitorGeolocationAvailable
+                  {settings.visitorGeolocationEnabled
                     ? "available when a visitor consents"
                     : "disabled by the server operator"}
                 </p>

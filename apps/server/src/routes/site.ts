@@ -32,7 +32,6 @@ export function registerSiteRoutes(app: FastifyInstance): void {
       presenceEnabled: settings.presenceEnabled,
       theme: settings.theme,
       limits: toMessagingLimits(settings),
-      turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null,
       vapidPublicKey: isPushConfigured() ? env.VAPID_PUBLIC_KEY! : null,
       emailNotificationsAvailable: isEmailConfigured(),
       visitorInsights: {

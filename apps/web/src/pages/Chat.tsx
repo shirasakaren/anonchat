@@ -588,7 +588,7 @@ export default function Chat() {
             role="USER"
             conversationId={session.conversationId}
             conversationKey={conversationKey}
-            maxAssetSizeMb={site.limits.maxAttachmentSizeMb}
+            maxAssetSizeMb={site.limits.attachmentSize.globalMb}
             incomingNote={incomingNote}
             readOnly={isBlocked}
             onClose={() => setNoteOpen(false)}

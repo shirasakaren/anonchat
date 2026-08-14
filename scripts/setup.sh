@@ -198,19 +198,6 @@ main() {
     *) ;;
   esac
 
-  echo
-  echo "IP address logging (used only for abuse mitigation; off protects privacy by default):"
-  store_ips=$(prompt_yn "Store submitter IP addresses?" "n")
-
-  echo
-  turnstile_choice=$(prompt_yn "Enable Cloudflare Turnstile CAPTCHA on identity creation?" "n")
-  turnstile_site_key=""
-  turnstile_secret_key=""
-  if [ "$turnstile_choice" = "y" ]; then
-    turnstile_site_key=$(prompt "Turnstile site key" "")
-    turnstile_secret_key=$(prompt "Turnstile secret key" "")
-  fi
-
   session_secret=$(random_secret)
   postgres_password=$(random_password)
 
@@ -224,20 +211,6 @@ SESSION_SECRET=$session_secret
 PUBLIC_URL=$public_url
 PORT=$port
 TRUST_PROXY=false
-
-STORE_IP_ADDRESSES=$([ "$store_ips" = "y" ] && echo true || echo false)
-MAX_MESSAGE_LENGTH=100000
-MAX_ATTACHMENT_SIZE_MB=25
-MAX_ATTACHMENTS_PER_MESSAGE=5
-MESSAGE_EDIT_WINDOW_MINUTES=15
-
-RATE_LIMIT_MESSAGES_PER_MINUTE=20
-RATE_LIMIT_REGISTRATIONS_PER_HOUR=10
-RATE_LIMIT_LINK_PREVIEWS_PER_MINUTE=20
-LINK_PREVIEWS_ENABLED=true
-
-TURNSTILE_SITE_KEY=$turnstile_site_key
-TURNSTILE_SECRET_KEY=$turnstile_secret_key
 
 STORAGE_DRIVER=$storage_driver
 S3_ENDPOINT=$s3_endpoint

@@ -33,10 +33,6 @@ Parameters:
   DBInstanceClass:
     Type: String
     Default: db.t4g.micro
-  StoreIpAddresses:
-    Type: String
-    AllowedValues: ["true", "false"]
-    Default: "false"
 
 Resources:
   # ---------------------------------------------------------------------
@@ -154,8 +150,6 @@ Resources:
                 Value: "3000"
               - Name: TRUST_PROXY
                 Value: "true"
-              - Name: STORE_IP_ADDRESSES
-                Value: !Ref StoreIpAddresses
               - Name: STORAGE_DRIVER
                 Value: local
               - Name: UPLOAD_DIR

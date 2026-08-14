@@ -40,11 +40,6 @@ variable "public_url" {
   description = "Public URL this app is served at. Leave blank for the first apply, then set it to the Cloud Run URL output and re-apply."
 }
 
-variable "store_ip_addresses" {
-  type    = bool
-  default = false
-}
-
 provider "google" {
   project = var.project_id
   region  = var.region
@@ -203,10 +198,6 @@ resource "google_cloud_run_v2_service" "app" {
       env {
         name  = "TRUST_PROXY"
         value = "true"
-      }
-      env {
-        name  = "STORE_IP_ADDRESSES"
-        value = var.store_ip_addresses ? "true" : "false"
       }
       env {
         name  = "STORAGE_DRIVER"

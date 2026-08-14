@@ -648,7 +648,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
             role="ADMIN"
             conversationId={conversationId}
             conversationKey={conversationKey}
-            maxAssetSizeMb={site?.limits.maxAttachmentSizeMb ?? 25}
+            maxAssetSizeMb={site?.limits.attachmentSize.globalMb ?? 100}
             incomingNote={incomingNote}
             onClose={() => setNoteOpen(false)}
           />

@@ -28,17 +28,8 @@ services:
       NODE_ENV: production
       PORT: "3000"
       TRUST_PROXY: "true"
-      STORE_IP_ADDRESSES: "false"
       STORAGE_DRIVER: local
       UPLOAD_DIR: /app/data/uploads
-      MAX_MESSAGE_LENGTH: "100000"
-      MAX_ATTACHMENT_SIZE_MB: "25"
-      MAX_ATTACHMENTS_PER_MESSAGE: "5"
-      MESSAGE_EDIT_WINDOW_MINUTES: "15"
-      RATE_LIMIT_MESSAGES_PER_MINUTE: "20"
-      RATE_LIMIT_REGISTRATIONS_PER_HOUR: "10"
-      RATE_LIMIT_LINK_PREVIEWS_PER_MINUTE: "20"
-      LINK_PREVIEWS_ENABLED: "true"
       S3_ENDPOINT: ""
       S3_REGION: auto
       S3_BUCKET: ""

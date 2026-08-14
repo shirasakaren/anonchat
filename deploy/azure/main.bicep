@@ -15,7 +15,6 @@ param sessionSecret string
 @description('Public URL this app is served at. Leave blank for the first deploy, then set it to the Container App\'s FQDN and redeploy.')
 param publicUrl string = ''
 
-param storeIpAddresses bool = false
 
 var namePrefix = 'anonchat'
 
@@ -124,10 +123,6 @@ module app 'br/public:avm/res/app/container-app:0.19.0' = {
           {
             name: 'TRUST_PROXY'
             value: 'true'
-          }
-          {
-            name: 'STORE_IP_ADDRESSES'
-            value: storeIpAddresses ? 'true' : 'false'
           }
           {
             name: 'STORAGE_DRIVER'

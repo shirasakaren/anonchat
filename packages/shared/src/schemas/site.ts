@@ -33,7 +33,6 @@ export interface PublicSiteInfoDto {
   presenceEnabled: boolean;
   theme: string;
   limits: MessagingLimitsDto;
-  turnstileSiteKey: string | null;
   /** Null when this server has no VAPID_* configured - Web Push is entirely
    *  unavailable in that case (see docs/ARCHITECTURE.md). */
   vapidPublicKey: string | null;

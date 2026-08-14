@@ -29,8 +29,6 @@ services:
         value: production
       - key: TRUST_PROXY
         value: "true"
-      - key: STORE_IP_ADDRESSES
-        value: "false"
       - key: STORAGE_DRIVER
         value: local
       - key: UPLOAD_DIR
