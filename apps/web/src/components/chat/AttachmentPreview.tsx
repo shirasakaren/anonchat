@@ -23,6 +23,7 @@ import { TextCodePreview } from "./preview/TextCodePreview.js";
 import { ThemedAudioPlayer } from "./preview/ThemedAudioPlayer.js";
 import { readResponseBytes } from "./preview/readResponseBytes.js";
 import { detectTextLanguage, DOCX_MIMETYPE, isCsv, isMarkdown, resolveFileMimetype } from "./preview/textFileTypes.js";
+import { useToast } from "../../context/ToastContext.js";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -108,6 +109,7 @@ function DocumentPreviewContent({
 }
 
 export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: Props) {
+  const { showToast } = useToast();
   const [state, setState] = useState<LoadState>({ kind: "idle" });
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [documentOpen, setDocumentOpen] = useState(false);
@@ -123,7 +125,7 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
       setState({ kind: "loading", progress: 0 });
       try {
         const response = await fetch(downloadUrl, { credentials: "include" });
-        if (!response.ok) throw new Error("download failed");
+        if (!response.ok) throw new Error(`The server returned HTTP ${response.status} while downloading this file.`);
         const raw = await readResponseBytes(response, attachment.sizeBytes, (progress) => {
           setState({ kind: "loading", progress });
         });
@@ -138,11 +140,15 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
           anchor.download = meta.filename;
           anchor.click();
         }
-      } catch {
+      } catch (error) {
         setState({ kind: "error" });
+        showToast({
+          title: "Attachment could not be opened",
+          message: error instanceof Error ? error.message : "Check your connection and try again.",
+        });
       }
     },
-    [attachment.sizeBytes, conversationKey, downloadUrl, meta],
+    [attachment.sizeBytes, conversationKey, downloadUrl, meta, showToast],
   );
 
   useEffect(() => {

@@ -52,6 +52,7 @@ import {
   createPendingAttachmentPreviews,
   revokePendingAttachmentPreviews,
 } from "../../components/chat/PendingAttachmentTransfer.js";
+import { useToast } from "../../context/ToastContext.js";
 
 const SharedNoteDrawer = lazy(() => import("../../components/note/SharedNoteDrawer.js"));
 
@@ -61,6 +62,7 @@ interface Props {
 }
 
 export function ConversationView({ conversationId, onChanged }: Props) {
+  const { showToast } = useToast();
   const { identity } = useAdminSession();
   const { site } = useSite();
   const [conversation, setConversation] = useState<AdminConversationDto | null>(null);
@@ -348,13 +350,14 @@ export function ConversationView({ conversationId, onChanged }: Props) {
       draft.clearIfMatches(text);
       onChanged();
     } catch (err) {
+      const reason = err instanceof Error ? err.message : "The message could not be sent.";
       setMessages((prev) =>
-        prev.map((m) =>
-          m.id === localId
-            ? { ...m, status: "failed", failureReason: err instanceof Error ? err.message : "Failed to send" }
-            : m,
-        ),
+        prev.map((m) => (m.id === localId ? { ...m, status: "failed", failureReason: reason } : m)),
       );
+      showToast({
+        title: files.length > 0 ? "Attachment upload failed" : "Message failed",
+        message: reason,
+      });
     }
   }
 
@@ -367,15 +370,13 @@ export function ConversationView({ conversationId, onChanged }: Props) {
       setEditing(null);
       editAdminMessage(conversationId, messageId, encryptMessageText(conversationKey!, text))
         .then((dto) => setMessages((prev) => prev.map((m) => (m.id === messageId ? decryptDto(dto) : m))))
-        .catch((err) =>
+        .catch((err) => {
+          const reason = err instanceof ApiError ? err.message : "The edit could not be saved.";
           setMessages((prev) =>
-            prev.map((m) =>
-              m.id === messageId
-                ? { ...m, status: "failed", failureReason: err instanceof ApiError ? err.message : "Edit failed" }
-                : m,
-            ),
-          ),
-        );
+            prev.map((m) => (m.id === messageId ? { ...m, status: "failed", failureReason: reason } : m)),
+          );
+          showToast({ title: "Edit failed", message: reason });
+        });
       return;
     }
 
@@ -422,16 +423,26 @@ export function ConversationView({ conversationId, onChanged }: Props) {
 
   async function handleDeleteForEveryone(message: DisplayMessage) {
     setDeleteTarget(null);
-    await deleteAdminMessage(conversationId, message.id).catch(() => {});
-    setMessages((prev) => prev.map((m) => (m.id === message.id ? { ...m, deleted: true, text: "" } : m)));
+    try {
+      await deleteAdminMessage(conversationId, message.id);
+      setMessages((prev) => prev.map((m) => (m.id === message.id ? { ...m, deleted: true, text: "" } : m)));
+    } catch (error) {
+      showToast({
+        title: "Message could not be deleted",
+        message: error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   }
 
   async function handleReact(message: DisplayMessage, emoji: string | null) {
     try {
       if (emoji === null) await clearAdminReaction(conversationId, message.id);
       else await setAdminReaction(conversationId, message.id, encryptReaction(conversationKey!, emoji));
-    } catch {
-      // best-effort
+    } catch (error) {
+      showToast({
+        title: "Reaction could not be updated",
+        message: error instanceof Error ? error.message : "Please try again.",
+      });
     }
   }
 

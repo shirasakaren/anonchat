@@ -25,6 +25,7 @@ import { FullScreenLoader } from "../../components/common/Loader.js";
 import { ThemePicker } from "../../components/common/ThemePicker.js";
 import { AvatarCropper } from "../../components/common/AvatarCropper.js";
 import { DefaultAvatar } from "../../components/common/DefaultAvatar.js";
+import { useToast } from "../../context/ToastContext.js";
 
 function NumberControl({
   label,
@@ -60,6 +61,7 @@ function NumberControl({
 }
 
 export default function SettingsPage({ view = "system" }: { view?: "profile" | "system" }) {
+  const { showToast } = useToast();
   const { admin, refreshAdmin } = useAdminSession();
   const { isSoundEnabled, setSoundEnabled, requestPermission } = useAdminNotifications();
   const { site, refresh: refreshSite } = useSite();
@@ -172,6 +174,13 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
 
   if (!settings) return <FullScreenLoader />;
 
+  function notifyError(title: string, error: unknown) {
+    showToast({
+      title,
+      message: error instanceof Error ? error.message : "Please try again.",
+    });
+  }
+
   async function handleThemeChange(id: string) {
     setThemeState(id);
     setThemeSaving(true);
@@ -184,10 +193,11 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
       setSettings(updated);
       setThemeSaved(true);
       setTimeout(() => setThemeSaved(false), 2000);
-    } catch {
+    } catch (error) {
       // Revert on failure.
       applyTheme(currentTheme);
       setThemeState(currentTheme);
+      notifyError("Theme could not be saved", error);
     } finally {
       setThemeSaving(false);
     }
@@ -217,6 +227,8 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
       await refreshSite();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+    } catch (error) {
+      notifyError("Profile could not be saved", error);
     } finally {
       setSaving(false);
     }
@@ -231,6 +243,8 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
       await refreshSite();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+    } catch (error) {
+      notifyError("Messaging settings could not be saved", error);
     } finally {
       setSaving(false);
     }
@@ -245,6 +259,8 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
       await refreshSite();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+    } catch (error) {
+      notifyError("Branding could not be saved", error);
     } finally {
       setSaving(false);
     }
@@ -262,6 +278,8 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
       setSettings(updated);
       setDigestSaved(true);
       setTimeout(() => setDigestSaved(false), 2000);
+    } catch (error) {
+      notifyError("Email settings could not be saved", error);
     } finally {
       setDigestSaving(false);
     }
@@ -281,6 +299,7 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
       setPushSubscribed(true);
     } catch {
       setPushError("Couldn't enable push notifications. Please try again.");
+      showToast({ title: "Push notifications could not be enabled", message: "Please try again." });
     } finally {
       setPushBusy(false);
     }
@@ -298,15 +317,22 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
       setPushSubscribed(false);
     } catch {
       setPushError("Couldn't disable push notifications. Please try again.");
+      showToast({ title: "Push notifications could not be disabled", message: "Please try again." });
     } finally {
       setPushBusy(false);
     }
   }
 
   async function handlePushEnabledToggle(enabled: boolean) {
+    const previous = pushEnabled;
     setPushEnabled(enabled);
-    const updated = await updateSettings({ adminPushEnabled: enabled });
-    setSettings(updated);
+    try {
+      const updated = await updateSettings({ adminPushEnabled: enabled });
+      setSettings(updated);
+    } catch (error) {
+      setPushEnabled(previous);
+      notifyError("Push preference could not be saved", error);
+    }
   }
 
   async function handleSaveVisitorInsights() {
@@ -322,6 +348,8 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
       setSettings(updated);
       setInsightsSaved(true);
       setTimeout(() => setInsightsSaved(false), 2000);
+    } catch (error) {
+      notifyError("Privacy settings could not be saved", error);
     } finally {
       setInsightsSaving(false);
     }
@@ -336,6 +364,8 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
       await refreshSite();
       setRuntimeSaved(true);
       setTimeout(() => setRuntimeSaved(false), 2000);
+    } catch (error) {
+      notifyError("Runtime limits could not be saved", error);
     } finally {
       setRuntimeSaving(false);
     }
@@ -355,6 +385,8 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
       const updated = await uploadAvatar(blob);
       setSettings(updated);
       await refreshSite();
+    } catch (error) {
+      notifyError("Avatar upload failed", error);
     } finally {
       setAvatarUploading(false);
     }
@@ -372,6 +404,7 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
       setGravatarEmail("");
     } catch (err) {
       setGravatarError(err instanceof ApiError ? err.message : "Could not import that Gravatar.");
+      notifyError("Gravatar import failed", err);
     } finally {
       setGravatarBusy(false);
     }
@@ -389,6 +422,7 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
       await refreshSite();
     } catch (error) {
       setPhotoError(error instanceof ApiError ? error.message : "Could not upload that photo.");
+      notifyError("Profile photo upload failed", error);
     } finally {
       setPhotoBusy(false);
     }
@@ -404,6 +438,7 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
       await refreshSite();
     } catch (error) {
       setPhotoError(error instanceof ApiError ? error.message : "Could not remove that photo.");
+      notifyError("Profile photo could not be removed", error);
     } finally {
       setPhotoBusy(false);
     }
