@@ -10,7 +10,7 @@
 /* ── Fallback defaults (monochrome-dark) before JS applies data-theme ─
    Scoped to :not([data-theme]) deliberately: this selector has the same
    specificity as the per-theme `[data-theme="x"]` blocks in themes.css,
-   and (because of @import ordering) comes AFTER them in the cascade — so
+   and (because of @import ordering) comes AFTER them in the cascade - so
    a bare `:root` here would permanently win over every theme block and
    the whole theme system would silently render as monochrome-dark no
    matter what was selected. Excluding elements that already carry

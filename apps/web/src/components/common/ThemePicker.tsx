@@ -12,7 +12,7 @@ interface ThemePickerProps {
 /**
  * A theme preview card. `data-theme` is set directly on this card (rather
  * than relying on the page's active theme), so every card renders its own
- * theme's actual colors — themes.css's `[data-theme="x"]` selectors match
+ * theme's actual colors - themes.css's `[data-theme="x"]` selectors match
  * any element carrying the attribute, not just the document root, so the
  * whole subtree below resolves that theme's CSS variables regardless of
  * what theme the rest of the page is in.
@@ -29,7 +29,7 @@ function ThemeCard({ theme, active, onClick }: { theme: ThemeMeta; active: boole
         active ? "border-[var(--color-accent-500)]" : "border-[var(--border)] hover:border-[var(--color-accent-300)]",
       )}
     >
-      {/* Top 3/6 — gradient color preview built from this theme's own palette. */}
+      {/* Top 3/6 - gradient color preview built from this theme's own palette. */}
       <div
         aria-hidden
         style={{
@@ -38,7 +38,7 @@ function ThemeCard({ theme, active, onClick }: { theme: ThemeMeta; active: boole
         }}
       />
 
-      {/* Middle 1.75/6 — theme name, anchored bottom-left. */}
+      {/* Middle 1.75/6 - theme name, anchored bottom-left. */}
       <div
         className="flex items-end justify-start px-3 pb-1"
         style={{ background: "var(--surface-raised)", color: "var(--text)" }}
@@ -46,7 +46,7 @@ function ThemeCard({ theme, active, onClick }: { theme: ThemeMeta; active: boole
         <span className="text-sm font-semibold leading-tight">{theme.name}</span>
       </div>
 
-      {/* Bottom 1.25/6 — solid color swatches, anchored bottom-left. */}
+      {/* Bottom 1.25/6 - solid color swatches, anchored bottom-left. */}
       <div className="flex items-end justify-start gap-1.5 px-3 pb-3" style={{ background: "var(--surface-raised)" }}>
         <span
           className="h-3.5 w-3.5 rounded-full border border-[var(--border)]"

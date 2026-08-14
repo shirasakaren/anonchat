@@ -74,7 +74,7 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
         <p className="mt-2 text-sm text-[var(--text-muted)]">No email. No account. No name required. {site?.bio}</p>
         <p className="mt-3 flex items-start justify-center gap-1.5 text-xs text-[var(--text-muted)]">
           <ShieldCheck size={14} className="mt-px shrink-0 text-[var(--link-fg)]" aria-hidden />
-          End-to-end encrypted — only your identity and {ownerName}'s key can decrypt these messages.
+          End-to-end encrypted - only your identity and {ownerName}'s key can decrypt these messages.
         </p>
         {site?.visitorInsights.collectsIpAddress && (
           <p className="mt-2 text-xs text-[var(--text-muted)]">

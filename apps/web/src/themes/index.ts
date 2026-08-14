@@ -1,4 +1,4 @@
-/** Theme variant — dark or light. */
+/** Theme variant - dark or light. */
 export type ThemeVariant = "dark" | "light";
 
 /** Metadata for one theme. */
@@ -16,7 +16,7 @@ export const THEMES: ThemeMeta[] = [
     id: "monochrome-dark",
     name: "Monochrome Dark",
     variant: "dark",
-    description: "Dark canvas with neutral white text — the default Anonchat look",
+    description: "Dark canvas with neutral white text - the default Anonchat look",
   },
   {
     id: "amber-dark",
@@ -58,7 +58,7 @@ export const THEMES: ThemeMeta[] = [
     id: "graphite-dark",
     name: "Graphite",
     variant: "dark",
-    description: "Neutral gray — balanced and understated",
+    description: "Neutral gray - balanced and understated",
   },
   {
     id: "midnight",
@@ -96,7 +96,7 @@ export const THEMES: ThemeMeta[] = [
     id: "paper",
     name: "Paper",
     variant: "light",
-    description: "Warm white canvas — the terminal-on-paper style reference",
+    description: "Warm white canvas - the terminal-on-paper style reference",
   },
   {
     id: "cloud-light",
@@ -114,7 +114,7 @@ export const THEMES: ThemeMeta[] = [
     id: "glacier",
     name: "Glacier",
     variant: "light",
-    description: "Cold icy blue — crisp and clean",
+    description: "Cold icy blue - crisp and clean",
   },
   {
     id: "honey-light",
@@ -156,7 +156,7 @@ export const THEMES: ThemeMeta[] = [
     id: "sepia",
     name: "Sepia",
     variant: "light",
-    description: "Warm vintage brown-cream — aged paper",
+    description: "Warm vintage brown-cream - aged paper",
   },
 
   // ── Special / gradient themes ────────────────────────────────────────

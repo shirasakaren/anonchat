@@ -49,7 +49,7 @@ export function RecoveryPhraseVerification({ phrase, filename, verified, onVerif
           onClick={beginVerification}
           className="w-full rounded-lg border border-[var(--border-strong)] px-4 py-2.5 text-sm font-semibold hover:bg-[var(--surface-muted)]"
         >
-          I've stored it — verify my backup
+          I've stored it - verify my backup
         </button>
       </div>
     );
