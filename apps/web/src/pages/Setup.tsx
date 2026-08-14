@@ -9,7 +9,7 @@ import { useSite } from "../context/SiteContext.js";
 import { useTheme } from "../context/ThemeContext.js";
 import { DEFAULT_THEME } from "../themes/index.js";
 import { FullScreenLoader } from "../components/common/Loader.js";
-import { RecoveryPhraseDisplay } from "../components/common/RecoveryPhraseDisplay.js";
+import { RecoveryPhraseVerification } from "../components/common/RecoveryPhraseVerification.js";
 import { ThemePicker } from "../components/common/ThemePicker.js";
 
 type Step = "welcome" | "theme" | "profile" | "credentials" | "recovery" | "done";
@@ -244,16 +244,12 @@ export default function Setup() {
               Save it somewhere safe - a password manager is ideal. If you lose it and ever log in from a new browser,
               past messages become permanently unreadable.
             </p>
-            <RecoveryPhraseDisplay phrase={recoveryPhrase} />
-            <label className="flex items-start gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={acknowledged}
-                onChange={(e) => setAcknowledged(e.target.checked)}
-                className="mt-0.5 accent-[var(--color-accent-500)]"
-              />
-              I've saved my recovery key
-            </label>
+            <RecoveryPhraseVerification
+              phrase={recoveryPhrase}
+              filename="anonchat-admin-recovery-key.txt"
+              verified={acknowledged}
+              onVerifiedChange={setAcknowledged}
+            />
             {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
             <button
               type="button"

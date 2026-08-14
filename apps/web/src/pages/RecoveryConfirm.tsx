@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { RecoveryPhraseDisplay } from "../components/common/RecoveryPhraseDisplay.js";
+import { RecoveryPhraseVerification } from "../components/common/RecoveryPhraseVerification.js";
 
 export default function RecoveryConfirm({
   phrase,
@@ -10,7 +10,7 @@ export default function RecoveryConfirm({
   publicId: string;
   onAcknowledge: () => void;
 }) {
-  const [acknowledged, setAcknowledged] = useState(false);
+  const [verified, setVerified] = useState(false);
 
   return (
     <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-12">
@@ -24,20 +24,16 @@ export default function RecoveryConfirm({
           data. <strong>If you lose it and clear this browser, this conversation is gone for good.</strong>
         </p>
         <div className="mt-4">
-          <RecoveryPhraseDisplay phrase={phrase} />
-        </div>
-        <label className="mt-4 flex items-start gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={acknowledged}
-            onChange={(e) => setAcknowledged(e.target.checked)}
-            className="mt-0.5 accent-[var(--color-accent-500)]"
+          <RecoveryPhraseVerification
+            phrase={phrase}
+            filename={`anonchat-${publicId}-recovery-key.txt`}
+            verified={verified}
+            onVerifiedChange={setVerified}
           />
-          I've saved it
-        </label>
+        </div>
         <button
           type="button"
-          disabled={!acknowledged}
+          disabled={!verified}
           onClick={onAcknowledge}
           className="mt-4 w-full rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
         >
