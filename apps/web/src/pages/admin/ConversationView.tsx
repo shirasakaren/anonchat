@@ -27,6 +27,7 @@ import { ApiError } from "../../api/client.js";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
 import { useSite } from "../../context/SiteContext.js";
 import { useRealtimeSocket } from "../../hooks/useRealtimeSocket.js";
+import { useEncryptedDraft } from "../../hooks/useEncryptedDraft.js";
 import { Composer } from "../../components/chat/Composer.js";
 import { ConnectionBanner } from "../../components/chat/ConnectionBanner.js";
 import { DateSeparator } from "../../components/chat/DateSeparator.js";
@@ -81,6 +82,8 @@ export function ConversationView({ conversationId, onChanged }: Props) {
     if (!identity || !conversation) return null;
     return getConversationKey(identity, conversation.anonymousExchangePublicKey, conversation.id);
   }, [identity, conversation]);
+
+  const draft = useEncryptedDraft("ADMIN", conversationId, conversationKey);
 
   const decryptDto = useCallback(
     (dto: MessageDto): DisplayMessage => ({
@@ -298,6 +301,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
         return [...withoutOptimistic, decryptDto(dto)].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
       });
       pendingRef.current.delete(localId);
+      draft.clearIfMatches(text);
       onChanged();
     } catch (err) {
       setMessages((prev) =>
@@ -574,6 +578,9 @@ export function ConversationView({ conversationId, onChanged }: Props) {
         onSend={handleSend}
         onTypingChange={(isTyping) => wsSend({ type: isTyping ? "typing.start" : "typing.stop", conversationId })}
         cannedReplies={cannedReplies}
+        draftId={`admin:${conversationId}`}
+        draftText={draft.draftText}
+        onDraftChange={draft.updateDraft}
       />
 
       {deleteTarget && (

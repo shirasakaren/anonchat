@@ -17,6 +17,7 @@ import { useAnonymousSession } from "../context/AnonymousSessionContext.js";
 import { useSite } from "../context/SiteContext.js";
 import { useTheme } from "../context/ThemeContext.js";
 import { useRealtimeSocket } from "../hooks/useRealtimeSocket.js";
+import { useEncryptedDraft } from "../hooks/useEncryptedDraft.js";
 import { Composer } from "../components/chat/Composer.js";
 import { ConnectionBanner } from "../components/chat/ConnectionBanner.js";
 import { DateSeparator } from "../components/chat/DateSeparator.js";
@@ -78,6 +79,7 @@ export default function Chat() {
     [session],
   );
   const welcomeHtml = useMemo(() => renderMessageMarkdown(site.welcomeMessage), [site.welcomeMessage]);
+  const draft = useEncryptedDraft("USER", session.conversationId, conversationKey);
 
   const decryptDto = useCallback(
     (dto: MessageDto): DisplayMessage => ({
@@ -239,6 +241,7 @@ export default function Chat() {
         setShowNotificationPrompt(true);
       }
       pendingFilesRef.current.delete(localId);
+      draft.clearIfMatches(text);
     } catch (err) {
       setMessages((prev) =>
         prev.map((m) =>
@@ -462,6 +465,9 @@ export default function Chat() {
         onCancelEdit={() => setEditing(null)}
         onSend={handleSend}
         onTypingChange={handleTypingChange}
+        draftId={`user:${session.conversationId}`}
+        draftText={draft.draftText}
+        onDraftChange={draft.updateDraft}
       />
 
       {deleteTarget && (

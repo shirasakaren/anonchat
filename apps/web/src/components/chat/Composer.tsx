@@ -64,6 +64,9 @@ interface Props {
   onSend: (text: string, files: File[]) => void;
   onTypingChange?: (isTyping: boolean) => void;
   initialText?: string;
+  draftId?: string;
+  draftText?: string;
+  onDraftChange?: (text: string) => void;
   /** Admin-only: enables the "/template" autocomplete below. Anonymous
    *  users' composer simply never passes this, so the trigger never
    *  activates for them. */
@@ -82,9 +85,12 @@ export function Composer({
   onSend,
   onTypingChange,
   initialText,
+  draftId,
+  draftText,
+  onDraftChange,
   cannedReplies,
 }: Props) {
-  const [text, setText] = useState(initialText ?? "");
+  const [text, setText] = useState(initialText ?? draftText ?? "");
   const [files, setFiles] = useState<PendingFile[]>([]);
   const [showEmoji, setShowEmoji] = useState(false);
   const [shortcodeQuery, setShortcodeQuery] = useState<{ start: number; query: string } | null>(null);
@@ -108,11 +114,9 @@ export function Composer({
   const previewHtml = useMemo(() => (showPreview ? renderMessageMarkdown(text) : null), [showPreview, text]);
 
   useEffect(() => {
-    if (initialText !== undefined) {
-      setText(initialText);
-      textareaRef.current?.focus();
-    }
-  }, [initialText]);
+    setText(initialText ?? draftText ?? "");
+    if (initialText !== undefined) textareaRef.current?.focus();
+  }, [draftId, draftText, initialText]);
 
   // Close the emoji picker on an outside click - it has no built-in
   // dismiss-on-blur behavior of its own.
@@ -129,6 +133,7 @@ export function Composer({
 
   function updateText(value: string) {
     setText(value);
+    if (initialText === undefined) onDraftChange?.(value);
     onTypingChange?.(value.length > 0);
   }
 
