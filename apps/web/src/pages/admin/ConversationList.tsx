@@ -121,7 +121,12 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
         return rest;
       });
       setLiveToken((n) => n + 1);
-    } else if (event.type === "conversation.updated") {
+    } else if (event.type === "conversation.updated" || event.type === "conversation.read") {
+      // conversation.read fires when ConversationView marks messages read
+      // (e.g. the admin just opened this chat) - without refetching here,
+      // the row's unreadCount/badge only updates on the next unrelated
+      // list refresh, so it visibly persists until a manual reload even
+      // though the server already cleared it.
       setLiveToken((n) => n + 1);
     }
   }, []);
