@@ -23,11 +23,12 @@ import {
   hashSessionToken,
   setAnonSessionCookie,
 } from "../auth/session.js";
-import { requireAnon } from "../auth/plugin.js";
+import { requireAnon, requireAnonIdentity } from "../auth/plugin.js";
 import { getClientIp } from "../utils/ip.js";
 import { checkRateLimit } from "../utils/rateLimiter.js";
 import { Errors } from "../utils/errors.js";
 import { prisma } from "../db.js";
+import { hardDeleteConversation } from "../services/conversation.service.js";
 
 export function registerAnonymousRoutes(app: FastifyInstance): void {
   app.post("/anonymous/register", async (request, reply) => {
@@ -108,6 +109,14 @@ export function registerAnonymousRoutes(app: FastifyInstance): void {
       adminPublicKeys: adminPublicKeys ?? { signingPublicKey: "", exchangePublicKey: "" },
     };
     return response;
+  });
+
+  app.delete("/anonymous/me", { preHandler: requireAnonIdentity }, async (request, reply) => {
+    const conversationId = request.anonUser!.conversation?.id;
+    if (!conversationId) throw Errors.notFound("Conversation not found.");
+    await hardDeleteConversation(conversationId);
+    clearAnonSessionCookie(reply);
+    reply.status(204).send();
   });
 
   // Entirely optional (spec: "tell that it's fully optional"): stores an

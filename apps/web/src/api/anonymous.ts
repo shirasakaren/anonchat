@@ -42,6 +42,10 @@ export function logoutAnonymous(): Promise<void> {
   return api.post<void>("/anonymous/logout");
 }
 
+export function deleteAnonymousIdentity(): Promise<void> {
+  return api.delete<void>("/anonymous/me");
+}
+
 /** Opts this identity into (or, with "", out of) an email when the admin replies. */
 export function setNotificationEmail(email: string): Promise<void> {
   return api.post<void>("/anonymous/notification-email", { email });

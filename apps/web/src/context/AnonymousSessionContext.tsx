@@ -3,6 +3,7 @@ import type { Identity } from "@anonchat/crypto";
 import type { PublicKeysInput } from "@anonchat/shared";
 import {
   getAnonymousMe,
+  deleteAnonymousIdentity,
   logoutAnonymous,
   recoverAnonymousSession,
   registerAnonymousIdentity,
@@ -17,6 +18,7 @@ import {
   setActiveIdentityId,
   touchIdentity,
 } from "../crypto/identityStore.js";
+import { deleteEncryptedDraft } from "../crypto/encryptedDrafts.js";
 
 interface SessionState {
   identity: Identity;
@@ -34,6 +36,7 @@ interface AnonymousSessionContextValue {
   continueWithStoredIdentity: (publicId: string) => Promise<void>;
   importFromRecoveryPhrase: (phrase: string) => Promise<void>;
   logout: () => Promise<void>;
+  deleteIdentity: () => Promise<void>;
   /** Escape hatch for a broken identity (e.g. the server has no record of it
    *  anymore - deleted, or a dev/test database reset): discards it from this
    *  device and drops back to "needs-identity" so the visitor can start a
@@ -145,6 +148,17 @@ export function AnonymousSessionProvider({ children }: { children: ReactNode }) 
     setStatus("needs-identity");
   }, []);
 
+  const deleteIdentity = useCallback(async () => {
+    if (!session) return;
+    const { publicId, conversationId } = session;
+    await deleteAnonymousIdentity();
+    deleteEncryptedDraft("USER", conversationId);
+    await removeIdentity(publicId);
+    setSession(null);
+    setError(null);
+    setStatus("needs-identity");
+  }, [session]);
+
   const discardBrokenIdentity = useCallback(async () => {
     const activeId = getActiveIdentityId();
     if (activeId) await removeIdentity(activeId);
@@ -168,6 +182,7 @@ export function AnonymousSessionProvider({ children }: { children: ReactNode }) 
         continueWithStoredIdentity,
         importFromRecoveryPhrase,
         logout,
+        deleteIdentity,
         discardBrokenIdentity,
         setConversationStatus,
       }}

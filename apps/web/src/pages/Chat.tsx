@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { encryptBlob } from "@anonchat/crypto";
-import { StickyNote } from "lucide-react";
+import { StickyNote, Trash2 } from "lucide-react";
 import type { ConversationNoteDto, MessageDto, ServerWsEvent } from "@anonchat/shared";
 import {
   attachmentUrl,
@@ -23,6 +23,7 @@ import { ConnectionBanner } from "../components/chat/ConnectionBanner.js";
 import { DateSeparator } from "../components/chat/DateSeparator.js";
 import { withDateSeparators } from "../components/chat/dateSeparators.js";
 import { DeleteMessageModal } from "../components/chat/DeleteMessageModal.js";
+import { DeleteIdentityModal } from "../components/chat/DeleteIdentityModal.js";
 import { getLocallyDeletedMessageIds, hideMessageLocally } from "../components/chat/locallyDeletedMessages.js";
 import { MessageBubble } from "../components/chat/MessageBubble.js";
 import { NotificationEmailPrompt } from "../components/chat/NotificationEmailPrompt.js";
@@ -53,7 +54,7 @@ export default function Chat() {
   // Chat only ever mounts once PublicApp has confirmed both are resolved
   // (status === "ready" and site is loaded) - asserted here rather than
   // early-returned so every hook below stays unconditional.
-  const { session: activeSession, setConversationStatus, logout } = useAnonymousSession();
+  const { session: activeSession, setConversationStatus, logout, deleteIdentity } = useAnonymousSession();
   const { site: activeSite } = useSite();
   const { syncFromServer } = useTheme();
   const session = activeSession!;
@@ -64,6 +65,7 @@ export default function Chat() {
   const [replyTo, setReplyTo] = useState<DisplayMessage | null>(null);
   const [editing, setEditing] = useState<DisplayMessage | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DisplayMessage | null>(null);
+  const [deleteIdentityOpen, setDeleteIdentityOpen] = useState(false);
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => getLocallyDeletedMessageIds(session.conversationId));
   const [adminOnline, setAdminOnline] = useState<boolean | null>(null);
   const [adminTyping, setAdminTyping] = useState(false);
@@ -360,7 +362,7 @@ export default function Chat() {
 
   return (
     <main className="flex h-screen flex-col">
-      <header className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface-raised)] px-4 py-2.5">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface-raised)] px-4 py-2.5">
         <div className="flex items-center gap-2.5">
           {site.avatarUrl ? (
             <img src={site.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
@@ -374,7 +376,7 @@ export default function Chat() {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
           <button
             type="button"
             onClick={() => setNoteOpen(true)}
@@ -391,6 +393,15 @@ export default function Chat() {
           </span>
           <button type="button" onClick={() => logout()} className="text-xs text-[var(--text-muted)] underline">
             Switch identity
+          </button>
+          <button
+            type="button"
+            onClick={() => setDeleteIdentityOpen(true)}
+            title="Delete this identity and its data"
+            aria-label="Delete this identity and its data"
+            className="rounded-lg p-1.5 text-[var(--text-muted)] hover:bg-[var(--danger-bg)] hover:text-[var(--danger-fg)]"
+          >
+            <Trash2 size={17} aria-hidden />
           </button>
         </div>
       </header>
@@ -476,6 +487,9 @@ export default function Chat() {
           onDeleteForEveryone={() => void handleDeleteForEveryone(deleteTarget)}
           onCancel={() => setDeleteTarget(null)}
         />
+      )}
+      {deleteIdentityOpen && (
+        <DeleteIdentityModal onDelete={deleteIdentity} onCancel={() => setDeleteIdentityOpen(false)} />
       )}
       {noteOpen && (
         <Suspense fallback={null}>

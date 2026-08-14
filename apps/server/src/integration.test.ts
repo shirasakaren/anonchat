@@ -455,6 +455,23 @@ describe("anonchat integration", () => {
     expect(formerSessionRes.status).toBe(401);
   });
 
+  it("lets an authenticated visitor permanently erase their own identity", async () => {
+    const userJar = newJar();
+    await primeCsrf(app, userJar);
+    const user = makeIdentity();
+    const registerRes = await call(app, userJar, "POST", "/anonymous/register", {
+      signingPublicKey: bytesToBase64url(user.identity.signingPublicKey),
+      exchangePublicKey: bytesToBase64url(user.identity.exchangePublicKey),
+      proof: bytesToBase64url(user.proof),
+    });
+
+    const deleteRes = await call(app, userJar, "DELETE", "/anonymous/me");
+    expect(deleteRes.status).toBe(204);
+    expect(await prisma.anonymousUser.findUnique({ where: { publicId: user.identity.publicId } })).toBeNull();
+    expect(await prisma.conversation.findUnique({ where: { id: registerRes.body.conversationId } })).toBeNull();
+    expect((await call(app, userJar, "GET", "/conversation")).status).toBe(401);
+  });
+
   it("requires a matching CSRF header on state-changing requests", async () => {
     const jar = newJar();
     await primeCsrf(app, jar);

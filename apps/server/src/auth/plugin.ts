@@ -41,6 +41,17 @@ export async function requireAnon(request: FastifyRequest, _reply: FastifyReply)
   }
 }
 
+/**
+ * Authenticates ownership without requiring an active chat. Privacy/account
+ * controls such as permanent erasure must remain available to a blocked
+ * person even though messaging mutations do not.
+ */
+export async function requireAnonIdentity(request: FastifyRequest, _reply: FastifyReply): Promise<void> {
+  if (!request.anonUser || request.anonUser.status === "DELETED") {
+    throw Errors.unauthorized("Please create or restore an anonymous identity first.");
+  }
+}
+
 export async function requireAdmin(request: FastifyRequest, _reply: FastifyReply): Promise<void> {
   if (!request.adminAuth) throw Errors.unauthorized("Admin sign-in required.");
 }

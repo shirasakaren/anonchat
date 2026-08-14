@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { deriveIdentity, generateRecoverySecret } from "@anonchat/crypto";
-import { clearEncryptedDraftIfMatches, loadEncryptedDraft, saveEncryptedDraft } from "./encryptedDrafts.js";
+import {
+  clearEncryptedDraftIfMatches,
+  deleteEncryptedDraft,
+  loadEncryptedDraft,
+  saveEncryptedDraft,
+} from "./encryptedDrafts.js";
 
 class MemoryStorage {
   readonly values = new Map<string, string>();
@@ -47,5 +52,12 @@ describe("encrypted drafts", () => {
     const otherKey = deriveIdentity(generateRecoverySecret()).exchangeSecretKey;
     expect(loadEncryptedDraft("USER", "one", otherKey, storage)).toBe("");
     expect(storage.values.size).toBe(0);
+  });
+
+  it("removes a conversation draft during identity erasure", () => {
+    const storage = new MemoryStorage();
+    saveEncryptedDraft("USER", "one", key, "private", storage);
+    deleteEncryptedDraft("USER", "one", storage);
+    expect(loadEncryptedDraft("USER", "one", key, storage)).toBe("");
   });
 });

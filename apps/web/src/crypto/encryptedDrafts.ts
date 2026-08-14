@@ -98,3 +98,9 @@ export function clearEncryptedDraftIfMatches(
     target.removeItem(draftStorageKey(role, conversationId));
   }
 }
+
+export function deleteEncryptedDraft(role: DraftRole, conversationId: string, storage?: DraftStorage): void {
+  const target = storageOrNull(storage);
+  if (!target) return;
+  target.removeItem(draftStorageKey(role, conversationId));
+}
