@@ -21,6 +21,7 @@ async function toSettingsDto(): Promise<SiteSettingsDto> {
     onboardingComplete,
     displayName: settings.displayName,
     bio: settings.bio,
+    welcomeMessage: settings.welcomeMessage,
     avatarUrl: settings.avatarUrl,
     contactLinks: (settings.contactLinksJson as { label: string; url: string }[]) ?? [],
     pgpPublicKey: settings.pgpPublicKey,
@@ -48,6 +49,7 @@ export function registerAdminSettingsRoutes(app: FastifyInstance): void {
       data: {
         ...(body.displayName !== undefined ? { displayName: body.displayName } : {}),
         ...(body.bio !== undefined ? { bio: body.bio } : {}),
+        ...(body.welcomeMessage !== undefined ? { welcomeMessage: body.welcomeMessage } : {}),
         ...(body.contactLinks !== undefined ? { contactLinksJson: body.contactLinks } : {}),
         ...(body.pgpPublicKey !== undefined ? { pgpPublicKey: body.pgpPublicKey || null } : {}),
         ...(body.presenceEnabled !== undefined ? { presenceEnabled: body.presenceEnabled } : {}),

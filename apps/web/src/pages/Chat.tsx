@@ -25,6 +25,8 @@ import { getLocallyDeletedMessageIds, hideMessageLocally } from "../components/c
 import { MessageBubble } from "../components/chat/MessageBubble.js";
 import { NotificationEmailPrompt } from "../components/chat/NotificationEmailPrompt.js";
 import { PushBellButton } from "../components/chat/PushBellButton.js";
+import { ExpandableProse } from "../components/chat/ExpandableProse.js";
+import { renderMessageMarkdown } from "../components/chat/markdown.js";
 import {
   dismissNotificationEmailPrompt,
   isNotificationEmailPromptDismissed,
@@ -69,6 +71,7 @@ export default function Chat() {
     () => getConversationKey(session.identity, session.adminPublicKeys.exchangePublicKey, session.conversationId),
     [session],
   );
+  const welcomeHtml = useMemo(() => renderMessageMarkdown(site.welcomeMessage), [site.welcomeMessage]);
 
   const decryptDto = useCallback(
     (dto: MessageDto): DisplayMessage => ({
@@ -375,8 +378,25 @@ export default function Chat() {
         {loadingHistory ? (
           <FullScreenLoader label="Loading your conversation…" />
         ) : messages.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-center text-sm text-[var(--text-muted)]">
-            <p>Start the conversation. Send a message below.</p>
+          <div className="flex h-full items-center justify-center px-4">
+            <div className="w-full max-w-xl rounded-2xl border border-[var(--border)] bg-[var(--surface-raised)] p-5 shadow-sm">
+              <div className="mb-3 flex items-center gap-2.5">
+                {site.avatarUrl ? (
+                  <img src={site.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover" />
+                ) : (
+                  <DefaultAvatar name={site.displayName} className="h-9 w-9 text-sm" />
+                )}
+                <div>
+                  <p className="text-sm font-semibold">{site.displayName}</p>
+                  <p className="text-xs text-[var(--text-muted)]">Welcome message</p>
+                </div>
+              </div>
+              {welcomeHtml ? (
+                <ExpandableProse html={welcomeHtml} clamp={false} />
+              ) : (
+                <p className="text-sm text-[var(--text-muted)]">Send a message below to start the conversation.</p>
+              )}
+            </div>
           </div>
         ) : (
           <div className="space-y-3">

@@ -18,6 +18,7 @@ export function registerSiteRoutes(app: FastifyInstance): void {
       onboardingComplete,
       displayName: settings.displayName,
       bio: settings.bio,
+      welcomeMessage: settings.welcomeMessage,
       avatarUrl: settings.avatarUrl,
       contactLinks: (settings.contactLinksJson as { label: string; url: string }[]) ?? [],
       pgpPublicKey: settings.pgpPublicKey,

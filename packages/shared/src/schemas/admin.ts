@@ -39,6 +39,7 @@ export type TotpVerifyRequestInput = z.infer<typeof TotpVerifyRequestSchema>;
 export const SiteSettingsRequestSchema = z.object({
   displayName: z.string().min(1).max(80).optional(),
   bio: z.string().max(500).optional(),
+  welcomeMessage: z.string().max(4000).optional(),
   contactLinks: z
     .array(
       z.object({
@@ -145,6 +146,7 @@ export interface SiteSettingsDto {
   onboardingComplete: boolean;
   displayName: string;
   bio: string;
+  welcomeMessage: string;
   avatarUrl: string | null;
   contactLinks: { label: string; url: string }[];
   pgpPublicKey: string | null;

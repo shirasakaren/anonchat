@@ -4,6 +4,7 @@ export interface PublicSiteInfoDto {
   onboardingComplete: boolean;
   displayName: string;
   bio: string;
+  welcomeMessage: string;
   avatarUrl: string | null;
   contactLinks: { label: string; url: string }[];
   pgpPublicKey: string | null;

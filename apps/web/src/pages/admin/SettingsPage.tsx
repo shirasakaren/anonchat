@@ -34,6 +34,7 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<SiteSettingsDto | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
+  const [welcomeMessage, setWelcomeMessage] = useState("");
   const [contactLinks, setContactLinks] = useState<{ label: string; url: string }[]>([]);
   const [pgpPublicKey, setPgpPublicKey] = useState("");
   const [presenceEnabled, setPresenceEnabled] = useState(true);
@@ -66,6 +67,7 @@ export default function SettingsPage() {
       setSettings(s);
       setDisplayName(s.displayName);
       setBio(s.bio);
+      setWelcomeMessage(s.welcomeMessage);
       setContactLinks(s.contactLinks);
       setPgpPublicKey(s.pgpPublicKey ?? "");
       setPresenceEnabled(s.presenceEnabled);
@@ -118,7 +120,14 @@ export default function SettingsPage() {
     setSaving(true);
     setSaved(false);
     try {
-      const updated = await updateSettings({ displayName, bio, contactLinks, pgpPublicKey, presenceEnabled });
+      const updated = await updateSettings({
+        displayName,
+        bio,
+        welcomeMessage,
+        contactLinks,
+        pgpPublicKey,
+        presenceEnabled,
+      });
       setSettings(updated);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -336,6 +345,20 @@ export default function SettingsPage() {
               onChange={(e) => setBio(e.target.value)}
               className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
             />
+          </label>
+          <label className="mb-3 block text-sm font-medium">
+            First-contact welcome message
+            <textarea
+              rows={4}
+              maxLength={4000}
+              value={welcomeMessage}
+              onChange={(e) => setWelcomeMessage(e.target.value)}
+              placeholder="Welcome! How can I help?"
+              className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+            />
+            <span className="mt-1 block text-xs font-normal text-[var(--text-muted)]">
+              Shown before a visitor sends their first message. Markdown is supported.
+            </span>
           </label>
           <label className="mb-3 block text-sm font-medium">
             PGP public key

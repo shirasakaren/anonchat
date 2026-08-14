@@ -210,6 +210,11 @@ model SiteSettings {
   id               Int     @id @default(1)
   displayName      String  @default("Site Owner")
   bio              String  @default("")
+  /// Public markdown shown before a visitor sends the first encrypted
+  /// message. It is intentionally not stored as a Message: an automatic
+  /// server-authored message could not be signed/encrypted as the admin
+  /// without putting the admin's private key on the server.
+  welcomeMessage   String  @default("Welcome! Send a message below to start an anonymous, end-to-end encrypted conversation.")
   avatarUrl        String?
   contactLinksJson Json    @default("[]")
   pgpPublicKey     String?
