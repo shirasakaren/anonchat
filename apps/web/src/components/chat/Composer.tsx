@@ -17,11 +17,32 @@ import {
   searchShortcodes,
   type ShortcodeMatch,
 } from "./emojiShortcuts.js";
+import { getCaretCoordinates } from "./caretCoordinates.js";
+import { EmojiShortcutOverlay } from "./EmojiShortcutOverlay.js";
 import { justCompletedFreshCodeFence } from "./codeFenceDetection.js";
 import { CodeBlockModal } from "./CodeBlockModal.js";
 import { ExpandableProse } from "./ExpandableProse.js";
 import { renderMessageMarkdown } from "./markdown.js";
 import { useTheme } from "../../context/ThemeContext.js";
+
+/** How many shortcode matches to offer - the overlay scrolls horizontally
+ *  (see EmojiShortcutOverlay), so there's no reason to cap this as
+ *  tightly as an in-flow dropdown would need to. */
+const SHORTCODE_SUGGESTION_LIMIT = 30;
+/** Gap between the text cursor's line and the overlay floating above it. */
+const OVERLAY_GAP_PX = 8;
+/** Matches EmojiShortcutOverlay's own max-w-[min(90vw,20rem)] - used only
+ *  to keep the overlay's left edge from being positioned so far right it'd
+ *  run off the viewport, not to size the overlay itself. */
+const OVERLAY_MAX_WIDTH_PX = 320;
+
+function computeOverlayPosition(el: HTMLTextAreaElement, cursor: number): { top: number; left: number } {
+  const rect = el.getBoundingClientRect();
+  const caret = getCaretCoordinates(el, cursor);
+  const rawLeft = rect.left + caret.left;
+  const left = Math.min(Math.max(rawLeft, 8), window.innerWidth - OVERLAY_MAX_WIDTH_PX - 8);
+  return { top: rect.top + caret.top - OVERLAY_GAP_PX, left };
+}
 
 export interface PendingFile {
   file: File;
@@ -60,13 +81,14 @@ export function Composer({
   const [showEmoji, setShowEmoji] = useState(false);
   const [shortcodeQuery, setShortcodeQuery] = useState<{ start: number; query: string } | null>(null);
   const [selectedSuggestion, setSelectedSuggestion] = useState(0);
+  const [overlayPos, setOverlayPos] = useState<{ top: number; left: number } | null>(null);
   const [mode, setMode] = useState<"write" | "preview">("write");
   const [codeModal, setCodeModal] = useState<{ fenceStart: number; fenceEnd: number } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const pickerWrapperRef = useRef<HTMLDivElement>(null);
   const { meta } = useTheme();
 
-  const suggestions = shortcodeQuery ? searchShortcodes(shortcodeQuery.query) : [];
+  const suggestions = shortcodeQuery ? searchShortcodes(shortcodeQuery.query, SHORTCODE_SUGGESTION_LIMIT) : [];
 
   useEffect(() => {
     if (initialText !== undefined) {
@@ -111,12 +133,15 @@ export function Composer({
   /** Re-derives the in-progress ":partial" shortcode (if any) from the
    *  textarea's current value and cursor position - called after every text
    *  change and every cursor move, since moving the cursor away from a
-   *  half-typed shortcode should close the suggestion list too. */
+   *  half-typed shortcode should close the suggestion list too. Also
+   *  recomputes the overlay's anchor position, since the cursor (and so
+   *  where the overlay needs to float above) moves along with it. */
   function syncShortcodeQuery(el: HTMLTextAreaElement) {
     const cursor = el.selectionStart ?? el.value.length;
     const active = findActiveShortcodeQuery(el.value.slice(0, cursor));
     setShortcodeQuery(active);
     setSelectedSuggestion(0);
+    setOverlayPos(active ? computeOverlayPosition(el, cursor) : null);
   }
 
   function handleTextChange(e: ChangeEvent<HTMLTextAreaElement>) {
@@ -214,13 +239,20 @@ export function Composer({
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    // Left/Right (not Up/Down) - the overlay is a single horizontally-
+    // scrolling strip (see EmojiShortcutOverlay), matching WhatsApp's own
+    // shortcut picker. This fully takes over the arrow keys while a
+    // shortcode is in progress, the same way Enter/Tab already do below -
+    // moving the text cursor away from a half-typed ":code" implicitly
+    // abandons it anyway (syncShortcodeQuery closes the overlay on the
+    // resulting selection-change event).
     if (shortcodeQuery && suggestions.length > 0) {
-      if (e.key === "ArrowDown") {
+      if (e.key === "ArrowRight") {
         e.preventDefault();
         setSelectedSuggestion((i) => (i + 1) % suggestions.length);
         return;
       }
-      if (e.key === "ArrowUp") {
+      if (e.key === "ArrowLeft") {
         e.preventDefault();
         setSelectedSuggestion((i) => (i - 1 + suggestions.length) % suggestions.length);
         return;
@@ -317,33 +349,14 @@ export function Composer({
         </div>
       )}
 
-      {shortcodeQuery && suggestions.length > 0 && (
-        <div
-          role="listbox"
-          aria-label="Emoji suggestions"
-          className="mb-2 flex flex-wrap gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] p-2"
-        >
-          {suggestions.map((match, i) => (
-            <button
-              key={match.code}
-              type="button"
-              role="option"
-              aria-selected={i === selectedSuggestion}
-              onMouseDown={(e) => {
-                // mousedown fires before the textarea blur, so it beats the
-                // suggestion-dismiss-on-cursor-move path and can't race it.
-                e.preventDefault();
-                applySuggestion(match);
-              }}
-              className={`flex items-center gap-1 rounded-md border px-2 py-1 text-sm hover:bg-[var(--surface-muted)] ${
-                i === selectedSuggestion ? "border-[var(--border-strong)]" : "border-transparent"
-              }`}
-            >
-              <span>{match.emoji}</span>
-              <span className="text-xs text-[var(--text-muted)]">:{match.code}:</span>
-            </button>
-          ))}
-        </div>
+      {shortcodeQuery && suggestions.length > 0 && overlayPos && (
+        <EmojiShortcutOverlay
+          matches={suggestions}
+          selectedIndex={selectedSuggestion}
+          top={overlayPos.top}
+          left={overlayPos.left}
+          onSelect={applySuggestion}
+        />
       )}
 
       <div className="mb-1.5 flex gap-1 text-xs font-medium">
