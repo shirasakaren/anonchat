@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ENCRYPTED_BLOB_OVERHEAD_BYTES,
   base64urlToBytes,
   bytesToBase64url,
   decryptBlob,
@@ -152,6 +153,7 @@ describe("blob encryption", () => {
     const key = deriveIdentity(generateRecoverySecret()).exchangeSecretKey;
     const plaintext = new Uint8Array(4096).map((_, i) => i % 256);
     const blob = encryptBlob(key, plaintext);
+    expect(blob.byteLength).toBe(plaintext.byteLength + ENCRYPTED_BLOB_OVERHEAD_BYTES);
     expect(decryptBlob(key, blob)).toEqual(plaintext);
   });
 

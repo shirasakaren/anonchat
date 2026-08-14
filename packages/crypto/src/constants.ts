@@ -6,6 +6,8 @@ export const RECOVERY_SECRET_BYTES = 32;
 export const PUBLIC_ID_BYTES = 6;
 export const SYMMETRIC_KEY_BYTES = 32;
 export const XCHACHA_NONCE_BYTES = 24;
+/** Nonce prefix (24 bytes) plus Poly1305 authentication tag (16 bytes). */
+export const ENCRYPTED_BLOB_OVERHEAD_BYTES = XCHACHA_NONCE_BYTES + 16;
 export const CHALLENGE_BYTES = 32;
 
 export const IDENTITY_HKDF_SALT = "anonchat-identity-v1";
