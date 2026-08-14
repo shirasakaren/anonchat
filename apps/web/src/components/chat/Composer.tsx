@@ -124,24 +124,21 @@ export function Composer({
     filesRef.current = files;
   }, [files]);
 
-  const syncQueries = useCallback(
-    (activeEditor: Editor) => {
-      const { $from, from } = activeEditor.state.selection;
-      const textBeforeCaret = $from.parent.textBetween(0, $from.parentOffset, undefined, "\ufffc");
-      const activeShortcode = findActiveShortcodeQuery(textBeforeCaret);
-      const documentBeforeCaret = activeEditor.state.doc.textBetween(0, from, "\n", "\ufffc");
-      const activeSlash = cannedRepliesRef.current?.length ? findActiveSlashQuery(documentBeforeCaret) : null;
+  const syncQueries = useCallback((activeEditor: Editor) => {
+    const { $from, from } = activeEditor.state.selection;
+    const textBeforeCaret = $from.parent.textBetween(0, $from.parentOffset, undefined, "\ufffc");
+    const activeShortcode = findActiveShortcodeQuery(textBeforeCaret);
+    const documentBeforeCaret = activeEditor.state.doc.textBetween(0, from, "\n", "\ufffc");
+    const activeSlash = cannedRepliesRef.current?.length ? findActiveSlashQuery(documentBeforeCaret) : null;
 
-      setShortcodeQuery(
-        activeShortcode
-          ? { from: from - (textBeforeCaret.length - activeShortcode.start), query: activeShortcode.query }
-          : null,
-      );
-      setSlashQuery(activeSlash);
-      setOverlayPos(activeShortcode || activeSlash ? editorOverlayPosition(activeEditor) : null);
-    },
-    [],
-  );
+    setShortcodeQuery(
+      activeShortcode
+        ? { from: from - (textBeforeCaret.length - activeShortcode.start), query: activeShortcode.query }
+        : null,
+    );
+    setSlashQuery(activeSlash);
+    setOverlayPos(activeShortcode || activeSlash ? editorOverlayPosition(activeEditor) : null);
+  }, []);
 
   const editor = useEditor(
     {
@@ -342,6 +339,11 @@ export function Composer({
         return;
       }
     }
+    if (e.key === "Enter" && editor?.isActive("heading")) {
+      e.preventDefault();
+      editor.chain().focus().enter().setParagraph().run();
+      return;
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -455,7 +457,13 @@ export function Composer({
 
       <div className="flex items-end gap-2">
         <div className="flex min-w-0 flex-1 items-end rounded-xl border border-[var(--border-strong)] bg-transparent px-1.5 focus-within:border-[var(--color-accent-500)]">
-          <input id={`attachment-input-${draftId ?? "message"}`} type="file" multiple className="hidden" onChange={handleFilePick} />
+          <input
+            id={`attachment-input-${draftId ?? "message"}`}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFilePick}
+          />
           <label
             htmlFor={`attachment-input-${draftId ?? "message"}`}
             className="mb-1 cursor-pointer rounded-lg p-2 hover:bg-[var(--surface-muted)]"
