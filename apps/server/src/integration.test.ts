@@ -139,6 +139,17 @@ describe("anonchat integration", () => {
     expect(adminConversationRes.body.anonymousDisplayName).toBe("Quiet Fox");
     expect(adminConversationRes.body.adminAlias).toBeNull();
 
+    const aliasRes = await call(app, adminJar, "PATCH", `/admin/conversations/${conversationId}/alias`, {
+      alias: "Admin-only nickname",
+    });
+    expect(aliasRes.status).toBe(200);
+    expect(aliasRes.body.adminAlias).toBe("Admin-only nickname");
+
+    const anonymousMeRes = await call(app, userJar, "GET", "/anonymous/me");
+    expect(anonymousMeRes.status).toBe(200);
+    expect(anonymousMeRes.body.displayName).toBe("Quiet Fox");
+    expect(anonymousMeRes.body.adminAlias).toBeUndefined();
+
     const userKey = deriveConversationKey(
       user.identity.exchangeSecretKey,
       base64urlToBytes(adminPublicKeys.exchangePublicKey),
