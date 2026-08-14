@@ -99,6 +99,12 @@ export async function uploadAvatar(file: File | Blob): Promise<SiteSettingsDto> 
   return apiFetch<SiteSettingsDto>("/admin/avatar", { method: "POST", body: form });
 }
 
+/** Imports only the profile picture from Gravatar for the given email -
+ *  never the display name or bio Gravatar also exposes. */
+export function importGravatarAvatar(email: string): Promise<SiteSettingsDto> {
+  return api.post<SiteSettingsDto>("/admin/avatar/gravatar", { email });
+}
+
 export function listConversations(query: {
   status?: string;
   q?: string;

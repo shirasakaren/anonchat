@@ -24,6 +24,7 @@ import { DeleteMessageModal } from "../components/chat/DeleteMessageModal.js";
 import { getLocallyDeletedMessageIds, hideMessageLocally } from "../components/chat/locallyDeletedMessages.js";
 import { MessageBubble } from "../components/chat/MessageBubble.js";
 import { TypingIndicator } from "../components/chat/TypingIndicator.js";
+import { DefaultAvatar } from "../components/common/DefaultAvatar.js";
 import { FullScreenLoader } from "../components/common/Loader.js";
 import {
   decryptMessageText,
@@ -50,9 +51,7 @@ export default function Chat() {
   const [replyTo, setReplyTo] = useState<DisplayMessage | null>(null);
   const [editing, setEditing] = useState<DisplayMessage | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DisplayMessage | null>(null);
-  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() =>
-    getLocallyDeletedMessageIds(session.conversationId),
-  );
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => getLocallyDeletedMessageIds(session.conversationId));
   const [adminOnline, setAdminOnline] = useState<boolean | null>(null);
   const [adminTyping, setAdminTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -304,10 +303,7 @@ export default function Chat() {
   // rebuilt wholesale on every reconnect/refetch, so a locally-hidden
   // message would just silently reappear next reload if it were removed
   // from there instead.
-  const visibleMessages = useMemo(
-    () => messages.filter((m) => !hiddenIds.has(m.id)),
-    [messages, hiddenIds],
-  );
+  const visibleMessages = useMemo(() => messages.filter((m) => !hiddenIds.has(m.id)), [messages, hiddenIds]);
   const threadItems = useMemo(() => withDateSeparators(visibleMessages), [visibleMessages]);
 
   // Only the single most-recently-read own message should show "Read" -
@@ -332,7 +328,11 @@ export default function Chat() {
     <main className="flex h-screen flex-col">
       <header className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface-raised)] px-4 py-2.5">
         <div className="flex items-center gap-2.5">
-          {site.avatarUrl && <img src={site.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />}
+          {site.avatarUrl ? (
+            <img src={site.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
+          ) : (
+            <DefaultAvatar name={site.displayName} className="h-8 w-8 text-sm" />
+          )}
           <div>
             <h1 className="text-sm font-semibold leading-tight">{site.displayName}</h1>
             {site.presenceEnabled && adminOnline !== null && (

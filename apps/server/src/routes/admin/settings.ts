@@ -1,15 +1,13 @@
 import type { FastifyInstance } from "fastify";
-import { SiteSettingsRequestSchema, type SiteSettingsDto } from "@anonchat/shared";
+import { GravatarImportRequestSchema, SiteSettingsRequestSchema, type SiteSettingsDto } from "@anonchat/shared";
 import { requireAdmin } from "../../auth/plugin.js";
 import { prisma } from "../../db.js";
 import { publishToAllAnonymousUsers, publishToAdmins } from "../../realtime/hub.js";
 import { adminExists, getAdminPublicKeys } from "../../services/admin.service.js";
 import { recordAudit } from "../../services/auditLog.service.js";
+import { ALLOWED_AVATAR_MIME_TYPES, MAX_AVATAR_BYTES, fetchGravatarAvatarDataUrl } from "../../services/gravatar.js";
 import { getSiteSettings } from "../../services/siteSettings.service.js";
 import { Errors } from "../../utils/errors.js";
-
-const ALLOWED_AVATAR_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
-const MAX_AVATAR_BYTES = 2_000_000;
 
 async function toSettingsDto(): Promise<SiteSettingsDto> {
   const [settings, onboardingComplete, adminPublicKeys] = await Promise.all([
@@ -73,6 +71,23 @@ export function registerAdminSettingsRoutes(app: FastifyInstance): void {
     const settings = await getSiteSettings();
     await prisma.siteSettings.update({ where: { id: settings.id }, data: { avatarUrl: dataUrl } });
     await recordAudit(admin.id, "settings.avatar_updated");
+    reply.send(await toSettingsDto());
+  });
+
+  // Imports ONLY the profile picture from Gravatar - never the name/bio
+  // Gravatar also exposes. Fetched server-side (see gravatar.ts) so the
+  // admin's own email is never sent client-side to a third party, and so
+  // visitors never hot-link gravatar.com through the site's avatar <img>.
+  app.post("/admin/avatar/gravatar", { preHandler: requireAdmin }, async (request, reply) => {
+    const { admin } = request.adminAuth!;
+    const { email } = GravatarImportRequestSchema.parse(request.body);
+    const dataUrl = await fetchGravatarAvatarDataUrl(email);
+    if (!dataUrl) {
+      throw Errors.notFound("No Gravatar image found for that email.");
+    }
+    const settings = await getSiteSettings();
+    await prisma.siteSettings.update({ where: { id: settings.id }, data: { avatarUrl: dataUrl } });
+    await recordAudit(admin.id, "settings.avatar_imported_gravatar");
     reply.send(await toSettingsDto());
   });
 }

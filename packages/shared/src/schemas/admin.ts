@@ -54,6 +54,11 @@ export const SiteSettingsRequestSchema = z.object({
 });
 export type SiteSettingsRequestInput = z.infer<typeof SiteSettingsRequestSchema>;
 
+export const GravatarImportRequestSchema = z.object({
+  email: z.string().email().max(320),
+});
+export type GravatarImportRequestInput = z.infer<typeof GravatarImportRequestSchema>;
+
 export const CannedReplyRequestSchema = z.object({
   title: z.string().min(1).max(80),
   body: z.string().min(1).max(4000),

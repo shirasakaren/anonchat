@@ -4,6 +4,7 @@ import { useSite } from "../context/SiteContext.js";
 import { useAnonymousSession } from "../context/AnonymousSessionContext.js";
 import { listIdentities, type IdentitySummary } from "../crypto/identityStore.js";
 import { ApiError } from "../api/client.js";
+import { DefaultAvatar } from "../components/common/DefaultAvatar.js";
 
 type View = "landing" | "import";
 
@@ -60,9 +61,12 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
   return (
     <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-12">
       <div className="mb-8 text-center">
-        {site?.avatarUrl && (
-          <img src={site.avatarUrl} alt="" className="mx-auto mb-4 h-16 w-16 rounded-full object-cover" />
-        )}
+        {site &&
+          (site.avatarUrl ? (
+            <img src={site.avatarUrl} alt="" className="mx-auto mb-4 h-16 w-16 rounded-full object-cover" />
+          ) : (
+            <DefaultAvatar name={ownerName} className="mx-auto mb-4 h-16 w-16 text-2xl" />
+          ))}
         <h1 className="text-2xl font-semibold">Message {ownerName} anonymously</h1>
         <p className="mt-2 text-sm text-[var(--text-muted)]">No email. No account. No name required. {site?.bio}</p>
         <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-[var(--text-muted)]">

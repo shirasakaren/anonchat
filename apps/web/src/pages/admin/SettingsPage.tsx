@@ -6,16 +6,19 @@ import {
   getSettings,
   updateSettings,
   uploadAvatar,
+  importGravatarAvatar,
   beginTotpSetup,
   verifyTotpSetup,
   disableTotp,
 } from "../../api/admin.js";
+import { ApiError } from "../../api/client.js";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
 import { useAdminNotifications } from "../../hooks/useAdminNotifications.js";
 import { useTheme } from "../../context/ThemeContext.js";
 import { FullScreenLoader } from "../../components/common/Loader.js";
 import { ThemePicker } from "../../components/common/ThemePicker.js";
 import { AvatarCropper } from "../../components/common/AvatarCropper.js";
+import { DefaultAvatar } from "../../components/common/DefaultAvatar.js";
 
 export default function SettingsPage() {
   const { admin, refreshAdmin } = useAdminSession();
@@ -39,6 +42,10 @@ export default function SettingsPage() {
   const [totpError, setTotpError] = useState<string | null>(null);
   const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [gravatarOpen, setGravatarOpen] = useState(false);
+  const [gravatarEmail, setGravatarEmail] = useState("");
+  const [gravatarBusy, setGravatarBusy] = useState(false);
+  const [gravatarError, setGravatarError] = useState<string | null>(null);
 
   useEffect(() => {
     getSettings().then((s) => {
@@ -119,6 +126,22 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleImportGravatar(e: React.FormEvent) {
+    e.preventDefault();
+    setGravatarBusy(true);
+    setGravatarError(null);
+    try {
+      const updated = await importGravatarAvatar(gravatarEmail.trim());
+      setSettings(updated);
+      setGravatarOpen(false);
+      setGravatarEmail("");
+    } catch (err) {
+      setGravatarError(err instanceof ApiError ? err.message : "Could not import that Gravatar.");
+    } finally {
+      setGravatarBusy(false);
+    }
+  }
+
   async function handleEnableTotp() {
     const setup = await beginTotpSetup();
     setTotpSetup(setup);
@@ -150,25 +173,68 @@ export default function SettingsPage() {
         <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
           <h2 className="mb-3 text-sm font-semibold">Profile</h2>
           <div className="mb-3 flex items-center gap-3">
-            {settings.avatarUrl && (
+            {settings.avatarUrl ? (
               <img src={settings.avatarUrl} alt="" className="h-14 w-14 rounded-full object-cover" />
+            ) : (
+              <DefaultAvatar name={displayName || "Site Owner"} className="h-14 w-14 text-lg" />
             )}
-            <label
-              className={clsx(
-                "text-sm text-[var(--link-fg)]",
-                avatarUploading ? "pointer-events-none opacity-50" : "cursor-pointer",
-              )}
-            >
-              {avatarUploading ? "Uploading…" : "Change avatar"}
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                className="hidden"
-                disabled={avatarUploading}
-                onChange={handleAvatarChange}
-              />
-            </label>
+            <div className="flex flex-col items-start gap-1">
+              <label
+                className={clsx(
+                  "text-sm text-[var(--link-fg)]",
+                  avatarUploading ? "pointer-events-none opacity-50" : "cursor-pointer",
+                )}
+              >
+                {avatarUploading ? "Uploading…" : "Change avatar"}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="hidden"
+                  disabled={avatarUploading}
+                  onChange={handleAvatarChange}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => setGravatarOpen((v) => !v)}
+                className="text-sm text-[var(--link-fg)] hover:underline"
+              >
+                {gravatarOpen ? "Cancel Gravatar import" : "Import from Gravatar"}
+              </button>
+            </div>
           </div>
+          {gravatarOpen && (
+            <form
+              onSubmit={handleImportGravatar}
+              className="mb-3 flex items-start gap-2 rounded-lg border border-[var(--border)] p-3"
+            >
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-[var(--text-muted)]">
+                  Gravatar email
+                  <input
+                    type="email"
+                    required
+                    autoFocus
+                    value={gravatarEmail}
+                    onChange={(e) => setGravatarEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+                  />
+                </label>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  Only the profile picture is imported - never your Gravatar name or bio.
+                </p>
+                {gravatarError && <p className="mt-1 text-xs text-[var(--danger-fg)]">{gravatarError}</p>}
+              </div>
+              <button
+                type="submit"
+                disabled={gravatarBusy}
+                className="mt-5 rounded-lg bg-[var(--btn-bg)] px-3 py-2 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
+              >
+                {gravatarBusy ? "Importing…" : "Import"}
+              </button>
+            </form>
+          )}
           {pendingAvatarFile && (
             <AvatarCropper
               file={pendingAvatarFile}
