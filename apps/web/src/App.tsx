@@ -1,11 +1,12 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Navigate, Route, BrowserRouter, Routes } from "react-router-dom";
 import { SiteProvider, useSite } from "./context/SiteContext.js";
 import { useTheme } from "./context/ThemeContext.js";
 import { FullScreenError, FullScreenLoader } from "./components/common/Loader.js";
-import Setup from "./pages/Setup.js";
-import PublicApp from "./pages/PublicApp.js";
-import AdminApp from "./pages/admin/AdminApp.js";
+
+const Setup = lazy(() => import("./pages/Setup.js"));
+const PublicApp = lazy(() => import("./pages/PublicApp.js"));
+const AdminApp = lazy(() => import("./pages/admin/AdminApp.js"));
 
 /**
  * /admin is intentionally NOT gated on site.onboardingComplete - AdminApp
@@ -50,11 +51,13 @@ function RootRouter() {
   }
 
   return (
-    <Routes>
-      <Route path="/setup" element={<Setup />} />
-      <Route path="/admin/*" element={<AdminApp />} />
-      <Route path="/*" element={site.onboardingComplete ? <PublicApp /> : <Navigate to="/setup" replace />} />
-    </Routes>
+    <Suspense fallback={<FullScreenLoader label="Loading Anonchat…" />}>
+      <Routes>
+        <Route path="/setup" element={<Setup />} />
+        <Route path="/admin/*" element={<AdminApp />} />
+        <Route path="/*" element={site.onboardingComplete ? <PublicApp /> : <Navigate to="/setup" replace />} />
+      </Routes>
+    </Suspense>
   );
 }
 

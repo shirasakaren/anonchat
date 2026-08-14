@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { getAdminMe } from "../api/admin.js";
 import { AnonymousSessionProvider, useAnonymousSession } from "../context/AnonymousSessionContext.js";
 import { FullScreenError, FullScreenLoader } from "../components/common/Loader.js";
 import PublicHome from "./PublicHome.js";
 import RecoveryConfirm from "./RecoveryConfirm.js";
-import Chat from "./Chat.js";
+
+const Chat = lazy(() => import("./Chat.js"));
 
 function PublicAppInner() {
   const { status, error, discardBrokenIdentity } = useAnonymousSession();
@@ -68,7 +69,11 @@ function PublicAppInner() {
       />
     );
   }
-  return <Chat />;
+  return (
+    <Suspense fallback={<FullScreenLoader label="Opening your conversation…" />}>
+      <Chat />
+    </Suspense>
+  );
 }
 
 export default function PublicApp() {
