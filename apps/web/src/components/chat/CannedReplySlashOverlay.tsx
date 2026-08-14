@@ -54,7 +54,9 @@ export function CannedReplySlashOverlay({ matches, selectedIndex, top, left, onS
             }`}
           >
             <p className="flex min-w-0 items-center gap-1.5 truncate text-sm font-medium">
-              <span aria-hidden className="text-[var(--text-muted)]">/</span>
+              <span aria-hidden className="text-[var(--text-muted)]">
+                /
+              </span>
               <span className="truncate">{reply.title}</span>
             </p>
             <p className="truncate text-xs text-[var(--text-muted)]">{reply.body}</p>

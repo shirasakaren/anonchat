@@ -172,7 +172,11 @@ export function NotificationPreferencesButton({ vapidPublicKey, emailAvailable }
             </form>
           )}
 
-          {error && <p className="mt-2 text-xs text-[var(--danger-fg)]" role="alert">{error}</p>}
+          {error && (
+            <p className="mt-2 text-xs text-[var(--danger-fg)]" role="alert">
+              {error}
+            </p>
+          )}
           <p className="mt-3 text-[11px] leading-relaxed text-[var(--text-muted)]">
             Message content stays end-to-end encrypted and is never included in notifications.
           </p>

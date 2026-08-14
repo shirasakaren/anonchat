@@ -98,21 +98,27 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
     [refreshAdmin],
   );
 
-  const unlockKey = useCallback(async (password: string) => {
-    if (!admin) throw new Error("The admin session is not ready.");
-    const unlocked = await unlockAdminIdentity(password, admin.publicKeys);
-    setIdentity(unlocked);
-    setNeedsKeyUnlock(false);
-    setKeyIssue(null);
-  }, [admin]);
+  const unlockKey = useCallback(
+    async (password: string) => {
+      if (!admin) throw new Error("The admin session is not ready.");
+      const unlocked = await unlockAdminIdentity(password, admin.publicKeys);
+      setIdentity(unlocked);
+      setNeedsKeyUnlock(false);
+      setKeyIssue(null);
+    },
+    [admin],
+  );
 
-  const importKey = useCallback(async (phrase: string, password: string) => {
-    if (!admin) throw new Error("The admin session is not ready.");
-    const unlocked = await importAdminIdentityFromRecoveryPhrase(phrase, password, admin.publicKeys);
-    setIdentity(unlocked);
-    setNeedsKeyUnlock(false);
-    setKeyIssue(null);
-  }, [admin]);
+  const importKey = useCallback(
+    async (phrase: string, password: string) => {
+      if (!admin) throw new Error("The admin session is not ready.");
+      const unlocked = await importAdminIdentityFromRecoveryPhrase(phrase, password, admin.publicKeys);
+      setIdentity(unlocked);
+      setNeedsKeyUnlock(false);
+      setKeyIssue(null);
+    },
+    [admin],
+  );
 
   // Drop straight to the sign-in screen the moment any /admin/* request
   // comes back 401 - e.g. another device revoked this session from the
