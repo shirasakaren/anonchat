@@ -4,7 +4,7 @@ import { loadEnv } from "../env.js";
 import { isPushConfigured } from "../push/index.js";
 import { isEmailConfigured } from "../email/index.js";
 import { adminExists, getAdminPublicKeys } from "../services/admin.service.js";
-import { getSiteSettings } from "../services/siteSettings.service.js";
+import { getSiteSettings, toMessagingLimits } from "../services/siteSettings.service.js";
 
 export function registerSiteRoutes(app: FastifyInstance): void {
   app.get("/site", async () => {
@@ -31,20 +31,15 @@ export function registerSiteRoutes(app: FastifyInstance): void {
       adminPublicKeys,
       presenceEnabled: settings.presenceEnabled,
       theme: settings.theme,
-      limits: {
-        maxMessageLength: env.MAX_MESSAGE_LENGTH,
-        maxAttachmentSizeMb: env.MAX_ATTACHMENT_SIZE_MB,
-        maxAttachmentsPerMessage: env.MAX_ATTACHMENTS_PER_MESSAGE,
-        messageEditWindowMinutes: env.MESSAGE_EDIT_WINDOW_MINUTES,
-      },
+      limits: toMessagingLimits(settings),
       turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null,
       vapidPublicKey: isPushConfigured() ? env.VAPID_PUBLIC_KEY! : null,
       emailNotificationsAvailable: isEmailConfigured(),
       visitorInsights: {
         enabled: settings.visitorInsightsEnabled,
         retentionDays: settings.visitorInsightsRetentionDays,
-        collectsIpAddress: env.STORE_IP_ADDRESSES,
-        coarseGeolocation: env.VISITOR_GEOLOCATION_PROVIDER === "ipwhois",
+        collectsIpAddress: settings.storeIpAddresses,
+        coarseGeolocation: settings.visitorGeolocationEnabled,
       },
     };
     return response;

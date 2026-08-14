@@ -7,14 +7,13 @@ import {
 } from "@anonchat/shared";
 import { requireAdmin } from "../../auth/plugin.js";
 import { prisma } from "../../db.js";
-import { loadEnv } from "../../env.js";
 import { publishToAllAnonymousUsers, publishToAdmins } from "../../realtime/hub.js";
 import { adminExists, getAdminPublicKeys } from "../../services/admin.service.js";
 import { recordAudit } from "../../services/auditLog.service.js";
 import { isEmailConfigured } from "../../email/index.js";
 import { isPushConfigured } from "../../push/index.js";
 import { ALLOWED_AVATAR_MIME_TYPES, MAX_AVATAR_BYTES, fetchGravatarAvatarDataUrl } from "../../services/gravatar.js";
-import { getSiteSettings } from "../../services/siteSettings.service.js";
+import { getSiteSettings, toMessagingLimits } from "../../services/siteSettings.service.js";
 import { Errors } from "../../utils/errors.js";
 
 async function toSettingsDto(): Promise<SiteSettingsDto> {
@@ -23,7 +22,6 @@ async function toSettingsDto(): Promise<SiteSettingsDto> {
     adminExists(),
     getAdminPublicKeys(),
   ]);
-  const env = loadEnv();
   return {
     onboardingComplete,
     siteTitle: settings.siteTitle,
@@ -48,8 +46,15 @@ async function toSettingsDto(): Promise<SiteSettingsDto> {
     adminPushEnabled: settings.adminPushEnabled,
     visitorInsightsEnabled: settings.visitorInsightsEnabled,
     visitorInsightsRetentionDays: settings.visitorInsightsRetentionDays,
-    visitorIpStorageAvailable: env.STORE_IP_ADDRESSES,
-    visitorGeolocationAvailable: env.VISITOR_GEOLOCATION_PROVIDER === "ipwhois",
+    limits: toMessagingLimits(settings),
+    rateLimitMessagesPerMinute: settings.rateLimitMessagesPerMinute,
+    rateLimitRegistrationsPerHour: settings.rateLimitRegistrationsPerHour,
+    rateLimitLinkPreviewsPerMinute: settings.rateLimitLinkPreviewsPerMinute,
+    linkPreviewsEnabled: settings.linkPreviewsEnabled,
+    storeIpAddresses: settings.storeIpAddresses,
+    visitorGeolocationEnabled: settings.visitorGeolocationEnabled,
+    adminDigestMinIntervalMinutes: settings.adminDigestMinIntervalMinutes,
+    replyEmailMinIntervalMinutes: settings.replyEmailMinIntervalMinutes,
   };
 }
 
@@ -95,6 +100,49 @@ export function registerAdminSettingsRoutes(app: FastifyInstance): void {
         ...(body.visitorInsightsEnabled !== undefined ? { visitorInsightsEnabled: body.visitorInsightsEnabled } : {}),
         ...(body.visitorInsightsRetentionDays !== undefined
           ? { visitorInsightsRetentionDays: body.visitorInsightsRetentionDays }
+          : {}),
+        ...(body.maxMessageLength !== undefined ? { maxMessageLength: body.maxMessageLength } : {}),
+        ...(body.maxAttachmentSizeMb !== undefined ? { maxAttachmentSizeMb: body.maxAttachmentSizeMb } : {}),
+        ...(body.maxImageAttachmentSizeMb !== undefined
+          ? { maxImageAttachmentSizeMb: body.maxImageAttachmentSizeMb }
+          : {}),
+        ...(body.maxVideoAttachmentSizeMb !== undefined
+          ? { maxVideoAttachmentSizeMb: body.maxVideoAttachmentSizeMb }
+          : {}),
+        ...(body.maxAudioAttachmentSizeMb !== undefined
+          ? { maxAudioAttachmentSizeMb: body.maxAudioAttachmentSizeMb }
+          : {}),
+        ...(body.maxDocumentAttachmentSizeMb !== undefined
+          ? { maxDocumentAttachmentSizeMb: body.maxDocumentAttachmentSizeMb }
+          : {}),
+        ...(body.maxOtherAttachmentSizeMb !== undefined
+          ? { maxOtherAttachmentSizeMb: body.maxOtherAttachmentSizeMb }
+          : {}),
+        ...(body.maxAttachmentsPerMessage !== undefined
+          ? { maxAttachmentsPerMessage: body.maxAttachmentsPerMessage }
+          : {}),
+        ...(body.messageEditWindowMinutes !== undefined
+          ? { messageEditWindowMinutes: body.messageEditWindowMinutes }
+          : {}),
+        ...(body.rateLimitMessagesPerMinute !== undefined
+          ? { rateLimitMessagesPerMinute: body.rateLimitMessagesPerMinute }
+          : {}),
+        ...(body.rateLimitRegistrationsPerHour !== undefined
+          ? { rateLimitRegistrationsPerHour: body.rateLimitRegistrationsPerHour }
+          : {}),
+        ...(body.rateLimitLinkPreviewsPerMinute !== undefined
+          ? { rateLimitLinkPreviewsPerMinute: body.rateLimitLinkPreviewsPerMinute }
+          : {}),
+        ...(body.linkPreviewsEnabled !== undefined ? { linkPreviewsEnabled: body.linkPreviewsEnabled } : {}),
+        ...(body.storeIpAddresses !== undefined ? { storeIpAddresses: body.storeIpAddresses } : {}),
+        ...(body.visitorGeolocationEnabled !== undefined
+          ? { visitorGeolocationEnabled: body.visitorGeolocationEnabled }
+          : {}),
+        ...(body.adminDigestMinIntervalMinutes !== undefined
+          ? { adminDigestMinIntervalMinutes: body.adminDigestMinIntervalMinutes }
+          : {}),
+        ...(body.replyEmailMinIntervalMinutes !== undefined
+          ? { replyEmailMinIntervalMinutes: body.replyEmailMinIntervalMinutes }
           : {}),
       },
     });
