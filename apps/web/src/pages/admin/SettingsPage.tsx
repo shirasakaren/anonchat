@@ -1,4 +1,5 @@
 import { useEffect, useState, type DragEvent } from "react";
+import { useBlocker } from "react-router-dom";
 import clsx from "clsx";
 import { GripVertical, Plus, Trash2, X } from "lucide-react";
 import type { ProfileMediaDto, SiteSettingsDto } from "@anonchat/shared";
@@ -30,6 +31,8 @@ import { useToast } from "../../context/ToastContext.js";
 import { ProfileMediaTile } from "../../components/common/ProfileMediaTile.js";
 import { ImageLightbox } from "../../components/chat/preview/ImageLightbox.js";
 import { VideoLightbox } from "../../components/chat/preview/VideoLightbox.js";
+import { UnsavedMediaOrderModal } from "../../components/admin/UnsavedMediaOrderModal.js";
+import { mediaOrdersEqual, moveMediaOrder, reconcileMediaOrder } from "./profileMediaOrder.js";
 
 function NumberControl({
   label,
@@ -101,6 +104,8 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
   const [openMediaVideo, setOpenMediaVideo] = useState<ProfileMediaDto | null>(null);
   const [draggedMediaId, setDraggedMediaId] = useState<string | null>(null);
   const [mediaDropTargetId, setMediaDropTargetId] = useState<string | null>(null);
+  const [profileMediaOrder, setProfileMediaOrder] = useState<string[]>([]);
+  const [savedProfileMediaOrder, setSavedProfileMediaOrder] = useState<string[]>([]);
   const [digestEmail, setDigestEmail] = useState("");
   const [digestEnabled, setDigestEnabled] = useState(false);
   const [digestInterval, setDigestInterval] = useState(15);
@@ -138,7 +143,10 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
 
   useEffect(() => {
     void getSettings().then((s) => {
+      const mediaIds = s.profileMedia.map(({ id }) => id);
       setSettings(s);
+      setProfileMediaOrder(mediaIds);
+      setSavedProfileMediaOrder(mediaIds);
       setDisplayName(s.displayName);
       setSiteTitle(s.siteTitle);
       setBio(s.bio);
@@ -179,6 +187,19 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
     else setNotifPermission("unsupported");
     void getExistingPushSubscription().then((sub) => setPushSubscribed(sub !== null));
   }, [isSoundEnabled]);
+
+  const mediaOrderDirty = !mediaOrdersEqual(profileMediaOrder, savedProfileMediaOrder);
+  const navigationBlocker = useBlocker(view === "profile" && mediaOrderDirty);
+
+  useEffect(() => {
+    if (!mediaOrderDirty) return;
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [mediaOrderDirty]);
 
   if (!settings) return <FullScreenLoader />;
 
@@ -221,22 +242,28 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
     setSoundEnabled(enabled);
   }
 
-  async function handleSaveProfile() {
+  async function handleSaveProfile(): Promise<boolean> {
     setSaving(true);
     setSaved(false);
     try {
-      const updated = await updateSettings({
+      let updated = await updateSettings({
         displayName,
         bio,
         contactLinks,
         pgpPublicKey,
       });
+      if (mediaOrderDirty) updated = await reorderProfileMedia(profileMediaOrder);
+      const savedOrder = updated.profileMedia.map(({ id }) => id);
       setSettings(updated);
+      setProfileMediaOrder(savedOrder);
+      setSavedProfileMediaOrder(savedOrder);
       await refreshSite();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+      return true;
     } catch (error) {
       notifyError("Profile could not be saved", error);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -426,7 +453,10 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
     setMediaError(null);
     try {
       const updated = await uploadProfileMedia(file);
+      const serverOrder = updated.profileMedia.map(({ id }) => id);
       setSettings(updated);
+      setSavedProfileMediaOrder(serverOrder);
+      setProfileMediaOrder((current) => reconcileMediaOrder(current, serverOrder));
       await refreshSite();
     } catch (error) {
       setMediaError(error instanceof ApiError ? error.message : "Could not upload that media file.");
@@ -442,7 +472,10 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
     try {
       await deleteProfileMedia(id);
       const updated = await getSettings();
+      const serverOrder = updated.profileMedia.map(({ id: mediaId }) => mediaId);
       setSettings(updated);
+      setSavedProfileMediaOrder(serverOrder);
+      setProfileMediaOrder((current) => reconcileMediaOrder(current, serverOrder));
       await refreshSite();
     } catch (error) {
       setMediaError(error instanceof ApiError ? error.message : "Could not remove that media file.");
@@ -458,37 +491,13 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
     setDraggedMediaId(id);
   }
 
-  async function handleProfileMediaDrop(event: DragEvent<HTMLDivElement>, targetId: string) {
+  function handleProfileMediaDrop(event: DragEvent<HTMLDivElement>, targetId: string) {
     event.preventDefault();
     const sourceId = event.dataTransfer.getData("text/plain") || draggedMediaId;
     setDraggedMediaId(null);
     setMediaDropTargetId(null);
-    if (!settings || !sourceId || sourceId === targetId) return;
-
-    const previousMedia = settings.profileMedia;
-    const sourceIndex = previousMedia.findIndex(({ id }) => id === sourceId);
-    const targetIndex = previousMedia.findIndex(({ id }) => id === targetId);
-    if (sourceIndex < 0 || targetIndex < 0) return;
-
-    const nextMedia = [...previousMedia];
-    const [moved] = nextMedia.splice(sourceIndex, 1);
-    if (!moved) return;
-    nextMedia.splice(targetIndex, 0, moved);
-    setSettings((current) => (current ? { ...current, profileMedia: nextMedia } : current));
-    setMediaBusy(true);
-    setMediaError(null);
-
-    try {
-      const updated = await reorderProfileMedia(nextMedia.map(({ id }) => id));
-      setSettings(updated);
-      await refreshSite();
-    } catch (error) {
-      setSettings((current) => (current ? { ...current, profileMedia: previousMedia } : current));
-      setMediaError(error instanceof ApiError ? error.message : "Could not save the media order.");
-      notifyError("Profile media order could not be saved", error);
-    } finally {
-      setMediaBusy(false);
-    }
+    if (!sourceId) return;
+    setProfileMediaOrder((current) => moveMediaOrder(current, sourceId, targetId));
   }
 
   async function handleEnableTotp() {
@@ -512,6 +521,21 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
     if (!confirm("Disable two-factor authentication?")) return;
     await disableTotp();
     await refreshAdmin();
+  }
+
+  const mediaById = new Map(settings.profileMedia.map((media) => [media.id, media]));
+  const orderedProfileMedia = profileMediaOrder.flatMap((id) => {
+    const media = mediaById.get(id);
+    return media ? [media] : [];
+  });
+
+  async function saveBeforeLeaving() {
+    if ((await handleSaveProfile()) && navigationBlocker.state === "blocked") navigationBlocker.proceed();
+  }
+
+  function discardBeforeLeaving() {
+    setProfileMediaOrder(savedProfileMediaOrder);
+    if (navigationBlocker.state === "blocked") navigationBlocker.proceed();
   }
 
   return (
@@ -688,9 +712,9 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
                   />
                 </label>
               </div>
-              {settings.profileMedia.length > 0 && (
+              {orderedProfileMedia.length > 0 && (
                 <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {settings.profileMedia.map((media, index) => (
+                  {orderedProfileMedia.map((media, index) => (
                     <div
                       key={media.id}
                       draggable={!mediaBusy}
@@ -701,7 +725,7 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
                         event.dataTransfer.dropEffect = "move";
                         if (draggedMediaId !== media.id) setMediaDropTargetId(media.id);
                       }}
-                      onDrop={(event) => void handleProfileMediaDrop(event, media.id)}
+                      onDrop={(event) => handleProfileMediaDrop(event, media.id)}
                       onDragEnd={() => {
                         setDraggedMediaId(null);
                         setMediaDropTargetId(null);
@@ -740,6 +764,18 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
                   ))}
                 </div>
               )}
+              {mediaOrderDirty && (
+                <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-[var(--warning-bg)] px-3 py-2 text-xs text-[var(--warning-fg)]">
+                  <span>Media order changed. Select Save changes to publish it.</span>
+                  <button
+                    type="button"
+                    onClick={() => setProfileMediaOrder(savedProfileMediaOrder)}
+                    className="shrink-0 font-semibold underline"
+                  >
+                    Discard order
+                  </button>
+                </div>
+              )}
               {mediaError && <p className="mt-2 text-xs text-[var(--danger-fg)]">{mediaError}</p>}
             </div>
 
@@ -747,7 +783,7 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
               <button
                 type="button"
                 onClick={handleSaveProfile}
-                disabled={saving}
+                disabled={saving || mediaBusy}
                 className="rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
               >
                 {saving ? "Saving…" : saved ? "Saved!" : "Save changes"}
@@ -1271,6 +1307,14 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
           url={openMediaVideo.url}
           filename={openMediaVideo.filename}
           onClose={() => setOpenMediaVideo(null)}
+        />
+      )}
+      {navigationBlocker.state === "blocked" && (
+        <UnsavedMediaOrderModal
+          saving={saving}
+          onSave={() => void saveBeforeLeaving()}
+          onDiscard={discardBeforeLeaving}
+          onKeepEditing={navigationBlocker.reset}
         />
       )}
     </div>

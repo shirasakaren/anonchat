@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
-import { Navigate, Route, BrowserRouter, Routes } from "react-router-dom";
+import { createBrowserRouter, Navigate, Route, RouterProvider, Routes } from "react-router-dom";
 import { SiteProvider, useSite } from "./context/SiteContext.js";
 import { useTheme } from "./context/ThemeContext.js";
 import { FullScreenError, FullScreenLoader } from "./components/common/Loader.js";
@@ -62,11 +62,15 @@ function RootRouter() {
 }
 
 export default function App() {
+  return <RouterProvider router={router} />;
+}
+
+function AppRoute() {
   return (
-    <BrowserRouter>
-      <SiteProvider>
-        <RootRouter />
-      </SiteProvider>
-    </BrowserRouter>
+    <SiteProvider>
+      <RootRouter />
+    </SiteProvider>
   );
 }
+
+const router = createBrowserRouter([{ path: "*", element: <AppRoute /> }]);
