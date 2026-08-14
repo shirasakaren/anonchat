@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ChangeEvent,
@@ -8,7 +9,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import clsx from "clsx";
-import { X, Paperclip, Smile, File as FileIcon } from "lucide-react";
+import { X, Paperclip, Smile, File as FileIcon, Eye } from "lucide-react";
 import {
   expandEmojiShortcuts,
   findActiveShortcodeQuery,
@@ -81,34 +82,26 @@ export function Composer({
   const [shortcodeQuery, setShortcodeQuery] = useState<{ start: number; query: string } | null>(null);
   const [selectedSuggestion, setSelectedSuggestion] = useState(0);
   const [overlayPos, setOverlayPos] = useState<{ top: number; left: number } | null>(null);
-  const [mode, setMode] = useState<"write" | "preview">("write");
+  const [showPreview, setShowPreview] = useState(false);
   const [codeModal, setCodeModal] = useState<{ fenceStart: number; fenceEnd: number } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const pickerWrapperRef = useRef<HTMLDivElement>(null);
 
   const suggestions = shortcodeQuery ? searchShortcodes(shortcodeQuery.query, SHORTCODE_SUGGESTION_LIMIT) : [];
 
+  // Gated on showPreview, not just memoized on text - marked + DOMPurify +
+  // highlight.js runs its full pipeline here, and that cost should only
+  // land on every keystroke while the preview panel is actually visible,
+  // not silently on every keystroke regardless (which a plain
+  // useMemo(() => renderMessageMarkdown(text), [text]) would still do).
+  const previewHtml = useMemo(() => (showPreview ? renderMessageMarkdown(text) : null), [showPreview, text]);
+
   useEffect(() => {
     if (initialText !== undefined) {
       setText(initialText);
-      setMode("write");
       textareaRef.current?.focus();
     }
   }, [initialText]);
-
-  /** Preview mode has no textarea to edit or autocomplete into - closing
-   *  both here means neither can linger open with stale state when the
-   *  user switches away from Write. Switching back to Write restores focus
-   *  so typing can resume immediately. */
-  function switchMode(next: "write" | "preview") {
-    setMode(next);
-    if (next === "preview") {
-      setShortcodeQuery(null);
-      setShowEmoji(false);
-    } else {
-      requestAnimationFrame(() => textareaRef.current?.focus());
-    }
-  }
 
   // Close the emoji picker on an outside click - it has no built-in
   // dismiss-on-blur behavior of its own.
@@ -128,10 +121,10 @@ export function Composer({
     onTypingChange?.(value.length > 0);
   }
 
-  /** Inserts at the cursor (falling back to the end when the textarea
-   *  isn't mounted/focused, e.g. Preview mode) rather than always
-   *  appending - used by the emoji picker button, matching how the
-   *  :shortcode: overlay already inserts via applySuggestion below. */
+  /** Inserts at the cursor (falling back to the end on the off chance the
+   *  textarea ref isn't attached yet) rather than always appending - used
+   *  by the emoji picker button, matching how the :shortcode: overlay
+   *  already inserts via applySuggestion below. */
   function insertAtCursor(insert: string) {
     const el = textareaRef.current;
     if (!el) {
@@ -198,7 +191,6 @@ export function Composer({
     const newCursor = codeModal.fenceStart + fence.length;
     updateText(newValue);
     setCodeModal(null);
-    setMode("write");
     requestAnimationFrame(() => {
       const el = textareaRef.current;
       if (!el) return;
@@ -251,7 +243,7 @@ export function Composer({
     );
     setText("");
     setFiles([]);
-    setMode("write");
+    setShowPreview(false);
     onTypingChange?.(false);
     textareaRef.current?.focus();
   }
@@ -381,28 +373,17 @@ export function Composer({
         <button
           type="button"
           disabled={disabled}
-          onClick={() => switchMode("write")}
+          aria-pressed={showPreview}
+          onClick={() => setShowPreview((v) => !v)}
           className={clsx(
-            "rounded-md px-2 py-1",
-            mode === "write"
+            "flex items-center gap-1 rounded-md px-2 py-1",
+            showPreview
               ? "bg-[var(--surface-muted)] text-[var(--text)]"
               : "text-[var(--text-muted)] hover:text-[var(--text)]",
           )}
         >
-          Write
-        </button>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => switchMode("preview")}
-          className={clsx(
-            "rounded-md px-2 py-1",
-            mode === "preview"
-              ? "bg-[var(--surface-muted)] text-[var(--text)]"
-              : "text-[var(--text-muted)] hover:text-[var(--text)]",
-          )}
-        >
-          Preview
+          <Eye size={12} aria-hidden />
+          Live preview
         </button>
       </div>
 
@@ -433,51 +414,31 @@ export function Composer({
                 onSelect={(emoji) => {
                   insertAtCursor(emoji);
                   setShowEmoji(false);
-                  // Switch back to Write so the inserted emoji is actually
-                  // visible - clicking this while in Preview would otherwise
-                  // silently edit text the user can't currently see.
-                  switchMode("write");
                 }}
               />
             </div>
           )}
         </div>
 
-        {mode === "write" ? (
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={handleTextChange}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            onSelect={(e) => syncShortcodeQuery(e.currentTarget)}
-            onClick={(e) => syncShortcodeQuery(e.currentTarget)}
-            placeholder="Type a message… (Enter to send, Shift+Enter for a new line)"
-            rows={1}
-            disabled={disabled}
-            className="max-h-32 min-h-[2.5rem] flex-1 resize-none rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm disabled:opacity-50"
-            style={{ height: "auto" }}
-            onInput={(e) => {
-              const el = e.currentTarget;
-              el.style.height = "auto";
-              el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
-            }}
-          />
-        ) : (
-          // Read-only render of exactly what Send will encrypt and ship -
-          // never a separate draft, just a view toggle on the same `text`
-          // state. clamp={false}: this box already scrolls at a fixed
-          // height itself, so ExpandableProse's own "See more" clamp (meant
-          // for an already-sent bubble) would just be a second, redundant
-          // scroll boundary here.
-          <div className="max-h-32 min-h-[2.5rem] flex-1 overflow-y-auto rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm">
-            {text.trim() ? (
-              <ExpandableProse html={renderMessageMarkdown(text)} clamp={false} />
-            ) : (
-              <p className="text-[var(--text-muted)]">Nothing to preview yet.</p>
-            )}
-          </div>
-        )}
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={handleTextChange}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          onSelect={(e) => syncShortcodeQuery(e.currentTarget)}
+          onClick={(e) => syncShortcodeQuery(e.currentTarget)}
+          placeholder="Type a message… (Enter to send, Shift+Enter for a new line)"
+          rows={1}
+          disabled={disabled}
+          className="max-h-32 min-h-[2.5rem] flex-1 resize-none rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm disabled:opacity-50"
+          style={{ height: "auto" }}
+          onInput={(e) => {
+            const el = e.currentTarget;
+            el.style.height = "auto";
+            el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
+          }}
+        />
 
         <button
           type="button"
@@ -488,6 +449,22 @@ export function Composer({
           Send
         </button>
       </div>
+
+      {/* Still-editable textarea above stays live - this panel just mirrors
+          its rendered markdown underneath, updating on every keystroke
+          (previewHtml is gated on showPreview - see its own comment) rather
+          than replacing the input the way the old Write/Preview tab swap
+          did, which made it impossible to see formatting while typing. */}
+      {showPreview && (
+        <div className="mt-2 max-h-32 overflow-y-auto rounded-lg border border-[var(--border-strong)] bg-[var(--surface-muted)] px-3 py-2 text-sm">
+          {text.trim() ? (
+            <ExpandableProse html={previewHtml!} clamp={false} />
+          ) : (
+            <p className="text-[var(--text-muted)]">Nothing to preview yet.</p>
+          )}
+        </div>
+      )}
+
       <div className="mt-1 text-right text-xs text-[var(--text-muted)]">
         {overLimit && <span className="text-[var(--danger-fg)]">Message is too long. </span>}
         {text.length}/{maxLength}
