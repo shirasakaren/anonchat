@@ -160,6 +160,17 @@ export function AvatarCropper({ file, onCancel, onCropped }: AvatarCropperProps)
               style={{
                 width: displayedW,
                 height: displayedH,
+                // Tailwind's preflight sets `img { max-width: 100%; height:
+                // auto }`. The explicit inline `height` above already wins
+                // over that `height: auto`, but `max-width` isn't the same
+                // property as `width` - it silently caps the *used* width
+                // value regardless of the inline style's specificity. Past
+                // zoom=1 that clipped width while height kept growing,
+                // squashing the image horizontally. Both overrides are
+                // needed since either alone leaves the other constraint in
+                // place.
+                maxWidth: "none",
+                maxHeight: "none",
                 left: (VIEWPORT - displayedW) / 2 + offset.x,
                 top: (VIEWPORT - displayedH) / 2 + offset.y,
               }}
