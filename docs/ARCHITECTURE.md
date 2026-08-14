@@ -72,6 +72,12 @@ Foreground updates continue to use the authenticated WebSocket connection. Optio
 
 Email is optional and supports either ordinary SMTP or Resend. Visitor reply email is an explicit, one-address opt-in offered after the first sent message. Admin email is a configurable digest with an operator-enforced minimum interval, rather than one email per incoming message. Neither email path includes message content because the server cannot decrypt it.
 
+## Optional visitor insights
+
+Visitor diagnostics are disabled by default and require two independent decisions: the admin enables the consent flow, then each visitor explicitly opts in. The browser sends a bounded diagnostic snapshot (browser/OS/device class, viewport, locale/timezone, and connection quality). It never sends exact GPS, contacts, browsing history, canvas/font fingerprints, or decrypted chat content.
+
+`STORE_IP_ADDRESSES=true` permits the consented IP to be retained. `VISITOR_GEOLOCATION_PROVIDER=ipwhois` additionally permits a coarse IP lookup through ipwho.is; the default `none` makes no lookup. Each row receives an expiry, an hourly cleanup removes expired rows, visitors can revoke their row immediately, and switching the feature off deletes all rows.
+
 ## Storage abstraction
 
 `StorageAdapter` (`put`/`get`/`delete`) has two implementations: local disk (default, zero config) and an S3-compatible client (works unmodified against AWS S3, Cloudflare R2, Backblaze B2, or self-hosted MinIO by pointing `S3_ENDPOINT` at it). Attachment bytes stored through either adapter are already ciphertext by the time the server sees them.

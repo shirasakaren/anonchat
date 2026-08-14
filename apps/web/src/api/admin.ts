@@ -11,6 +11,7 @@ import type {
   MessagePage,
   SiteSettingsRequestInput,
   SiteSettingsDto,
+  VisitorInsightDto,
 } from "@anonchat/shared";
 import { api, apiFetch } from "./client.js";
 import type { OutgoingAttachment } from "./conversation.js";
@@ -121,6 +122,10 @@ export function listConversations(query: {
 
 export function getAdminConversation(id: string): Promise<AdminConversationDto> {
   return api.get<AdminConversationDto>(`/admin/conversations/${id}`);
+}
+
+export function getConversationVisitorInsight(id: string): Promise<{ insight: VisitorInsightDto | null }> {
+  return api.get(`/admin/conversations/${id}/insights`);
 }
 
 /** Sets the admin's private alias for a conversation; "" clears it. */

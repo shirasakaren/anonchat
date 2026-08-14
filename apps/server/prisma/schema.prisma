@@ -38,6 +38,7 @@ model AnonymousUser {
   conversation      Conversation?
   sessions          AnonymousSession[]
   pushSubscriptions PushSubscription[]
+  visitorInsight    VisitorInsight?
 
   @@map("anonymous_users")
 }
@@ -238,9 +239,77 @@ model SiteSettings {
   /// configured server-side (see apps/server/src/push/).
   adminPushEnabled Boolean @default(true)
 
+  /// Optional visitor diagnostics are OFF by default. Enabling this only
+  /// allows the consent prompt to be shown; no row is written until that
+  /// visitor explicitly opts in. Disabling it deletes existing rows.
+  visitorInsightsEnabled       Boolean @default(false)
+  visitorInsightsRetentionDays Int     @default(30)
+
   updatedAt DateTime @updatedAt
 
   @@map("site_settings")
+}
+
+/// Consented, time-limited visitor diagnostics. Values reported by the
+/// browser are descriptive, not an authentication/fingerprinting signal.
+/// No canvas/font fingerprint, exact GPS coordinate, cookies, history, or
+/// message content is collected here.
+model VisitorInsight {
+  id              String        @id @default(cuid())
+  anonymousUserId String        @unique
+  anonymousUser   AnonymousUser @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+
+  consentVersion String   @default("2026-08-14")
+  consentedAt    DateTime @default(now())
+  expiresAt      DateTime
+
+  ipAddress      String?
+  userAgent      String?
+  browserName    String?
+  browserVersion String?
+  osName         String?
+  osVersion      String?
+  deviceType     String?
+  platform       String?
+
+  language  String?
+  languages Json    @default("[]")
+  timezone  String?
+
+  screenWidth         Int?
+  screenHeight        Int?
+  viewportWidth       Int?
+  viewportHeight      Int?
+  pixelRatio          Float?
+  colorDepth          Int?
+  touchPoints         Int?
+  hardwareConcurrency Int?
+  deviceMemoryGb      Float?
+
+  connectionType          String?
+  connectionEffectiveType String?
+  connectionDownlinkMbps  Float?
+  connectionRttMs         Int?
+  connectionSaveData      Boolean?
+  referrerOrigin          String?
+
+  geoCountryCode String?
+  geoCountry     String?
+  geoRegion      String?
+  geoCity        String?
+  geoPostalCode  String?
+  geoLatitude    Float?
+  geoLongitude   Float?
+  geoTimezone    String?
+  networkAsn     Int?
+  networkOrg     String?
+  networkIsp     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([expiresAt])
+  @@map("visitor_insights")
 }
 
 model CannedReply {

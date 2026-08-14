@@ -1,6 +1,12 @@
 import { bytesToBase64url, signChallenge, type Identity } from "@anonchat/crypto";
 import { buildLoginChallengeMessage, buildRegistrationProofMessage } from "@anonchat/shared";
-import type { ChallengeResponse, MeResponse, RegisterResponse } from "@anonchat/shared";
+import type {
+  ChallengeResponse,
+  MeResponse,
+  RegisterResponse,
+  VisitorInsightConsentRequestInput,
+  VisitorInsightsStatusDto,
+} from "@anonchat/shared";
 import { api } from "./client.js";
 import type { PushSubscriptionKeys } from "../push/webPush.js";
 
@@ -47,4 +53,16 @@ export function subscribeUserPush(subscription: PushSubscriptionKeys): Promise<v
 
 export function unsubscribeUserPush(endpoint: string): Promise<{ unsubscribeBrowser: boolean }> {
   return api.post("/anonymous/push/unsubscribe", { endpoint });
+}
+
+export function getVisitorInsightsStatus(): Promise<VisitorInsightsStatusDto> {
+  return api.get("/anonymous/insights/status");
+}
+
+export function consentToVisitorInsights(input: VisitorInsightConsentRequestInput): Promise<void> {
+  return api.post("/anonymous/insights/consent", input);
+}
+
+export function revokeVisitorInsights(): Promise<void> {
+  return api.delete("/anonymous/insights");
 }

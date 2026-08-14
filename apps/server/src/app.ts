@@ -24,11 +24,13 @@ import { registerConversationRoutes } from "./routes/conversation.js";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerLinkPreviewRoutes } from "./routes/linkPreview.js";
 import { registerSiteRoutes } from "./routes/site.js";
+import { registerVisitorInsightsRoutes } from "./routes/visitorInsights.js";
 import { ensureCsrfCookie, verifyCsrf } from "./security/csrf.js";
 // Side-effect import: starts the in-process admin-digest sweep timer (see
 // its own doc comment), the same way rate limiting and login challenges
 // start their own cleanup timers just by being imported.
 import "./services/notificationDigest.service.js";
+import "./services/visitorInsights.service.js";
 import { handleError } from "./utils/errors.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -107,6 +109,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       registerAdminConversationRoutes(api);
       registerAdminSettingsRoutes(api);
       registerAdminPushRoutes(api);
+      registerVisitorInsightsRoutes(api);
       registerCannedReplyRoutes(api);
       registerAuditLogRoutes(api);
       registerWsRoutes(api);

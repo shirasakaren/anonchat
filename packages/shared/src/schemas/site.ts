@@ -21,4 +21,10 @@ export interface PublicSiteInfoDto {
   /** Null when this server has no VAPID_* configured - Web Push is entirely
    *  unavailable in that case (see docs/ARCHITECTURE.md). */
   vapidPublicKey: string | null;
+  visitorInsights: {
+    enabled: boolean;
+    retentionDays: number;
+    collectsIpAddress: boolean;
+    coarseGeolocation: boolean;
+  };
 }

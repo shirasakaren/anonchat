@@ -25,6 +25,7 @@ import { getLocallyDeletedMessageIds, hideMessageLocally } from "../components/c
 import { MessageBubble } from "../components/chat/MessageBubble.js";
 import { NotificationEmailPrompt } from "../components/chat/NotificationEmailPrompt.js";
 import { PushBellButton } from "../components/chat/PushBellButton.js";
+import { VisitorInsightsControl } from "../components/chat/VisitorInsightsControl.js";
 import { ExpandableProse } from "../components/chat/ExpandableProse.js";
 import { renderMessageMarkdown } from "../components/chat/markdown.js";
 import {
@@ -362,6 +363,7 @@ export default function Chat() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <VisitorInsightsControl conversationId={session.conversationId} config={site.visitorInsights} />
           <PushBellButton vapidPublicKey={site.vapidPublicKey} />
           <span className="rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-xs font-mono">
             #{session.publicId}

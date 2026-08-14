@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { GravatarImportRequestSchema, SiteSettingsRequestSchema, type SiteSettingsDto } from "@anonchat/shared";
 import { requireAdmin } from "../../auth/plugin.js";
 import { prisma } from "../../db.js";
+import { loadEnv } from "../../env.js";
 import { publishToAllAnonymousUsers, publishToAdmins } from "../../realtime/hub.js";
 import { adminExists, getAdminPublicKeys } from "../../services/admin.service.js";
 import { recordAudit } from "../../services/auditLog.service.js";
@@ -17,6 +18,7 @@ async function toSettingsDto(): Promise<SiteSettingsDto> {
     adminExists(),
     getAdminPublicKeys(),
   ]);
+  const env = loadEnv();
   return {
     onboardingComplete,
     displayName: settings.displayName,
@@ -34,6 +36,10 @@ async function toSettingsDto(): Promise<SiteSettingsDto> {
     adminEmailDigestIntervalMinutes: settings.adminEmailDigestIntervalMinutes,
     pushNotificationsAvailable: isPushConfigured(),
     adminPushEnabled: settings.adminPushEnabled,
+    visitorInsightsEnabled: settings.visitorInsightsEnabled,
+    visitorInsightsRetentionDays: settings.visitorInsightsRetentionDays,
+    visitorIpStorageAvailable: env.STORE_IP_ADDRESSES,
+    visitorGeolocationAvailable: env.VISITOR_GEOLOCATION_PROVIDER === "ipwhois",
   };
 }
 
@@ -64,8 +70,15 @@ export function registerAdminSettingsRoutes(app: FastifyInstance): void {
           ? { adminEmailDigestIntervalMinutes: body.adminEmailDigestIntervalMinutes }
           : {}),
         ...(body.adminPushEnabled !== undefined ? { adminPushEnabled: body.adminPushEnabled } : {}),
+        ...(body.visitorInsightsEnabled !== undefined ? { visitorInsightsEnabled: body.visitorInsightsEnabled } : {}),
+        ...(body.visitorInsightsRetentionDays !== undefined
+          ? { visitorInsightsRetentionDays: body.visitorInsightsRetentionDays }
+          : {}),
       },
     });
+    if (body.visitorInsightsEnabled === false) {
+      await prisma.visitorInsight.deleteMany();
+    }
     await recordAudit(admin.id, "settings.updated");
     // Push the new theme live to every open tab (anonymous visitors and any
     // other admin session) instead of making them wait for their next load.

@@ -25,6 +25,10 @@ const EnvSchema = z.object({
   TRUST_PROXY: boolFromEnv,
 
   STORE_IP_ADDRESSES: boolFromEnv,
+  // Optional IP-derived coarse geolocation. "ipwhois" sends the visitor's
+  // IP to ipwho.is only after that visitor consents and the admin enables
+  // visitor insights. "none" (default) keeps all geolocation offline.
+  VISITOR_GEOLOCATION_PROVIDER: z.enum(["none", "ipwhois"]).default("none"),
   MAX_MESSAGE_LENGTH: z.coerce.number().int().positive().default(DEFAULT_MAX_MESSAGE_LENGTH),
   MAX_ATTACHMENT_SIZE_MB: z.coerce.number().int().positive().default(DEFAULT_MAX_ATTACHMENT_SIZE_MB),
   MAX_ATTACHMENTS_PER_MESSAGE: z.coerce.number().int().positive().default(DEFAULT_MAX_ATTACHMENTS_PER_MESSAGE),

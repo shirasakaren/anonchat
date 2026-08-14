@@ -61,6 +61,10 @@ export default function SettingsPage() {
   const [pushSubscribed, setPushSubscribed] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
   const [pushError, setPushError] = useState<string | null>(null);
+  const [insightsEnabled, setInsightsEnabled] = useState(false);
+  const [insightsRetentionDays, setInsightsRetentionDays] = useState(30);
+  const [insightsSaving, setInsightsSaving] = useState(false);
+  const [insightsSaved, setInsightsSaved] = useState(false);
 
   useEffect(() => {
     getSettings().then((s) => {
@@ -76,6 +80,8 @@ export default function SettingsPage() {
       setDigestEnabled(s.adminEmailDigestEnabled);
       setDigestInterval(s.adminEmailDigestIntervalMinutes);
       setPushEnabled(s.adminPushEnabled);
+      setInsightsEnabled(s.visitorInsightsEnabled);
+      setInsightsRetentionDays(s.visitorInsightsRetentionDays);
     });
     setSoundOn(isSoundEnabled());
     if ("Notification" in window) setNotifPermission(Notification.permission);
@@ -193,6 +199,22 @@ export default function SettingsPage() {
     setPushEnabled(enabled);
     const updated = await updateSettings({ adminPushEnabled: enabled });
     setSettings(updated);
+  }
+
+  async function handleSaveVisitorInsights() {
+    setInsightsSaving(true);
+    setInsightsSaved(false);
+    try {
+      const updated = await updateSettings({
+        visitorInsightsEnabled: insightsEnabled,
+        visitorInsightsRetentionDays: insightsRetentionDays,
+      });
+      setSettings(updated);
+      setInsightsSaved(true);
+      setTimeout(() => setInsightsSaved(false), 2000);
+    } finally {
+      setInsightsSaving(false);
+    }
   }
 
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -562,6 +584,64 @@ export default function SettingsPage() {
             className="rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
           >
             {digestSaving ? "Saving…" : digestSaved ? "Saved!" : "Save"}
+          </button>
+        </section>
+
+        <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
+          <h2 className="mb-2 text-sm font-semibold">Optional visitor insights</h2>
+          <p className="mb-3 text-xs text-[var(--text-muted)]">
+            Ask visitors to explicitly share limited device and network diagnostics. This is off by default and never
+            includes exact GPS, fingerprinting, browsing history, or decrypted message content.
+          </p>
+          <label className="mb-3 flex items-start gap-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={insightsEnabled}
+              onChange={(e) => setInsightsEnabled(e.target.checked)}
+              className="mt-0.5 accent-[var(--color-accent-500)]"
+            />
+            <span>
+              Ask visitors for consent
+              <span className="mt-0.5 block text-xs font-normal text-[var(--text-muted)]">
+                Turning this off deletes every retained visitor-insight record immediately.
+              </span>
+            </span>
+          </label>
+          <label className="mb-3 block text-sm font-medium">
+            Delete shared diagnostics after
+            <span className="ml-2 inline-flex items-center gap-1.5">
+              <input
+                type="number"
+                min={1}
+                max={365}
+                value={insightsRetentionDays}
+                onChange={(e) => setInsightsRetentionDays(Number(e.target.value))}
+                className="w-20 rounded-lg border border-[var(--border-strong)] bg-transparent px-2 py-1 text-sm"
+              />
+              days
+            </span>
+          </label>
+          <div className="mb-3 rounded-lg bg-[var(--surface-muted)] p-3 text-xs text-[var(--text-muted)]">
+            <p>
+              IP storage:{" "}
+              {settings.visitorIpStorageAvailable
+                ? "available when a visitor consents"
+                : "disabled by the server operator"}
+            </p>
+            <p className="mt-1">
+              Coarse IP geolocation:{" "}
+              {settings.visitorGeolocationAvailable
+                ? "available when a visitor consents"
+                : "disabled by the server operator"}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void handleSaveVisitorInsights()}
+            disabled={insightsSaving}
+            className="rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
+          >
+            {insightsSaving ? "Saving…" : insightsSaved ? "Saved!" : "Save privacy settings"}
           </button>
         </section>
 

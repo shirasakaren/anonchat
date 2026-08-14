@@ -33,6 +33,12 @@ export function registerSiteRoutes(app: FastifyInstance): void {
       },
       turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null,
       vapidPublicKey: isPushConfigured() ? env.VAPID_PUBLIC_KEY! : null,
+      visitorInsights: {
+        enabled: settings.visitorInsightsEnabled,
+        retentionDays: settings.visitorInsightsRetentionDays,
+        collectsIpAddress: env.STORE_IP_ADDRESSES,
+        coarseGeolocation: env.VISITOR_GEOLOCATION_PROVIDER === "ipwhois",
+      },
     };
     return response;
   });

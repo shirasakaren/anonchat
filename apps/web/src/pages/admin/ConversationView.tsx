@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { encryptBlob } from "@anonchat/crypto";
-import { Pencil } from "lucide-react";
+import { Info, Pencil } from "lucide-react";
 import {
   DEFAULT_MAX_MESSAGE_LENGTH,
   type AdminConversationDto,
@@ -35,6 +35,7 @@ import { getLocallyDeletedMessageIds, hideMessageLocally } from "../../component
 import { MessageBubble } from "../../components/chat/MessageBubble.js";
 import { TypingIndicator } from "../../components/chat/TypingIndicator.js";
 import { FullScreenLoader } from "../../components/common/Loader.js";
+import { VisitorInsightsDrawer } from "../../components/admin/VisitorInsightsDrawer.js";
 import {
   decryptMessageText,
   encryptAttachmentMeta,
@@ -66,6 +67,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   const [aliasBusy, setAliasBusy] = useState(false);
   const [userOnline, setUserOnline] = useState(false);
   const [cannedReplies, setCannedReplies] = useState<CannedReplyDto[]>([]);
+  const [insightsOpen, setInsightsOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pendingRef = useRef<Map<string, { text: string; files: File[]; replyToId: string | null }>>(new Map());
@@ -487,6 +489,15 @@ export function ConversationView({ conversationId, onChanged }: Props) {
             </p>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => setInsightsOpen(true)}
+          title="View visitor insights"
+          aria-label="View visitor insights"
+          className="shrink-0 rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
+        >
+          <Info size={18} aria-hidden />
+        </button>
       </header>
 
       <ConnectionBanner status={wsStatus} />
@@ -553,6 +564,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
           onCancel={() => setDeleteTarget(null)}
         />
       )}
+      {insightsOpen && <VisitorInsightsDrawer conversationId={conversationId} onClose={() => setInsightsOpen(false)} />}
     </div>
   );
 }

@@ -57,6 +57,8 @@ export const SiteSettingsRequestSchema = z.object({
   adminEmailDigestEnabled: z.boolean().optional(),
   adminEmailDigestIntervalMinutes: z.coerce.number().int().min(1).max(1440).optional(),
   adminPushEnabled: z.boolean().optional(),
+  visitorInsightsEnabled: z.boolean().optional(),
+  visitorInsightsRetentionDays: z.coerce.number().int().min(1).max(365).optional(),
 });
 export type SiteSettingsRequestInput = z.infer<typeof SiteSettingsRequestSchema>;
 
@@ -163,4 +165,8 @@ export interface SiteSettingsDto {
    *  configured - see docs/ARCHITECTURE.md. */
   pushNotificationsAvailable: boolean;
   adminPushEnabled: boolean;
+  visitorInsightsEnabled: boolean;
+  visitorInsightsRetentionDays: number;
+  visitorIpStorageAvailable: boolean;
+  visitorGeolocationAvailable: boolean;
 }
