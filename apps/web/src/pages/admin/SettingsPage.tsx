@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type DragEvent } from "react";
 import clsx from "clsx";
-import { Plus, Trash2, X } from "lucide-react";
+import { GripVertical, Plus, Trash2, X } from "lucide-react";
 import type { ProfileMediaDto, SiteSettingsDto } from "@anonchat/shared";
 import {
   getSettings,
@@ -14,6 +14,7 @@ import {
   unsubscribeAdminPush,
   uploadProfileMedia,
   deleteProfileMedia,
+  reorderProfileMedia,
 } from "../../api/admin.js";
 import { ApiError } from "../../api/client.js";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
@@ -28,6 +29,7 @@ import { DefaultAvatar } from "../../components/common/DefaultAvatar.js";
 import { useToast } from "../../context/ToastContext.js";
 import { ProfileMediaTile } from "../../components/common/ProfileMediaTile.js";
 import { ImageLightbox } from "../../components/chat/preview/ImageLightbox.js";
+import { VideoLightbox } from "../../components/chat/preview/VideoLightbox.js";
 
 function NumberControl({
   label,
@@ -96,6 +98,9 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
   const [mediaBusy, setMediaBusy] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [openMediaImage, setOpenMediaImage] = useState<ProfileMediaDto | null>(null);
+  const [openMediaVideo, setOpenMediaVideo] = useState<ProfileMediaDto | null>(null);
+  const [draggedMediaId, setDraggedMediaId] = useState<string | null>(null);
+  const [mediaDropTargetId, setMediaDropTargetId] = useState<string | null>(null);
   const [digestEmail, setDigestEmail] = useState("");
   const [digestEnabled, setDigestEnabled] = useState(false);
   const [digestInterval, setDigestInterval] = useState(15);
@@ -447,6 +452,45 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
     }
   }
 
+  function handleProfileMediaDragStart(event: DragEvent<HTMLDivElement>, id: string) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", id);
+    setDraggedMediaId(id);
+  }
+
+  async function handleProfileMediaDrop(event: DragEvent<HTMLDivElement>, targetId: string) {
+    event.preventDefault();
+    const sourceId = event.dataTransfer.getData("text/plain") || draggedMediaId;
+    setDraggedMediaId(null);
+    setMediaDropTargetId(null);
+    if (!settings || !sourceId || sourceId === targetId) return;
+
+    const previousMedia = settings.profileMedia;
+    const sourceIndex = previousMedia.findIndex(({ id }) => id === sourceId);
+    const targetIndex = previousMedia.findIndex(({ id }) => id === targetId);
+    if (sourceIndex < 0 || targetIndex < 0) return;
+
+    const nextMedia = [...previousMedia];
+    const [moved] = nextMedia.splice(sourceIndex, 1);
+    if (!moved) return;
+    nextMedia.splice(targetIndex, 0, moved);
+    setSettings((current) => (current ? { ...current, profileMedia: nextMedia } : current));
+    setMediaBusy(true);
+    setMediaError(null);
+
+    try {
+      const updated = await reorderProfileMedia(nextMedia.map(({ id }) => id));
+      setSettings(updated);
+      await refreshSite();
+    } catch (error) {
+      setSettings((current) => (current ? { ...current, profileMedia: previousMedia } : current));
+      setMediaError(error instanceof ApiError ? error.message : "Could not save the media order.");
+      notifyError("Profile media order could not be saved", error);
+    } finally {
+      setMediaBusy(false);
+    }
+  }
+
   async function handleEnableTotp() {
     const setup = await beginTotpSetup();
     setTotpSetup(setup);
@@ -647,13 +691,42 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
               {settings.profileMedia.length > 0 && (
                 <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {settings.profileMedia.map((media, index) => (
-                    <div key={media.id} className="group relative aspect-[4/3] overflow-hidden rounded-xl">
+                    <div
+                      key={media.id}
+                      draggable={!mediaBusy}
+                      title="Drag to reorder"
+                      onDragStart={(event) => handleProfileMediaDragStart(event, media.id)}
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        event.dataTransfer.dropEffect = "move";
+                        if (draggedMediaId !== media.id) setMediaDropTargetId(media.id);
+                      }}
+                      onDrop={(event) => void handleProfileMediaDrop(event, media.id)}
+                      onDragEnd={() => {
+                        setDraggedMediaId(null);
+                        setMediaDropTargetId(null);
+                      }}
+                      className={clsx(
+                        "group relative aspect-[4/3] cursor-grab overflow-hidden rounded-xl active:cursor-grabbing",
+                        draggedMediaId === media.id && "opacity-50",
+                        mediaDropTargetId === media.id &&
+                          draggedMediaId !== media.id &&
+                          "ring-2 ring-[var(--color-accent-500)] ring-offset-2 ring-offset-[var(--surface)]",
+                      )}
+                    >
                       <ProfileMediaTile
                         media={media}
                         alt={`Profile ${media.kind} ${index + 1}`}
                         className="h-full w-full"
                         onImageOpen={setOpenMediaImage}
+                        onVideoOpen={setOpenMediaVideo}
                       />
+                      <span
+                        className="pointer-events-none absolute left-2 top-2 grid size-8 place-items-center rounded-full bg-black/70 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                        aria-hidden
+                      >
+                        <GripVertical size={15} />
+                      </span>
                       <button
                         type="button"
                         disabled={mediaBusy}
@@ -1191,6 +1264,13 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
           url={openMediaImage.url}
           filename={openMediaImage.filename}
           onClose={() => setOpenMediaImage(null)}
+        />
+      )}
+      {openMediaVideo && (
+        <VideoLightbox
+          url={openMediaVideo.url}
+          filename={openMediaVideo.filename}
+          onClose={() => setOpenMediaVideo(null)}
         />
       )}
     </div>

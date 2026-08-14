@@ -4,6 +4,7 @@ import type { ProfileMediaDto, PublicSiteInfoDto } from "@anonchat/shared";
 import { DefaultAvatar } from "../common/DefaultAvatar.js";
 import { ProfileMediaTile } from "../common/ProfileMediaTile.js";
 import { ImageLightbox } from "./preview/ImageLightbox.js";
+import { VideoLightbox } from "./preview/VideoLightbox.js";
 
 interface Props {
   site: PublicSiteInfoDto;
@@ -13,6 +14,7 @@ interface Props {
 export function AdminProfilePanel({ site, onClose }: Props) {
   const [keyCopied, setKeyCopied] = useState(false);
   const [openImage, setOpenImage] = useState<ProfileMediaDto | null>(null);
+  const [openVideo, setOpenVideo] = useState<ProfileMediaDto | null>(null);
 
   async function copyPublicKey() {
     if (!site.pgpPublicKey) return;
@@ -85,6 +87,7 @@ export function AdminProfilePanel({ site, onClose }: Props) {
                     alt={`${site.displayName} profile ${media.kind} ${index + 1}`}
                     className="aspect-square w-full rounded-xl"
                     onImageOpen={setOpenImage}
+                    onVideoOpen={setOpenVideo}
                   />
                 ))}
               </div>
@@ -113,6 +116,9 @@ export function AdminProfilePanel({ site, onClose }: Props) {
       </aside>
       {openImage && (
         <ImageLightbox url={openImage.url} filename={openImage.filename} onClose={() => setOpenImage(null)} />
+      )}
+      {openVideo && (
+        <VideoLightbox url={openVideo.url} filename={openVideo.filename} onClose={() => setOpenVideo(null)} />
       )}
     </>
   );

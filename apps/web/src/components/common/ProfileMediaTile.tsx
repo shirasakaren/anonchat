@@ -1,4 +1,3 @@
-import { useRef, useState } from "react";
 import { Play } from "lucide-react";
 import type { ProfileMediaDto } from "@anonchat/shared";
 import clsx from "clsx";
@@ -8,14 +7,12 @@ interface Props {
   alt: string;
   className?: string;
   onImageOpen?: (media: ProfileMediaDto) => void;
+  onVideoOpen?: (media: ProfileMediaDto) => void;
 }
 
-/** Shared profile renderer. Animated GIFs play naturally through <img>;
- * videos never autoplay and require the explicit play action. */
-export function ProfileMediaTile({ media, alt, className, onImageOpen }: Props) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [videoPlaying, setVideoPlaying] = useState(false);
-
+/** Shared profile renderer. Animated GIFs play naturally through <img>.
+ * Videos stay inert in the grid and open in the full-screen player. */
+export function ProfileMediaTile({ media, alt, className, onImageOpen, onVideoOpen }: Props) {
   if (media.kind === "image") {
     return (
       <button
@@ -33,29 +30,35 @@ export function ProfileMediaTile({ media, alt, className, onImageOpen }: Props) 
   }
 
   return (
-    <div className={clsx("relative overflow-hidden bg-black", className)}>
+    <button
+      type="button"
+      onClick={() => onVideoOpen?.(media)}
+      aria-label={`Open video ${media.filename}`}
+      className={clsx(
+        "group relative block overflow-hidden bg-black text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent-500)]",
+        className,
+      )}
+    >
       <video
-        ref={videoRef}
-        src={media.url}
-        controls
+        src={`${media.url}#t=0.1`}
+        muted
         playsInline
         preload="metadata"
-        aria-label={alt}
-        className="h-full w-full object-contain"
-        onPlay={() => setVideoPlaying(true)}
-        onPause={() => setVideoPlaying(false)}
-        onEnded={() => setVideoPlaying(false)}
+        aria-hidden="true"
+        tabIndex={-1}
+        className="pointer-events-none h-full w-full object-cover"
       />
-      {!videoPlaying && (
-        <button
-          type="button"
-          onClick={() => void videoRef.current?.play()}
-          aria-label={`Play ${media.filename}`}
-          className="absolute left-1/2 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-black/70 text-white shadow-lg transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-        >
-          <Play size={21} fill="currentColor" aria-hidden />
-        </button>
-      )}
-    </div>
+      <span
+        className="pointer-events-none absolute inset-0 bg-black/10 transition-colors group-hover:bg-black/20"
+        aria-hidden
+      />
+      <span
+        className="pointer-events-none absolute left-1/2 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-white/20 bg-[var(--btn-bg)] text-[var(--btn-fg)] shadow-lg transition-transform group-hover:scale-105 group-hover:bg-[var(--btn-bg-hover)]"
+        aria-hidden
+      >
+        <Play size={21} fill="currentColor" />
+      </span>
+      <span className="sr-only">{alt}</span>
+    </button>
   );
 }
