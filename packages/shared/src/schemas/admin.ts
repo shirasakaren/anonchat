@@ -37,6 +37,7 @@ export const TotpVerifyRequestSchema = z.object({
 export type TotpVerifyRequestInput = z.infer<typeof TotpVerifyRequestSchema>;
 
 export const SiteSettingsRequestSchema = z.object({
+  siteTitle: z.string().trim().min(1).max(100).optional(),
   displayName: z.string().min(1).max(80).optional(),
   bio: z.string().max(500).optional(),
   welcomeMessage: z.string().max(4000).optional(),
@@ -154,6 +155,7 @@ export interface AdminConversationSummaryDto {
 
 export interface SiteSettingsDto {
   onboardingComplete: boolean;
+  siteTitle: string;
   displayName: string;
   bio: string;
   welcomeMessage: string;

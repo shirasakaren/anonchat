@@ -246,6 +246,7 @@ model AdminSession {
 model SiteSettings {
   /// Singleton row - always id = 1.
   id                Int     @id @default(1)
+  siteTitle         String  @default("Anonchat")
   displayName       String  @default("Site Owner")
   bio               String  @default("")
   /// Public markdown shown before a visitor sends the first encrypted

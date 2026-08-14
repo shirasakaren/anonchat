@@ -5,6 +5,7 @@ import { Menu, X, MessageSquare, Settings, ShieldCheck, ClipboardList, ScrollTex
 import { useAdminSession } from "../../context/AdminSessionContext.js";
 import { useUnreadCount } from "../../hooks/useUnreadCount.js";
 import { LaunchGuideModal } from "../../components/admin/LaunchGuideModal.js";
+import { useSite } from "../../context/SiteContext.js";
 
 const NAV_ITEMS = [
   { to: "/admin", label: "Inbox", icon: MessageSquare, end: true },
@@ -17,6 +18,7 @@ const NAV_ITEMS = [
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { admin, logout } = useAdminSession();
+  const { site } = useSite();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [showLaunchGuide, setShowLaunchGuide] = useState(() => {
     const shouldShow = sessionStorage.getItem("anonchat.showLaunchGuide") === "true";
@@ -55,7 +57,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Desktop sidebar (md and up). */}
       <nav className="hidden w-56 flex-col border-r border-[var(--border)] bg-[var(--surface-raised)] p-3 md:flex">
         <div className="mb-4 px-2">
-          <p className="text-sm font-semibold">Anonchat</p>
+          <p className="truncate text-sm font-semibold">{site?.siteTitle ?? "Anonchat"}</p>
           <p className="truncate text-xs text-[var(--text-muted)]">{admin?.displayName}</p>
         </div>
         <div className="flex-1 space-y-1">{navLinks}</div>
@@ -71,7 +73,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Mobile: slim top bar + slide-over nav drawer. */}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--surface-raised)] px-3 md:hidden">
-          <p className="text-sm font-semibold">Anonchat</p>
+          <p className="truncate text-sm font-semibold">{site?.siteTitle ?? "Anonchat"}</p>
           <button
             type="button"
             onClick={() => setMobileNavOpen(true)}
@@ -93,7 +95,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <nav className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-[var(--border)] bg-[var(--surface-raised)] p-3">
             <div className="mb-4 flex items-start justify-between px-2">
               <div>
-                <p className="text-sm font-semibold">Anonchat</p>
+                <p className="truncate text-sm font-semibold">{site?.siteTitle ?? "Anonchat"}</p>
                 <p className="truncate text-xs text-[var(--text-muted)]">{admin?.displayName}</p>
               </div>
               <button

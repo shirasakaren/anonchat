@@ -26,6 +26,7 @@ async function toSettingsDto(): Promise<SiteSettingsDto> {
   const env = loadEnv();
   return {
     onboardingComplete,
+    siteTitle: settings.siteTitle,
     displayName: settings.displayName,
     bio: settings.bio,
     welcomeMessage: settings.welcomeMessage,
@@ -72,6 +73,7 @@ export function registerAdminSettingsRoutes(app: FastifyInstance): void {
     await prisma.siteSettings.update({
       where: { id: settings.id },
       data: {
+        ...(body.siteTitle !== undefined ? { siteTitle: body.siteTitle } : {}),
         ...(body.displayName !== undefined ? { displayName: body.displayName } : {}),
         ...(body.bio !== undefined ? { bio: body.bio } : {}),
         ...(body.welcomeMessage !== undefined ? { welcomeMessage: body.welcomeMessage } : {}),

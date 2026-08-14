@@ -16,6 +16,8 @@ export function SiteProvider({ children }: { children: ReactNode }) {
   const [site, setSite] = useState<PublicSiteInfoDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const siteTitle = site?.siteTitle;
+  const faviconUrl = site?.avatarUrl ?? "/icon.svg";
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -33,6 +35,18 @@ export function SiteProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (!siteTitle) return;
+    document.title = siteTitle;
+    let favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!favicon) {
+      favicon = document.createElement("link");
+      favicon.rel = "icon";
+      document.head.append(favicon);
+    }
+    favicon.href = faviconUrl;
+  }, [faviconUrl, siteTitle]);
 
   return <SiteContext.Provider value={{ site, loading, error, refresh }}>{children}</SiteContext.Provider>;
 }

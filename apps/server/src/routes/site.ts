@@ -17,6 +17,7 @@ export function registerSiteRoutes(app: FastifyInstance): void {
 
     const response: PublicSiteInfoDto = {
       onboardingComplete,
+      siteTitle: settings.siteTitle,
       displayName: settings.displayName,
       bio: settings.bio,
       welcomeMessage: settings.welcomeMessage,

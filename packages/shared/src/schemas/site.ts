@@ -2,6 +2,7 @@ import type { PublicKeysInput } from "./common.js";
 
 export interface PublicSiteInfoDto {
   onboardingComplete: boolean;
+  siteTitle: string;
   displayName: string;
   bio: string;
   welcomeMessage: string;

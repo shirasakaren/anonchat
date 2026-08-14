@@ -35,6 +35,7 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
   const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">("default");
   const [settings, setSettings] = useState<SiteSettingsDto | null>(null);
   const [displayName, setDisplayName] = useState("");
+  const [siteTitle, setSiteTitle] = useState("Anonchat");
   const [bio, setBio] = useState("");
   const [welcomeMessage, setWelcomeMessage] = useState("");
   const [contactLinks, setContactLinks] = useState<{ label: string; url: string }[]>([]);
@@ -75,6 +76,7 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
     void getSettings().then((s) => {
       setSettings(s);
       setDisplayName(s.displayName);
+      setSiteTitle(s.siteTitle);
       setBio(s.bio);
       setWelcomeMessage(s.welcomeMessage);
       setContactLinks(s.contactLinks);
@@ -139,6 +141,7 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
         pgpPublicKey,
       });
       setSettings(updated);
+      await refreshSite();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } finally {
@@ -152,6 +155,21 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
     try {
       const updated = await updateSettings({ welcomeMessage, privacyPolicyUrl, presenceEnabled });
       setSettings(updated);
+      await refreshSite();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSaveBranding() {
+    setSaving(true);
+    setSaved(false);
+    try {
+      const updated = await updateSettings({ siteTitle });
+      setSettings(updated);
+      await refreshSite();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } finally {
@@ -247,6 +265,7 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
     try {
       const updated = await uploadAvatar(blob);
       setSettings(updated);
+      await refreshSite();
     } finally {
       setAvatarUploading(false);
     }
@@ -259,6 +278,7 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
     try {
       const updated = await importGravatarAvatar(gravatarEmail.trim());
       setSettings(updated);
+      await refreshSite();
       setGravatarOpen(false);
       setGravatarEmail("");
     } catch (err) {
@@ -536,6 +556,41 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
 
         {view === "system" && (
           <>
+            <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
+              <h2 className="mb-1 text-sm font-semibold">Branding</h2>
+              <p className="mb-4 text-xs text-[var(--text-muted)]">
+                Set the browser tab title. The favicon always uses your profile picture and is changed from Profile.
+              </p>
+              <div className="mb-4 flex items-center gap-3 rounded-xl bg-[var(--surface-muted)] p-3">
+                {settings.avatarUrl ? (
+                  <img src={settings.avatarUrl} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                ) : (
+                  <DefaultAvatar name={displayName || "Site Owner"} className="h-10 w-10 rounded-lg text-sm" />
+                )}
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{siteTitle || "Anonchat"}</p>
+                  <p className="text-xs text-[var(--text-muted)]">Browser tab preview</p>
+                </div>
+              </div>
+              <label className="mb-4 block text-sm font-medium">
+                Site title
+                <input
+                  value={siteTitle}
+                  maxLength={100}
+                  onChange={(event) => setSiteTitle(event.target.value)}
+                  placeholder="Anonchat"
+                  className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => void handleSaveBranding()}
+                disabled={saving || !siteTitle.trim()}
+                className="rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
+              >
+                {saving ? "Saving…" : saved ? "Saved!" : "Save branding"}
+              </button>
+            </section>
             <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
               <h2 className="mb-1 text-sm font-semibold">Messaging & public experience</h2>
               <p className="mb-4 text-xs text-[var(--text-muted)]">
