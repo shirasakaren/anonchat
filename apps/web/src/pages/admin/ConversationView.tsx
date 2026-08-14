@@ -620,6 +620,16 @@ export function ConversationView({ conversationId, onChanged }: Props) {
       <Composer
         maxLength={site?.limits.maxMessageLength ?? DEFAULT_MAX_MESSAGE_LENGTH}
         maxAttachments={site?.limits.maxAttachmentsPerMessage ?? 5}
+        attachmentLimits={
+          site?.limits.attachmentSize ?? {
+            globalMb: 100,
+            imageMb: 20,
+            videoMb: 100,
+            audioMb: 30,
+            documentMb: 50,
+            otherMb: 25,
+          }
+        }
         disabled={false}
         replyPreview={replyTo?.text}
         onCancelReply={() => setReplyTo(null)}

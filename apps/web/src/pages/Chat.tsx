@@ -557,6 +557,7 @@ export default function Chat() {
         <Composer
           maxLength={site.limits.maxMessageLength}
           maxAttachments={site.limits.maxAttachmentsPerMessage}
+          attachmentLimits={site.limits.attachmentSize}
           disabled={isBlocked}
           disabledReason={isBlocked ? "You can no longer send messages in this conversation." : undefined}
           replyPreview={replyTo?.text}

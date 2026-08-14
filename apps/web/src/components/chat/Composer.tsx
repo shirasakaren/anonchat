@@ -14,7 +14,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Markdown } from "@tiptap/markdown";
 import { X, Paperclip, Smile, File as FileIcon } from "lucide-react";
-import type { CannedReplyDto } from "@anonchat/shared";
+import type { AttachmentSizeLimitsDto, CannedReplyDto } from "@anonchat/shared";
 import {
   expandEmojiShortcuts,
   findActiveShortcodeQuery,
@@ -26,6 +26,8 @@ import { findActiveSlashQuery, searchCannedReplies } from "./cannedReplySlash.js
 import { EmojiShortcutOverlay } from "./EmojiShortcutOverlay.js";
 import { CannedReplySlashOverlay } from "./CannedReplySlashOverlay.js";
 import { EmojiPicker } from "./emoji/EmojiPicker.js";
+import { maxAttachmentSizeMbForFile } from "./preview/textFileTypes.js";
+import { useToast } from "../../context/ToastContext.js";
 
 const SHORTCODE_SUGGESTION_LIMIT = 30;
 const OVERLAY_GAP_PX = 8;
@@ -52,6 +54,7 @@ export interface PendingFile {
 interface Props {
   maxLength: number;
   maxAttachments: number;
+  attachmentLimits: AttachmentSizeLimitsDto;
   disabled: boolean;
   disabledReason?: string;
   replyPreview?: string;
@@ -76,6 +79,7 @@ interface Props {
 export function Composer({
   maxLength,
   maxAttachments,
+  attachmentLimits,
   disabled,
   disabledReason,
   replyPreview,
@@ -90,6 +94,7 @@ export function Composer({
   onDraftChange,
   cannedReplies,
 }: Props) {
+  const { showToast } = useToast();
   const [markdown, setMarkdown] = useState(initialText ?? draftText ?? "");
   const [files, setFiles] = useState<PendingFile[]>([]);
   const [showEmoji, setShowEmoji] = useState(false);
@@ -272,9 +277,38 @@ export function Composer({
   }
 
   function addFiles(newFiles: File[]) {
+    const available = Math.max(0, maxAttachments - files.length);
+    if (available === 0) {
+      showToast({
+        title: "Attachment limit reached",
+        message: `You can attach up to ${maxAttachments} files to one message.`,
+      });
+      requestAnimationFrame(() => editor?.commands.focus());
+      return;
+    }
+
+    if (newFiles.length > available) {
+      showToast({
+        title: "Some files were not added",
+        message: `Only ${available} more ${available === 1 ? "file fits" : "files fit"} in this message.`,
+      });
+    }
+
+    const accepted: File[] = [];
+    for (const file of newFiles.slice(0, available)) {
+      const { category, limitMb } = maxAttachmentSizeMbForFile(attachmentLimits, file.type, file.name);
+      if (file.size > limitMb * 1024 * 1024) {
+        showToast({
+          title: `${file.name} is too large`,
+          message: `The ${category} upload limit is ${limitMb} MB. Choose a smaller file or ask the site owner to increase it.`,
+        });
+      } else {
+        accepted.push(file);
+      }
+    }
+
     setFiles((prev) => {
-      const available = Math.max(0, maxAttachments - prev.length);
-      const additions = newFiles.slice(0, available).map((file) => ({
+      const additions = accepted.map((file) => ({
         file,
         previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
       }));
