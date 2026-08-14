@@ -432,6 +432,11 @@ export default function Chat() {
     setProfileOpen(false);
   }
 
+  function toggleProfile() {
+    if (profileOpen) hideProfile();
+    else showProfile();
+  }
+
   const canEdit = (message: DisplayMessage) => {
     if (!site.limits.messageEditWindowMinutes) return false;
     const ageMs = Date.now() - new Date(message.createdAt).getTime();
@@ -445,8 +450,8 @@ export default function Chat() {
         <header className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface-raised)] px-4 py-2.5">
           <button
             type="button"
-            onClick={showProfile}
-            aria-label="Show admin profile"
+            onClick={toggleProfile}
+            aria-label={profileOpen ? "Hide admin profile" : "Show admin profile"}
             aria-expanded={profileOpen}
             className="flex items-center gap-2.5 rounded-lg text-left hover:bg-[var(--surface-muted)]"
           >
