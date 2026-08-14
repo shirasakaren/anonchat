@@ -104,6 +104,7 @@ export default function Setup() {
     try {
       await onboardAdmin({ username, password, displayName, identity: pendingIdentity, theme });
       setupCompletionInFlight = true;
+      sessionStorage.setItem("anonchat.showLaunchGuide", "true");
       setStep("done");
       // Refreshes the shared site info for this tab's future navigations
       // (e.g. later visiting "/"). Deliberately not awaited before

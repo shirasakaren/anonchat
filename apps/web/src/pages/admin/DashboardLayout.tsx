@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { Menu, X, MessageSquare, Settings, ShieldCheck, ClipboardList, ScrollText, UserRound } from "lucide-react";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
 import { useUnreadCount } from "../../hooks/useUnreadCount.js";
+import { LaunchGuideModal } from "../../components/admin/LaunchGuideModal.js";
 
 const NAV_ITEMS = [
   { to: "/admin", label: "Inbox", icon: MessageSquare, end: true },
@@ -17,6 +18,11 @@ const NAV_ITEMS = [
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { admin, logout } = useAdminSession();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [showLaunchGuide, setShowLaunchGuide] = useState(() => {
+    const shouldShow = sessionStorage.getItem("anonchat.showLaunchGuide") === "true";
+    if (shouldShow) sessionStorage.removeItem("anonchat.showLaunchGuide");
+    return shouldShow;
+  });
   const unreadCount = useUnreadCount();
 
   const closeMobileNav = () => setMobileNavOpen(false);
@@ -112,6 +118,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </button>
           </nav>
         </div>
+      )}
+      {showLaunchGuide && admin && (
+        <LaunchGuideModal adminName={admin.displayName} onClose={() => setShowLaunchGuide(false)} />
       )}
     </div>
   );
