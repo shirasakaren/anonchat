@@ -18,6 +18,13 @@ export function hashSessionToken(token: string): string {
   return bytesToHex(sha256(new TextEncoder().encode(token)));
 }
 
+export function isAdminSessionActive(
+  session: { revokedAt: Date | null; expiresAt: Date },
+  now = new Date(),
+): boolean {
+  return session.revokedAt === null && session.expiresAt > now;
+}
+
 export function isSecureContext(): boolean {
   const env = loadEnv();
   try {
@@ -121,12 +128,17 @@ export async function resolveAdminFromRequest(request: FastifyRequest) {
     where: { tokenHash: hashSessionToken(token) },
     include: { admin: true },
   });
-  // Deliberately NO expiresAt check: per the product requirement, an admin
-  // session persists forever - the only ways it ends are an explicit logout
-  // or a revoke from the Sessions page. expiresAt is still written below so
-  // the column keeps a value if an expiry policy is ever re-enabled.
-  if (!session || session.revokedAt) return null;
   const now = new Date();
+  if (!session || !isAdminSessionActive(session, now)) {
+    // Preserve the record as a security/audit event while ensuring an old
+    // copied cookie cannot be replayed after the browser's 30-day cookie
+    // lifetime. Normal device deduplication hides revoked rows from the
+    // active-session list.
+    if (session && !session.revokedAt) {
+      await prisma.adminSession.update({ where: { id: session.id }, data: { revokedAt: now } });
+    }
+    return null;
+  }
   await prisma.adminSession.update({
     where: { id: session.id },
     data: { lastSeenAt: now, expiresAt: new Date(now.getTime() + ADMIN_SESSION_TTL_MS) },
