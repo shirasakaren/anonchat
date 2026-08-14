@@ -38,6 +38,21 @@ specific privacy/deployment obligations; see "Known gaps" and
 - The desktop admin sidebar can collapse to a persistent icon-only rail and
   expand again; mobile navigation continues to use the labeled drawer.
 
+Production-style browser verification at 1280 by 800 used a 120-column CSV
+whose rendered table was 79,493 pixels wide. The page stayed at the 1,280
+pixel viewport width, the viewer retained 64 pixels of space on both sides,
+and its 1,022 pixel local pane provided the horizontal scroll. A valid 40 MB,
+1920 by 1080 H.264 MP4 that the previous 25 MB limit rejected uploaded with
+progress, rendered in the standard 512 by 288 player, and advanced playback.
+A 110 MB video was rejected before upload with the configured 100 MB limit in
+an accessible toast. The temporary identity, attachments, admin test session,
+and local fixtures were removed after verification.
+
+All 15 migrations were also applied to a fresh PostgreSQL 17 database. The
+full 247-test suite passed (21 crypto, 21 shared, 103 server, 102 web), every
+workspace typechecked, lint and Prettier checks passed, and the production
+build completed successfully.
+
 ## Attachment and document preview follow-up (2026-08-14)
 
 - Selecting, pasting, or dropping attachments returns focus to the existing
