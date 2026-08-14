@@ -6,6 +6,7 @@ export interface PublicSiteInfoDto {
   bio: string;
   welcomeMessage: string;
   avatarUrl: string | null;
+  profilePhotos: string[];
   contactLinks: { label: string; url: string }[];
   pgpPublicKey: string | null;
   privacyPolicyUrl: string | null;

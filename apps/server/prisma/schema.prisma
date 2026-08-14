@@ -245,23 +245,25 @@ model AdminSession {
 
 model SiteSettings {
   /// Singleton row - always id = 1.
-  id               Int     @id @default(1)
-  displayName      String  @default("Site Owner")
-  bio              String  @default("")
+  id                Int     @id @default(1)
+  displayName       String  @default("Site Owner")
+  bio               String  @default("")
   /// Public markdown shown before a visitor sends the first encrypted
   /// message. It is intentionally not stored as a Message: an automatic
   /// server-authored message could not be signed/encrypted as the admin
   /// without putting the admin's private key on the server.
-  welcomeMessage   String  @default("Welcome! Send a message below to start an anonymous, end-to-end encrypted conversation.")
-  avatarUrl        String?
-  contactLinksJson Json    @default("[]")
-  pgpPublicKey     String?
+  welcomeMessage    String  @default("Welcome! Send a message below to start an anonymous, end-to-end encrypted conversation.")
+  avatarUrl         String?
+  /// Public gallery displayed in the visitor-facing admin profile panel.
+  profilePhotosJson Json    @default("[]")
+  contactLinksJson  Json    @default("[]")
+  pgpPublicKey      String?
   /// Public operator-authored notice covering controller identity, purposes,
   /// recipients, retention, rights, and contact details.
-  privacyPolicyUrl String?
-  presenceEnabled  Boolean @default(true)
+  privacyPolicyUrl  String?
+  presenceEnabled   Boolean @default(true)
   /// Theme identifier, e.g. "monochrome-dark", "paper", "forest-dark".
-  theme            String  @default("monochrome-dark")
+  theme             String  @default("monochrome-dark")
 
   /// Where the admin's new-message digest email is sent. Email
   /// notifications are entirely inert without both this AND EMAIL_DRIVER

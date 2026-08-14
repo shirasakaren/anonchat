@@ -1,5 +1,10 @@
 import type { FastifyInstance } from "fastify";
-import { GravatarImportRequestSchema, SiteSettingsRequestSchema, type SiteSettingsDto } from "@anonchat/shared";
+import {
+  GravatarImportRequestSchema,
+  ProfilePhotoParamsSchema,
+  SiteSettingsRequestSchema,
+  type SiteSettingsDto,
+} from "@anonchat/shared";
 import { requireAdmin } from "../../auth/plugin.js";
 import { prisma } from "../../db.js";
 import { loadEnv } from "../../env.js";
@@ -25,6 +30,9 @@ async function toSettingsDto(): Promise<SiteSettingsDto> {
     bio: settings.bio,
     welcomeMessage: settings.welcomeMessage,
     avatarUrl: settings.avatarUrl,
+    profilePhotos: Array.isArray(settings.profilePhotosJson)
+      ? settings.profilePhotosJson.filter((value): value is string => typeof value === "string")
+      : [],
     contactLinks: (settings.contactLinksJson as { label: string; url: string }[]) ?? [],
     pgpPublicKey: settings.pgpPublicKey,
     privacyPolicyUrl: settings.privacyPolicyUrl,
@@ -134,5 +142,46 @@ export function registerAdminSettingsRoutes(app: FastifyInstance): void {
     await prisma.siteSettings.update({ where: { id: settings.id }, data: { avatarUrl: dataUrl } });
     await recordAudit(admin.id, "settings.avatar_imported_gravatar");
     reply.send(await toSettingsDto());
+  });
+
+  app.post("/admin/profile-photos", { preHandler: requireAdmin }, async (request, reply) => {
+    const { admin } = request.adminAuth!;
+    const settings = await getSiteSettings();
+    const current = Array.isArray(settings.profilePhotosJson)
+      ? settings.profilePhotosJson.filter((value): value is string => typeof value === "string")
+      : [];
+    if (current.length >= 8) throw Errors.badRequest("You can add up to 8 profile photos.");
+
+    const file = await request.file({ limits: { fileSize: MAX_AVATAR_BYTES } }).catch(() => null);
+    if (!file) throw Errors.badRequest("No image uploaded.");
+    if (!ALLOWED_AVATAR_MIME_TYPES.has(file.mimetype)) {
+      throw Errors.badRequest("Profile photos must be PNG, JPEG, WebP, or GIF images.");
+    }
+    const buffer = await file.toBuffer().catch(() => {
+      throw Errors.tooLarge("Profile photos must be 2MB or smaller.");
+    });
+    const dataUrl = `data:${file.mimetype};base64,${buffer.toString("base64")}`;
+    await prisma.siteSettings.update({
+      where: { id: settings.id },
+      data: { profilePhotosJson: [...current, dataUrl] },
+    });
+    await recordAudit(admin.id, "settings.profile_photo_added");
+    reply.send(await toSettingsDto());
+  });
+
+  app.delete("/admin/profile-photos/:index", { preHandler: requireAdmin }, async (request, reply) => {
+    const { admin } = request.adminAuth!;
+    const { index } = ProfilePhotoParamsSchema.parse(request.params);
+    const settings = await getSiteSettings();
+    const current = Array.isArray(settings.profilePhotosJson)
+      ? settings.profilePhotosJson.filter((value): value is string => typeof value === "string")
+      : [];
+    if (index >= current.length) throw Errors.notFound("Profile photo not found.");
+    await prisma.siteSettings.update({
+      where: { id: settings.id },
+      data: { profilePhotosJson: current.filter((_, photoIndex) => photoIndex !== index) },
+    });
+    await recordAudit(admin.id, "settings.profile_photo_removed");
+    reply.status(204).send();
   });
 }

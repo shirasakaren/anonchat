@@ -69,6 +69,10 @@ export const GravatarImportRequestSchema = z.object({
 });
 export type GravatarImportRequestInput = z.infer<typeof GravatarImportRequestSchema>;
 
+export const ProfilePhotoParamsSchema = z.object({
+  index: z.coerce.number().int().min(0).max(7),
+});
+
 /** No spaces - the title doubles as the "/name" typed in the composer to
  *  trigger this template (see cannedReplySlash.ts on the client), so it
  *  needs to behave like a single command token. */
@@ -154,6 +158,7 @@ export interface SiteSettingsDto {
   bio: string;
   welcomeMessage: string;
   avatarUrl: string | null;
+  profilePhotos: string[];
   contactLinks: { label: string; url: string }[];
   pgpPublicKey: string | null;
   privacyPolicyUrl: string | null;
