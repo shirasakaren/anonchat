@@ -48,6 +48,7 @@ import {
   toBlobPart,
 } from "../crypto/conversationCrypto.js";
 import type { DisplayMessage } from "../components/chat/types.js";
+import { resolveFileMimetype } from "../components/chat/preview/textFileTypes.js";
 
 const SharedNoteDrawer = lazy(() => import("../components/note/SharedNoteDrawer.js"));
 
@@ -226,7 +227,7 @@ export default function Chat() {
           const encryptedBlob = encryptBlob(conversationKey, bytes);
           const meta = encryptAttachmentMeta(conversationKey, {
             filename: file.name,
-            mimetype: file.type || "application/octet-stream",
+            mimetype: resolveFileMimetype(file.type, file.name),
             size: file.size,
           });
           return { meta, blob: new Blob([toBlobPart(encryptedBlob)]) };

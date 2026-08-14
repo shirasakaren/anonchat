@@ -54,7 +54,106 @@ const EXTENSION_LANGUAGE: Record<string, string> = {
   txt: "plaintext",
   log: "plaintext",
   env: "ini",
+  jsonc: "json",
+  mdx: "markdown",
+  scss: "css",
+  sass: "css",
+  less: "css",
+  vue: "xml",
+  svelte: "xml",
+  astro: "xml",
+  fish: "bash",
+  ps1: "powershell",
+  bat: "dos",
+  cmd: "dos",
+  pl: "perl",
+  pm: "perl",
+  r: "r",
+  scala: "scala",
+  dart: "dart",
+  ex: "elixir",
+  exs: "elixir",
+  erl: "erlang",
+  hrl: "erlang",
+  fs: "fsharp",
+  fsx: "fsharp",
+  vb: "vbnet",
+  asm: "x86asm",
+  s: "x86asm",
+  sol: "solidity",
+  proto: "protobuf",
+  tf: "hcl",
+  hcl: "hcl",
+  properties: "properties",
+  gradle: "gradle",
+  cmake: "cmake",
+  makefile: "makefile",
+  editorconfig: "ini",
+  gitignore: "plaintext",
 };
+
+const MIME_BY_EXTENSION: Record<string, string> = {
+  ...Object.fromEntries(Object.keys(EXTENSION_LANGUAGE).map((extension) => [extension, "text/plain"])),
+  svg: "image/svg+xml",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  webp: "image/webp",
+  avif: "image/avif",
+  bmp: "image/bmp",
+  ico: "image/x-icon",
+  mp4: "video/mp4",
+  m4v: "video/mp4",
+  mov: "video/quicktime",
+  webm: "video/webm",
+  ogv: "video/ogg",
+  avi: "video/x-msvideo",
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+  m4a: "audio/mp4",
+  aac: "audio/aac",
+  oga: "audio/ogg",
+  ogg: "audio/ogg",
+  opus: "audio/ogg",
+  flac: "audio/flac",
+  pdf: "application/pdf",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  csv: "text/csv",
+  tsv: "text/tab-separated-values",
+};
+
+const BINARY_EXTENSIONS = new Set([
+  "exe",
+  "bin",
+  "dll",
+  "so",
+  "dylib",
+  "class",
+  "jar",
+  "war",
+  "zip",
+  "7z",
+  "rar",
+  "gz",
+  "bz2",
+  "xz",
+  "tar",
+  "iso",
+  "dmg",
+  "pkg",
+  "deb",
+  "rpm",
+  "apk",
+  "ipa",
+  "wasm",
+  "o",
+  "pyc",
+  "woff",
+  "woff2",
+  "ttf",
+  "otf",
+]);
 
 const TEXT_LIKE_MIME_PREFIXES = ["text/"];
 const TEXT_LIKE_MIME_EXACT = new Set([
@@ -68,8 +167,25 @@ const TEXT_LIKE_MIME_EXACT = new Set([
 ]);
 
 function extensionOf(filename: string): string | null {
-  const match = /\.([a-z0-9]+)$/i.exec(filename);
+  const basename = filename.split(/[\\/]/).pop()?.toLowerCase() ?? "";
+  if (basename === "dockerfile" || basename === "makefile") return basename;
+  if (basename.startsWith(".env")) return "env";
+  if (basename === ".gitignore") return "gitignore";
+  if (basename === ".editorconfig") return "editorconfig";
+  const match = /\.([a-z0-9]+)$/i.exec(basename);
   return match ? match[1]!.toLowerCase() : null;
+}
+
+/** Browser and operating-system file pickers frequently provide an empty or
+ *  generic MIME value for code, SVG, MOV, and archive files. Use the local
+ *  filename only to improve rendering metadata; the encrypted filename and
+ *  inferred MIME remain inside the E2EE attachment envelope. */
+export function resolveFileMimetype(mimetype: string, filename: string): string {
+  const ext = extensionOf(filename);
+  const inferred = ext ? MIME_BY_EXTENSION[ext] : undefined;
+  if (inferred) return inferred;
+  const normalized = mimetype.split(";", 1)[0]!.trim().toLowerCase();
+  return normalized || "application/octet-stream";
 }
 
 /** Returns the highlight.js language id to render a text/code attachment
@@ -77,6 +193,7 @@ function extensionOf(filename: string): string | null {
  *  (binary formats, or a generic mimetype/extension we don't recognize). */
 export function detectTextLanguage(mimetype: string, filename: string): string | null {
   const ext = extensionOf(filename);
+  if (ext && BINARY_EXTENSIONS.has(ext)) return null;
   const knownLanguage = ext ? EXTENSION_LANGUAGE[ext] : undefined;
   if (knownLanguage) return knownLanguage;
 

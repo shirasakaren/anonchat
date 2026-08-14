@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectTextLanguage, isCsv } from "./textFileTypes.js";
+import { detectTextLanguage, isCsv, resolveFileMimetype } from "./textFileTypes.js";
 
 describe("detectTextLanguage", () => {
   it("maps known extensions to their language id", () => {
@@ -28,6 +28,11 @@ describe("detectTextLanguage", () => {
   it("recognizes common application/* text-like mimetypes even with no extension", () => {
     expect(detectTextLanguage("application/json", "blob")).toBe("plaintext");
   });
+
+  it("keeps misleading text MIME metadata from previewing known binary files", () => {
+    expect(detectTextLanguage("text/plain", "program.exe")).toBeNull();
+    expect(detectTextLanguage("text/plain", "archive.bin")).toBeNull();
+  });
 });
 
 describe("isCsv", () => {
@@ -41,5 +46,18 @@ describe("isCsv", () => {
 
   it("rejects non-csv files", () => {
     expect(isCsv("text/plain", "notes.txt")).toBe(false);
+  });
+});
+
+describe("resolveFileMimetype", () => {
+  it("infers previewable formats when browser metadata is missing or generic", () => {
+    expect(resolveFileMimetype("application/octet-stream", "animation.svg")).toBe("image/svg+xml");
+    expect(resolveFileMimetype("", "clip.mov")).toBe("video/quicktime");
+    expect(resolveFileMimetype("application/octet-stream", "component.jsx")).toBe("text/plain");
+  });
+
+  it("preserves specific MIME metadata for unknown extensions", () => {
+    expect(resolveFileMimetype("application/zip", "backup.custom")).toBe("application/zip");
+    expect(resolveFileMimetype("", "backup.zip")).toBe("application/octet-stream");
   });
 });
