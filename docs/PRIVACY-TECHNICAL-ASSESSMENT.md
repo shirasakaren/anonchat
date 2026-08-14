@@ -14,20 +14,20 @@ No critical code-level privacy defect remains from this review. Two high-priorit
 
 ## Data-flow inventory
 
-| Data | Purpose | Default / trigger | Storage or recipient | Deletion path |
-| --- | --- | --- | --- | --- |
-| Anonymous public ID and public keys | Authentication and E2EE key agreement | Identity creation | PostgreSQL | Visitor self-erasure or admin permanent delete |
-| Message, reaction, attachment, and note ciphertext | 1:1 messaging | Person sends/saves content | PostgreSQL plus local/S3 object storage | Message deletion where applicable; complete identity erasure |
-| Message metadata | Delivery, ordering, unread/read state | Messaging | PostgreSQL | Complete identity erasure |
-| Anonymous session token hash; optional IP | Persistent authentication; abuse context when IP storage is enabled | Login/recovery | PostgreSQL; raw token only in HttpOnly cookie | Logout revokes; identity erasure deletes |
-| Optional reply email | Notify on an admin reply | Separate visitor opt-in | PostgreSQL and configured SMTP/Resend provider | Clear through API; identity erasure deletes |
-| Web Push endpoint and keys | Background message notification | Browser permission plus explicit enable | PostgreSQL and browser push service | Unsubscribe; identity erasure removes visitor ownership |
-| Visitor diagnostics | Troubleshooting/context | Admin enables feature, then visitor opts in | PostgreSQL | Visitor revocation, feature disable, timed expiry, identity erasure |
-| Optional IP-derived location/network | Coarse context | Diagnostics consent plus both operator flags | PostgreSQL; IP sent to ipwho.is | Same as diagnostics |
-| Admin sessions, IP, user agent | Admin authentication and device management | Admin login | PostgreSQL | Logout/revoke; expiry is enforced |
-| Admin audit log | Security/accountability | Admin mutations | PostgreSQL | Operator database retention process (not yet built in) |
-| Device-local recovery secret | Restore anonymous identity | Identity creation/import | Browser IndexedDB | Visitor identity erasure; manual browser-data clearing |
-| Device-local draft | Avoid losing unfinished text | Person types in composer | `localStorage`, encrypted and conversation-scoped | Successful matching send or identity erasure |
+| Data                                               | Purpose                                                             | Default / trigger                            | Storage or recipient                              | Deletion path                                                       |
+| -------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------- |
+| Anonymous public ID and public keys                | Authentication and E2EE key agreement                               | Identity creation                            | PostgreSQL                                        | Visitor self-erasure or admin permanent delete                      |
+| Message, reaction, attachment, and note ciphertext | 1:1 messaging                                                       | Person sends/saves content                   | PostgreSQL plus local/S3 object storage           | Message deletion where applicable; complete identity erasure        |
+| Message metadata                                   | Delivery, ordering, unread/read state                               | Messaging                                    | PostgreSQL                                        | Complete identity erasure                                           |
+| Anonymous session token hash; optional IP          | Persistent authentication; abuse context when IP storage is enabled | Login/recovery                               | PostgreSQL; raw token only in HttpOnly cookie     | Logout revokes; identity erasure deletes                            |
+| Optional reply email                               | Notify on an admin reply                                            | Separate visitor opt-in                      | PostgreSQL and configured SMTP/Resend provider    | Clear through API; identity erasure deletes                         |
+| Web Push endpoint and keys                         | Background message notification                                     | Browser permission plus explicit enable      | PostgreSQL and browser push service               | Unsubscribe; identity erasure removes visitor ownership             |
+| Visitor diagnostics                                | Troubleshooting/context                                             | Admin enables feature, then visitor opts in  | PostgreSQL                                        | Visitor revocation, feature disable, timed expiry, identity erasure |
+| Optional IP-derived location/network               | Coarse context                                                      | Diagnostics consent plus both operator flags | PostgreSQL; IP sent to ipwho.is                   | Same as diagnostics                                                 |
+| Admin sessions, IP, user agent                     | Admin authentication and device management                          | Admin login                                  | PostgreSQL                                        | Logout/revoke; expiry is enforced                                   |
+| Admin audit log                                    | Security/accountability                                             | Admin mutations                              | PostgreSQL                                        | Operator database retention process (not yet built in)              |
+| Device-local recovery secret                       | Restore anonymous identity                                          | Identity creation/import                     | Browser IndexedDB                                 | Visitor identity erasure; manual browser-data clearing              |
+| Device-local draft                                 | Avoid losing unfinished text                                        | Person types in composer                     | `localStorage`, encrypted and conversation-scoped | Successful matching send or identity erasure                        |
 
 ## Implemented safeguards
 

@@ -18,10 +18,7 @@ export function hashSessionToken(token: string): string {
   return bytesToHex(sha256(new TextEncoder().encode(token)));
 }
 
-export function isAdminSessionActive(
-  session: { revokedAt: Date | null; expiresAt: Date },
-  now = new Date(),
-): boolean {
+export function isAdminSessionActive(session: { revokedAt: Date | null; expiresAt: Date }, now = new Date()): boolean {
   return session.revokedAt === null && session.expiresAt > now;
 }
 
