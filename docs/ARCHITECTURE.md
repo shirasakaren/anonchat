@@ -96,6 +96,13 @@ The admin can configure a public privacy-policy URL in Settings. It is linked be
 
 `StorageAdapter` (`put`/`get`/`delete`) has two implementations: local disk (default, zero config) and an S3-compatible client (works unmodified against AWS S3, Cloudflare R2, Backblaze B2, or self-hosted MinIO by pointing `S3_ENDPOINT` at it). Attachment bytes stored through either adapter are already ciphertext by the time the server sees them.
 
+After the browser decrypts an attachment, images and audio render locally and
+document previews use local blob URLs. Video attachments remain paused
+thumbnails inside message bubbles and only mount native playback controls in a
+full-screen local viewer after an explicit click. Visitor and admin threads use
+the same MessageBubble and AttachmentPreview components, so playback behavior
+cannot drift between the two interfaces.
+
 ## Deployment
 
 Primary target is `docker compose up -d` on any VPS (see `docker-compose.yml`, `.env.example`, `scripts/setup.sh`). One-click/IaC templates for Railway, Render, AWS, GCP, and Azure live under `deploy/`. All of them build the same container image and only differ in how they provision Postgres and wire environment variables.

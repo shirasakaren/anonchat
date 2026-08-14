@@ -1,6 +1,6 @@
 # Project status / handoff
 
-Last updated: 2026-08-14. Read this first if you're picking up this project
+Last updated: 2026-08-15. Read this first if you're picking up this project
 in a new session - it's the durable source of truth for what's done, what's
 verified, and what's next. (Don't rely solely on an in-session task list -
 this file is what's meant to survive across sessions.)
@@ -13,6 +13,30 @@ performance, and WCAG passes have been completed. The codebase is tested and
 reviewed. Remaining items are either an optional product roadmap or operator-
 specific privacy/deployment obligations; see "Known gaps" and
 `docs/PRIVACY-TECHNICAL-ASSESSMENT.md`.
+
+## Chat video viewer follow-up (2026-08-15)
+
+- Sent video attachments no longer expose an inline player inside visitor or
+  admin message bubbles. They render as paused, fixed-ratio thumbnails with the
+  same theme-aware play control used by profile media.
+- Selecting a chat video opens the shared full-screen player with native
+  playback, seek, volume, full-screen, and download controls. Backdrop click,
+  Escape, and the close control dismiss the player.
+- Video upload progress keeps the blurred local thumbnail and progress bar,
+  but its play marker now follows the active theme. It stays non-interactive
+  until encryption and upload finish.
+- The shared MessageBubble and AttachmentPreview path enforces the same result
+  for visitors and admins, while one shared VideoPreviewTile keeps profile and
+  chat play affordances visually consistent.
+
+Browser verification sent a real encrypted 640 by 360 H.264 MP4. Its compact
+preview measured 512 by 288, remained paused at ready state 4, exposed no
+native controls, and displayed the active theme play control. Selecting it
+opened a 1152 pixel wide player with controls and active playback; clicking the
+empty backdrop closed it. The temporary identity, encrypted attachment,
+browser session, and fixture were permanently removed afterward. All 102 web
+tests passed, the web package typechecked and linted, Prettier passed, and the
+production build completed successfully.
 
 ## Profile media and dashboard polish follow-up (2026-08-14)
 
@@ -129,7 +153,8 @@ build completed successfully.
 - Code blocks and text/document surfaces now explicitly use theme surface/text
   tokens instead of inheriting a possibly incompatible message-bubble color.
 - Audio uses a custom themed player with play/pause, seek, time, mute, and
-  volume controls. Video remains directly playable in the message.
+  volume controls. Video stays paused in the message and opens the shared
+  full-screen player when selected.
 - Multipart sends use XMLHttpRequest for real upload progress because Fetch
   does not expose upload progress. Local image/video previews are blurred while
   uploading. Attachment downloads stream into the E2EE decrypt step with their

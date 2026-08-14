@@ -17,7 +17,7 @@ system fits together.
 - Anonymous identity from a cryptographically random recovery key, with an optional visitor-chosen name
 - Persistent 1:1 conversation per identity, end-to-end encrypted
 - Real-time messaging over WebSocket, with offline/reconnect sync
-- Encrypted attachments with upload/download progress, inline media, compact file cards, and full local document/code previews
+- Encrypted attachments with upload/download progress, themed media previews, full-screen video, and local document/code viewers
 - One shared TipTap note per conversation with encrypted rich text and playable media
 - Markdown-lite formatting, emoji shortcodes, reactions, replies, edit/delete
 - Admin dashboard: collapsible navigation, inbox search/filters, archive/block/delete, canned replies, and audit log
