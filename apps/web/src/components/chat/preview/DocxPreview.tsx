@@ -3,6 +3,7 @@ import DOMPurify from "dompurify";
 
 interface Props {
   bytes: Uint8Array<ArrayBuffer>;
+  fullScreen?: boolean;
 }
 
 type State = { kind: "loading" } | { kind: "ready"; html: string } | { kind: "error" };
@@ -42,7 +43,7 @@ const ALLOWED_TAGS = [
   "span",
 ];
 
-export function DocxPreview({ bytes }: Props) {
+export function DocxPreview({ bytes, fullScreen = false }: Props) {
   const [state, setState] = useState<State>({ kind: "loading" });
 
   useEffect(() => {
@@ -77,7 +78,7 @@ export function DocxPreview({ bytes }: Props) {
   }
   return (
     <div
-      className="prose-message max-h-96 overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[var(--text)]"
+      className={`prose-message overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[var(--text)] ${fullScreen ? "min-h-full" : "max-h-96"}`}
       dangerouslySetInnerHTML={{ __html: state.html }}
     />
   );

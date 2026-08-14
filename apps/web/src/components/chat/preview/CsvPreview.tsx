@@ -2,6 +2,7 @@ import { useMemo } from "react";
 
 interface Props {
   bytes: Uint8Array<ArrayBuffer>;
+  fullScreen?: boolean;
 }
 
 const MAX_ROWS = 500;
@@ -72,7 +73,7 @@ function parseCsv(text: string, maxRows: number): { rows: string[][]; truncated:
   return { rows, truncated: rows.length >= maxRows && i < text.length };
 }
 
-export function CsvPreview({ bytes }: Props) {
+export function CsvPreview({ bytes, fullScreen = false }: Props) {
   const { rows, truncated } = useMemo(() => {
     const text = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
     return parseCsv(text, MAX_ROWS);
@@ -88,7 +89,9 @@ export function CsvPreview({ bytes }: Props) {
   const body = rows.slice(1);
 
   return (
-    <div className="max-h-96 overflow-auto rounded-lg border border-[var(--border)] text-[var(--text)]">
+    <div
+      className={`overflow-auto rounded-lg border border-[var(--border)] text-[var(--text)] ${fullScreen ? "min-h-full" : "max-h-96"}`}
+    >
       <table className="w-full border-collapse text-xs">
         <thead className="sticky top-0 bg-[var(--surface-muted)]">
           <tr>

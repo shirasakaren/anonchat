@@ -208,4 +208,9 @@ export function isCsv(mimetype: string, filename: string): boolean {
   return mimetype === "text/csv" || extensionOf(filename) === "csv";
 }
 
+export function isMarkdown(filename: string): boolean {
+  const ext = extensionOf(filename);
+  return ext === "md" || ext === "markdown" || ext === "mdx";
+}
+
 export const DOCX_MIMETYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
