@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Languages, MapPin, Monitor, ShieldCheck, Smartphone, Tablet, Wifi, X } from "lucide-react";
 import type { VisitorInsightDto } from "@anonchat/shared";
 import { getConversationVisitorInsight } from "../../api/admin.js";
@@ -56,16 +56,43 @@ function CoarseLocationMap({ latitude, longitude }: { latitude: number; longitud
 }
 
 export function VisitorInsightsDrawer({ conversationId, onClose }: Props) {
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [insight, setInsight] = useState<VisitorInsightDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeButtonRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(
+        drawerRef.current?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((element) => element.offsetParent !== null);
+      if (focusable.length === 0) return;
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      previouslyFocused?.focus();
+    };
   }, [onClose]);
 
   useEffect(() => {
@@ -83,21 +110,25 @@ export function VisitorInsightsDrawer({ conversationId, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-40 bg-black/35" onMouseDown={onClose} role="presentation">
-      <aside
+      <div
+        ref={drawerRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Visitor insights"
+        aria-labelledby="visitor-insights-title"
         onMouseDown={(event) => event.stopPropagation()}
         className="ml-auto flex h-full w-full max-w-md flex-col border-l border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl"
       >
         <header className="flex items-start justify-between border-b border-[var(--border)] p-4">
           <div>
-            <h2 className="text-sm font-semibold">Visitor insights</h2>
+            <h2 id="visitor-insights-title" className="text-sm font-semibold">
+              Visitor insights
+            </h2>
             <p className="mt-1 text-xs text-[var(--text-muted)]">
               Consented diagnostics reported by this visitor's browser.
             </p>
           </div>
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={onClose}
             aria-label="Close visitor insights"
@@ -218,7 +249,7 @@ export function VisitorInsightsDrawer({ conversationId, onClose }: Props) {
             </div>
           )}
         </div>
-      </aside>
+      </div>
     </div>
   );
 }
