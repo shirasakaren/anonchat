@@ -73,6 +73,12 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
           <ShieldCheck size={14} className="shrink-0 text-[var(--link-fg)]" aria-hidden />
           End-to-end encrypted — only your identity and {ownerName}'s key can decrypt these messages.
         </p>
+        {site?.visitorInsights.collectsIpAddress && (
+          <p className="mt-2 text-xs text-[var(--text-muted)]">
+            This operator has enabled IP-address retention for abuse prevention.
+            {site.privacyPolicyUrl ? " See the privacy policy below for details." : " Ask the operator for details."}
+          </p>
+        )}
       </div>
 
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-raised)] p-6 shadow-sm">
