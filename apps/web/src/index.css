@@ -150,29 +150,6 @@ select:disabled {
   }
 }
 
-/* ── Inbox row: hover-revealed chevron vs unread badge ──────────────── */
-
-/* Unhovered, the unread badge holds the far-right edge. Hovering the
-   row (or opening its action menu) reveals the chevron at the far
-   right and shifts the badge left into the vacated space. Plain CSS so
-   the hover rules beat the responsive resets deterministically. On
-   touch sizes the chevron is always visible, so the badge is always
-   shifted. */
-.conversation-badge {
-  margin-right: 1.75rem;
-  transition: margin 150ms ease;
-}
-@media (min-width: 768px) {
-  .conversation-badge {
-    margin-right: 0;
-  }
-  .conversation-row:hover .conversation-badge,
-  .conversation-row:focus-within .conversation-badge,
-  .conversation-row.row-menu-open .conversation-badge {
-    margin-right: 1.75rem;
-  }
-}
-
 /* ── Message prose ─────────────────────────────────────────────────── */
 
 .prose-message {

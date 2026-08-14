@@ -232,13 +232,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
           conversations.map((conv) => {
             const unread = conv.unreadCount > 0;
             return (
-              <div
-                key={conv.id}
-                className={clsx(
-                  "conversation-row group relative border-b border-[var(--border)]",
-                  openMenuId === conv.id && "row-menu-open",
-                )}
-              >
+              <div key={conv.id} className="group relative border-b border-[var(--border)]">
                 <button
                   type="button"
                   onClick={() => onSelect(conv.id)}
@@ -270,33 +264,43 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                       unread ? "font-medium text-[var(--text)]" : "text-[var(--text-muted)]",
                     )}
                   >
-                    <span className="flex min-w-0 items-center gap-1 truncate">
+                    {/* min-w-0 + flex-1 (not the trailing side) is what
+                        actually reserves the chevron's space: text-overflow
+                        ellipsis also requires a non-flex box to act on, so
+                        the truncating text itself is a plain span, not
+                        `flex`. Growing this element (instead of `ml-auto` on
+                        the trailing side) means the badge+chevron cluster's
+                        width - which changes depending on whether the badge
+                        is rendered - always comes out of this span's budget,
+                        never the other way around; the previous `ml-auto`
+                        approach let that cluster collapse to zero width
+                        whenever `unread` was false (its only child was
+                        `absolute`, so it contributed nothing in-flow), which
+                        let a long preview run its full text under the
+                        always-absolutely-positioned chevron button. */}
+                    <span className="min-w-0 flex-1 truncate">
                       {previews[conv.id] === ATTACHMENT_PREVIEW ? (
-                        <>
+                        <span className="inline-flex items-center gap-1 align-middle">
                           <Paperclip size={11} className="shrink-0" aria-hidden />
                           Attachment
-                        </>
+                        </span>
                       ) : (
                         (previews[conv.id] ?? "…")
                       )}
                     </span>
-                    {/* Right side, below the time (same anchor): the chevron
-                        action trigger sits in the gap between the preview
-                        text and the unread badge, and the badge is pinned to
-                        the far right. The chevron's slot is always reserved
-                        (invisible when hidden, never display:none) so
-                        revealing it on hover cannot move the text. */}
-                    {/* Right side, below the time: unhovered, the unread badge
-                        holds the far-right edge; hovering (or opening the
-                        menu) shifts the badge left (.conversation-badge in
-                        index.css) and reveals the chevron overlay in the
-                        vacated rightmost slot. The group keeps a fixed
-                        height so the preview line never reflows. */}
-                    <div className="relative ml-auto flex h-6 shrink-0 items-center gap-1">
+                    {/* Right side, below the time: badge and chevron are now
+                        ordinary in-flow flex siblings (not absolutely
+                        positioned), so this cluster's real width is always
+                        subtracted from the preview span's budget above,
+                        whether or not the badge is currently rendered. The
+                        chevron button keeps its slot reserved even while
+                        `invisible` (never `display:none`), so revealing it
+                        on hover can't shift anything else in the row. */}
+                    <div className="flex h-6 shrink-0 items-center gap-1">
                       {unread && (
                         <span
                           className={clsx(
-                            "conversation-badge shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold",
+                            "shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold",
                             conv.mutedAt
                               ? "bg-[var(--surface-muted)] text-[var(--text-muted)]"
                               : "bg-[var(--btn-bg)] text-[var(--btn-fg)]",
@@ -305,7 +309,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                           {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
                         </span>
                       )}
-                      <div data-row-menu className="absolute right-0 top-1/2 z-10 -translate-y-1/2">
+                      <div data-row-menu className="relative shrink-0">
                         <button
                           type="button"
                           aria-label="Conversation actions"
