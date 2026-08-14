@@ -213,4 +213,32 @@ export function isMarkdown(filename: string): boolean {
   return ext === "md" || ext === "markdown" || ext === "mdx";
 }
 
+export function attachmentLimitCategory(mimetype: string, filename: string): AttachmentLimitCategory {
+  const effectiveMime = resolveFileMimetype(mimetype, filename);
+  if (effectiveMime.startsWith("image/")) return "image";
+  if (effectiveMime.startsWith("video/")) return "video";
+  if (effectiveMime.startsWith("audio/")) return "audio";
+  if (
+    effectiveMime === "application/pdf" ||
+    effectiveMime === DOCX_MIMETYPE ||
+    isCsv(effectiveMime, filename) ||
+    isMarkdown(filename) ||
+    detectTextLanguage(effectiveMime, filename)
+  ) {
+    return "document";
+  }
+  return "other";
+}
+
+export function maxAttachmentSizeMbForFile(
+  limits: AttachmentSizeLimitsDto,
+  mimetype: string,
+  filename: string,
+): { category: AttachmentLimitCategory; limitMb: number } {
+  const category = attachmentLimitCategory(mimetype, filename);
+  const categoryLimit = limits[`${category}Mb`];
+  return { category, limitMb: Math.min(limits.globalMb, categoryLimit) };
+}
+
 export const DOCX_MIMETYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+import type { AttachmentLimitCategory, AttachmentSizeLimitsDto } from "@anonchat/shared";
