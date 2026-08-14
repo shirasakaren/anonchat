@@ -306,6 +306,85 @@ select:disabled {
   margin-top: 0.5rem;
 }
 
+/* Chat composer: TipTap is the input itself, not a separate preview pane.
+   Keep block formatting readable but compact enough for a message box. */
+.composer-editor-content {
+  min-height: 2.625rem;
+  max-height: 8rem;
+  overflow-y: auto;
+  padding: 0.625rem 0.625rem 0.625rem 0.375rem;
+  color: var(--text);
+  font-size: 0.875rem;
+  line-height: 1.35;
+  outline: none;
+  overflow-wrap: anywhere;
+}
+
+.composer-editor-content > * + * {
+  margin-top: 0.4rem;
+}
+
+.composer-editor-content h1 {
+  font-size: 1.25rem;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.composer-editor-content h2 {
+  font-size: 1.1rem;
+  line-height: 1.3;
+  font-weight: 700;
+}
+
+.composer-editor-content h3 {
+  font-size: 1rem;
+  line-height: 1.35;
+  font-weight: 650;
+}
+
+.composer-editor-content ul,
+.composer-editor-content ol {
+  padding-left: 1.25rem;
+}
+
+.composer-editor-content ul {
+  list-style: disc;
+}
+
+.composer-editor-content ol {
+  list-style: decimal;
+}
+
+.composer-editor-content blockquote {
+  border-left: 3px solid var(--border-strong);
+  padding-left: 0.65rem;
+  color: var(--text-muted);
+}
+
+.composer-editor-content pre {
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  background: var(--surface-muted);
+  padding: 0.5rem 0.625rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+}
+
+.composer-editor-content code:not(pre code) {
+  border-radius: 0.25rem;
+  background: var(--surface-muted);
+  padding: 0.05rem 0.25rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.composer-editor-content p.is-editor-empty:first-child::before {
+  float: left;
+  height: 0;
+  color: var(--text-muted);
+  content: attr(data-placeholder);
+  pointer-events: none;
+}
+
 /* TipTap shared-note editor. All colors come from the active Anonchat
    theme, so the editor follows the same light/dark/custom palette rather
    than bringing its own white document surface. */

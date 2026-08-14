@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -8,8 +9,11 @@ import {
   type DragEvent,
   type KeyboardEvent,
 } from "react";
-import clsx from "clsx";
-import { X, Paperclip, Smile, File as FileIcon, Eye } from "lucide-react";
+import { EditorContent, useEditor, type Editor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Placeholder from "@tiptap/extension-placeholder";
+import { Markdown } from "@tiptap/markdown";
+import { X, Paperclip, Smile, File as FileIcon } from "lucide-react";
 import type { CannedReplyDto } from "@anonchat/shared";
 import {
   expandEmojiShortcuts,
@@ -19,32 +23,27 @@ import {
   type ShortcodeMatch,
 } from "./emojiShortcuts.js";
 import { findActiveSlashQuery, searchCannedReplies } from "./cannedReplySlash.js";
-import { getCaretCoordinates } from "./caretCoordinates.js";
 import { EmojiShortcutOverlay } from "./EmojiShortcutOverlay.js";
 import { CannedReplySlashOverlay } from "./CannedReplySlashOverlay.js";
 import { EmojiPicker } from "./emoji/EmojiPicker.js";
 import { justCompletedFreshCodeFence } from "./codeFenceDetection.js";
 import { CodeBlockModal } from "./CodeBlockModal.js";
-import { ExpandableProse } from "./ExpandableProse.js";
-import { renderMessageMarkdown } from "./markdown.js";
 
-/** How many shortcode matches to offer - the overlay scrolls horizontally
- *  (see EmojiShortcutOverlay), so there's no reason to cap this as
- *  tightly as an in-flow dropdown would need to. */
 const SHORTCODE_SUGGESTION_LIMIT = 30;
-/** Gap between the text cursor's line and the overlay floating above it. */
 const OVERLAY_GAP_PX = 8;
-/** Matches EmojiShortcutOverlay's own max-w-[min(90vw,20rem)] - used only
- *  to keep the overlay's left edge from being positioned so far right it'd
- *  run off the viewport, not to size the overlay itself. */
 const OVERLAY_MAX_WIDTH_PX = 320;
 
-function computeOverlayPosition(el: HTMLTextAreaElement, cursor: number): { top: number; left: number } {
-  const rect = el.getBoundingClientRect();
-  const caret = getCaretCoordinates(el, cursor);
-  const rawLeft = rect.left + caret.left;
-  const left = Math.min(Math.max(rawLeft, 8), window.innerWidth - OVERLAY_MAX_WIDTH_PX - 8);
-  return { top: rect.top + caret.top - OVERLAY_GAP_PX, left };
+interface ActiveShortcode {
+  from: number;
+  query: string;
+}
+
+function editorOverlayPosition(editor: Editor): { top: number; left: number } {
+  const caret = editor.view.coordsAtPos(editor.state.selection.from);
+  return {
+    top: caret.top - OVERLAY_GAP_PX,
+    left: Math.min(Math.max(caret.left, 8), window.innerWidth - OVERLAY_MAX_WIDTH_PX - 8),
+  };
 }
 
 export interface PendingFile {
@@ -67,12 +66,15 @@ interface Props {
   draftId?: string;
   draftText?: string;
   onDraftChange?: (text: string) => void;
-  /** Admin-only: enables the "/template" autocomplete below. Anonymous
-   *  users' composer simply never passes this, so the trigger never
-   *  activates for them. */
   cannedReplies?: CannedReplyDto[];
 }
 
+/**
+ * A single WYSIWYG message surface. StarterKit's input rules turn familiar
+ * Markdown prefixes into editable formatting in place (`# ` -> heading,
+ * `> ` -> quote, list markers -> lists), while the Markdown extension
+ * serializes the document back to text before draft persistence/encryption.
+ */
 export function Composer({
   maxLength,
   maxAttachments,
@@ -90,181 +92,184 @@ export function Composer({
   onDraftChange,
   cannedReplies,
 }: Props) {
-  const [text, setText] = useState(initialText ?? draftText ?? "");
+  const [markdown, setMarkdown] = useState(initialText ?? draftText ?? "");
   const [files, setFiles] = useState<PendingFile[]>([]);
   const [showEmoji, setShowEmoji] = useState(false);
-  const [shortcodeQuery, setShortcodeQuery] = useState<{ start: number; query: string } | null>(null);
+  const [shortcodeQuery, setShortcodeQuery] = useState<ActiveShortcode | null>(null);
   const [slashQuery, setSlashQuery] = useState<{ query: string } | null>(null);
   const [selectedSuggestion, setSelectedSuggestion] = useState(0);
   const [overlayPos, setOverlayPos] = useState<{ top: number; left: number } | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
-  const [codeModal, setCodeModal] = useState<{ fenceStart: number; fenceEnd: number } | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [codeModal, setCodeModal] = useState<{ from: number; to: number } | null>(null);
   const pickerWrapperRef = useRef<HTMLDivElement>(null);
-
-  const suggestions = shortcodeQuery ? searchShortcodes(shortcodeQuery.query, SHORTCODE_SUGGESTION_LIMIT) : [];
-  const templateSuggestions =
-    slashQuery && cannedReplies?.length ? searchCannedReplies(cannedReplies, slashQuery.query) : [];
-
-  // Gated on showPreview, not just memoized on text - marked + DOMPurify +
-  // highlight.js runs its full pipeline here, and that cost should only
-  // land on every keystroke while the preview panel is actually visible,
-  // not silently on every keystroke regardless (which a plain
-  // useMemo(() => renderMessageMarkdown(text), [text]) would still do).
-  const previewHtml = useMemo(() => (showPreview ? renderMessageMarkdown(text) : null), [showPreview, text]);
+  const onDraftChangeRef = useRef(onDraftChange);
+  const onTypingChangeRef = useRef(onTypingChange);
+  const transformingRef = useRef(false);
+  const previousInitialTextRef = useRef(initialText);
+  const initialTextRef = useRef(initialText);
+  const draftTextRef = useRef(draftText ?? "");
+  const filesRef = useRef(files);
+  const cannedRepliesRef = useRef(cannedReplies);
+  const codeModalRef = useRef(codeModal);
 
   useEffect(() => {
-    setText(initialText ?? draftText ?? "");
-    if (initialText !== undefined) textareaRef.current?.focus();
-  }, [draftId, draftText, initialText]);
+    onDraftChangeRef.current = onDraftChange;
+    onTypingChangeRef.current = onTypingChange;
+    draftTextRef.current = draftText ?? "";
+    initialTextRef.current = initialText;
+    cannedRepliesRef.current = cannedReplies;
+    codeModalRef.current = codeModal;
+  }, [cannedReplies, codeModal, draftText, initialText, onDraftChange, onTypingChange]);
 
-  // Close the emoji picker on an outside click - it has no built-in
-  // dismiss-on-blur behavior of its own.
+  useEffect(() => {
+    filesRef.current = files;
+  }, [files]);
+
+  const syncQueries = useCallback(
+    (activeEditor: Editor) => {
+      const { $from, from } = activeEditor.state.selection;
+      const textBeforeCaret = $from.parent.textBetween(0, $from.parentOffset, undefined, "\ufffc");
+      const activeShortcode = findActiveShortcodeQuery(textBeforeCaret);
+      const documentBeforeCaret = activeEditor.state.doc.textBetween(0, from, "\n", "\ufffc");
+      const activeSlash = cannedRepliesRef.current?.length ? findActiveSlashQuery(documentBeforeCaret) : null;
+
+      setShortcodeQuery(
+        activeShortcode
+          ? { from: from - (textBeforeCaret.length - activeShortcode.start), query: activeShortcode.query }
+          : null,
+      );
+      setSlashQuery(activeSlash);
+      setOverlayPos(activeShortcode || activeSlash ? editorOverlayPosition(activeEditor) : null);
+    },
+    [],
+  );
+
+  const editor = useEditor(
+    {
+      immediatelyRender: false,
+      extensions: [
+        StarterKit.configure({ link: { openOnClick: false, autolink: true } }),
+        Markdown,
+        Placeholder.configure({ placeholder: "Type a message…" }),
+      ],
+      content: initialText ?? draftText ?? "",
+      contentType: "markdown",
+      editable: !disabled,
+      editorProps: {
+        attributes: {
+          class: "composer-editor-content",
+          "aria-label": "Message",
+          role: "textbox",
+          "aria-multiline": "true",
+        },
+      },
+      onUpdate: ({ editor: activeEditor }) => {
+        const next = activeEditor.getMarkdown();
+        setMarkdown(next);
+        if (initialTextRef.current === undefined) onDraftChangeRef.current?.(next);
+        onTypingChangeRef.current?.(next.length > 0);
+
+        const { $from, from } = activeEditor.state.selection;
+        const textBeforeCaret = $from.parent.textBetween(0, $from.parentOffset, undefined, "\ufffc");
+        const completed = matchCompletedShortcode(textBeforeCaret);
+        if (completed && !transformingRef.current) {
+          transformingRef.current = true;
+          activeEditor.commands.insertContentAt(
+            { from: from - (textBeforeCaret.length - completed.start), to: from },
+            completed.emoji,
+          );
+          transformingRef.current = false;
+          return;
+        }
+
+        if (!codeModalRef.current && justCompletedFreshCodeFence(textBeforeCaret, textBeforeCaret.length)) {
+          setCodeModal({ from: from - 3, to: from });
+        }
+        syncQueries(activeEditor);
+      },
+      onSelectionUpdate: ({ editor: activeEditor }) => syncQueries(activeEditor),
+    },
+    [draftId],
+  );
+
+  useEffect(() => {
+    editor?.setEditable(!disabled);
+  }, [disabled, editor]);
+
+  // Editing a message temporarily replaces the current draft. When editing
+  // ends, restore the draft captured by the parent. Deliberately do not
+  // react to every draftText prop change: a delayed draft write resolving
+  // after Send was what made already-sent text reappear in the composer.
+  useEffect(() => {
+    if (!editor) return;
+    const wasEditing = previousInitialTextRef.current !== undefined;
+    const isEditing = initialText !== undefined;
+    previousInitialTextRef.current = initialText;
+    if (!isEditing && !wasEditing) return;
+    const next = initialText ?? draftTextRef.current;
+    editor.commands.setContent(next, { contentType: "markdown", emitUpdate: false });
+    setMarkdown(next);
+    editor.commands.focus("end");
+  }, [editor, initialText]);
+
   useEffect(() => {
     if (!showEmoji) return;
     function handlePointerDown(e: MouseEvent) {
-      if (pickerWrapperRef.current && !pickerWrapperRef.current.contains(e.target as Node)) {
-        setShowEmoji(false);
-      }
+      if (pickerWrapperRef.current && !pickerWrapperRef.current.contains(e.target as Node)) setShowEmoji(false);
     }
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [showEmoji]);
 
-  function updateText(value: string) {
-    setText(value);
-    if (initialText === undefined) onDraftChange?.(value);
-    onTypingChange?.(value.length > 0);
-  }
+  useEffect(
+    () => () => {
+      for (const pending of filesRef.current) if (pending.previewUrl) URL.revokeObjectURL(pending.previewUrl);
+    },
+    [],
+  );
 
-  /** Inserts at the cursor (falling back to the end on the off chance the
-   *  textarea ref isn't attached yet) rather than always appending - used
-   *  by the emoji picker button, matching how the :shortcode: overlay
-   *  already inserts via applySuggestion below. */
-  function insertAtCursor(insert: string) {
-    const el = textareaRef.current;
-    if (!el) {
-      updateText(text + insert);
-      return;
-    }
-    const cursor = el.selectionStart ?? text.length;
-    const newValue = text.slice(0, cursor) + insert + text.slice(el.selectionEnd ?? cursor);
-    const newCursor = cursor + insert.length;
-    updateText(newValue);
-    requestAnimationFrame(() => {
-      el.focus();
-      el.setSelectionRange(newCursor, newCursor);
-    });
-  }
+  const suggestions = useMemo(
+    () => (shortcodeQuery ? searchShortcodes(shortcodeQuery.query, SHORTCODE_SUGGESTION_LIMIT) : []),
+    [shortcodeQuery],
+  );
+  const templateSuggestions = useMemo(
+    () => (slashQuery && cannedReplies?.length ? searchCannedReplies(cannedReplies, slashQuery.query) : []),
+    [cannedReplies, slashQuery],
+  );
 
-  /** Re-derives the in-progress ":partial" shortcode and/or "/template"
-   *  query (if either is active) from the textarea's current value and
-   *  cursor position - called after every text change and every cursor
-   *  move, since moving the cursor away should close whichever suggestion
-   *  list is open. Also recomputes the overlay's anchor position, since the
-   *  cursor (and so where the overlay needs to float above) moves with it.
-   *  The two triggers can never both match at once (one requires "/" as
-   *  the very first character, the other a ":" immediately before the
-   *  cursor), so there's no ordering/priority concern between them. */
-  function syncOverlayQueries(el: HTMLTextAreaElement) {
-    const cursor = el.selectionStart ?? el.value.length;
-    const textBeforeCursor = el.value.slice(0, cursor);
-    const activeShortcode = findActiveShortcodeQuery(textBeforeCursor);
-    const activeSlash = cannedReplies?.length ? findActiveSlashQuery(textBeforeCursor) : null;
-    setShortcodeQuery(activeShortcode);
-    setSlashQuery(activeSlash);
-    setSelectedSuggestion(0);
-    setOverlayPos(activeShortcode || activeSlash ? computeOverlayPosition(el, cursor) : null);
-  }
+  useEffect(() => setSelectedSuggestion(0), [shortcodeQuery?.query, slashQuery?.query]);
 
-  function handleTextChange(e: ChangeEvent<HTMLTextAreaElement>) {
-    const el = e.currentTarget;
-    const cursor = el.selectionStart ?? el.value.length;
-    const completed = matchCompletedShortcode(el.value.slice(0, cursor));
-    if (completed) {
-      // The closing ":" was just typed on a known shortcode - convert it to
-      // the real emoji immediately instead of waiting for send.
-      const newValue = el.value.slice(0, completed.start) + completed.emoji + el.value.slice(completed.end);
-      const newCursor = completed.start + completed.emoji.length;
-      updateText(newValue);
-      setShortcodeQuery(null);
-      requestAnimationFrame(() => el.setSelectionRange(newCursor, newCursor));
-      return;
-    }
-    if (justCompletedFreshCodeFence(el.value, cursor)) {
-      // Open the Teams-style code modal instead of leaving a bare ``` in
-      // the draft - the fence's own position is recorded so the inserted
-      // block can replace exactly those three characters, not re-scan the
-      // text for them (the same "```" can legitimately appear more than
-      // once).
-      updateText(el.value);
-      setShortcodeQuery(null);
-      setCodeModal({ fenceStart: cursor - 3, fenceEnd: cursor });
-      return;
-    }
-    updateText(el.value);
-    syncOverlayQueries(el);
-  }
-
-  function handleCodeInsert(code: string, language: string) {
-    if (!codeModal) return;
-    const fence = "```" + language + "\n" + code.replace(/\n+$/, "") + "\n```\n";
-    const newValue = text.slice(0, codeModal.fenceStart) + fence + text.slice(codeModal.fenceEnd);
-    const newCursor = codeModal.fenceStart + fence.length;
-    updateText(newValue);
-    setCodeModal(null);
-    requestAnimationFrame(() => {
-      const el = textareaRef.current;
-      if (!el) return;
-      el.focus();
-      el.setSelectionRange(newCursor, newCursor);
-      el.style.height = "auto";
-      el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
-    });
+  function insertAtCursor(content: string) {
+    editor?.chain().focus().insertContent(content).run();
   }
 
   function applySuggestion(match: ShortcodeMatch) {
-    const el = textareaRef.current;
-    if (!el || !shortcodeQuery) return;
-    const cursor = el.selectionStart ?? text.length;
-    const newValue = text.slice(0, shortcodeQuery.start) + match.emoji + text.slice(cursor);
-    const newCursor = shortcodeQuery.start + match.emoji.length;
-    updateText(newValue);
+    if (!editor || !shortcodeQuery) return;
+    editor
+      .chain()
+      .focus()
+      .insertContentAt({ from: shortcodeQuery.from, to: editor.state.selection.from }, match.emoji)
+      .run();
     setShortcodeQuery(null);
-    el.focus();
-    requestAnimationFrame(() => el.setSelectionRange(newCursor, newCursor));
   }
 
-  /** Fills the template's body into the composer (replacing the "/query"
-   *  typed so far) rather than sending immediately - still editable before
-   *  the admin hits Send, unlike the old toggle-and-chip-list canned-reply
-   *  picker this replaces. */
   function applyTemplate(reply: CannedReplyDto) {
-    const el = textareaRef.current;
-    if (!el) return;
-    // The slash trigger only ever matches from position 0 (see
-    // findActiveSlashQuery), so the "/query" span being replaced always
-    // starts at the beginning of the text - but anything after the cursor
-    // (if the admin repositioned it mid-command) still needs to survive.
-    const cursor = el.selectionStart ?? text.length;
-    const newValue = reply.body + text.slice(cursor);
-    const newCursor = reply.body.length;
-    updateText(newValue);
+    if (!editor) return;
+    // Slash commands only activate at the start of the document. Replacing
+    // the command with parsed Markdown gives an immediately editable rich
+    // document instead of exposing the template's Markdown source.
+    editor.commands.setContent(reply.body, { contentType: "markdown" });
+    editor.commands.focus("end");
     setSlashQuery(null);
-    el.focus();
-    requestAnimationFrame(() => el.setSelectionRange(newCursor, newCursor));
   }
 
   function addFiles(newFiles: File[]) {
     setFiles((prev) => {
-      const combined = [
-        ...prev,
-        ...newFiles.map((file) => ({
-          file,
-          previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
-        })),
-      ];
-      return combined.slice(0, maxAttachments);
+      const available = Math.max(0, maxAttachments - prev.length);
+      const additions = newFiles.slice(0, available).map((file) => ({
+        file,
+        previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
+      }));
+      return [...prev, ...additions];
     });
   }
 
@@ -277,34 +282,33 @@ export function Composer({
   }
 
   function handleSend() {
-    const expanded = expandEmojiShortcuts(text).trim();
-    if (!expanded && files.length === 0) return;
-    onSend(
-      expanded,
-      files.map((f) => f.file),
-    );
-    setText("");
+    if (!editor) return;
+    const expanded = expandEmojiShortcuts(editor.getMarkdown()).trim();
+    if ((!expanded && files.length === 0) || expanded.length > maxLength) return;
+    const sentFiles = files.map((pending) => pending.file);
+    onSend(expanded, sentFiles);
+
+    // Clear both sources synchronously. This cancels the pending encrypted
+    // draft save before the network response can race a stale draft prop
+    // back into this editor (also covers canned replies).
+    onDraftChangeRef.current?.("");
+    editor.commands.clearContent(true);
+    setMarkdown("");
+    for (const pending of files) if (pending.previewUrl) URL.revokeObjectURL(pending.previewUrl);
     setFiles([]);
-    setShowPreview(false);
-    onTypingChange?.(false);
-    textareaRef.current?.focus();
+    setShortcodeQuery(null);
+    setSlashQuery(null);
+    onTypingChangeRef.current?.(false);
+    editor.commands.focus();
   }
 
-  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    // Up/Down (not Left/Right) - this overlay is a vertical list (see
-    // CannedReplySlashOverlay), unlike the emoji strip below. Can never be
-    // active at the same time as the shortcode overlay (see
-    // syncOverlayQueries's doc comment), so there's no ordering concern
-    // between the two blocks.
+  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.nativeEvent.isComposing) return;
     if (slashQuery && templateSuggestions.length > 0) {
-      if (e.key === "ArrowDown") {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault();
-        setSelectedSuggestion((i) => (i + 1) % templateSuggestions.length);
-        return;
-      }
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setSelectedSuggestion((i) => (i - 1 + templateSuggestions.length) % templateSuggestions.length);
+        const direction = e.key === "ArrowDown" ? 1 : -1;
+        setSelectedSuggestion((i) => (i + direction + templateSuggestions.length) % templateSuggestions.length);
         return;
       }
       if (e.key === "Enter" || e.key === "Tab") {
@@ -319,22 +323,11 @@ export function Composer({
         return;
       }
     }
-    // Left/Right (not Up/Down) - the overlay is a single horizontally-
-    // scrolling strip (see EmojiShortcutOverlay), matching WhatsApp's own
-    // shortcut picker. This fully takes over the arrow keys while a
-    // shortcode is in progress, the same way Enter/Tab already do below -
-    // moving the text cursor away from a half-typed ":code" implicitly
-    // abandons it anyway (syncOverlayQueries closes the overlay on the
-    // resulting selection-change event).
     if (shortcodeQuery && suggestions.length > 0) {
-      if (e.key === "ArrowRight") {
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
         e.preventDefault();
-        setSelectedSuggestion((i) => (i + 1) % suggestions.length);
-        return;
-      }
-      if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        setSelectedSuggestion((i) => (i - 1 + suggestions.length) % suggestions.length);
+        const direction = e.key === "ArrowRight" ? 1 : -1;
+        setSelectedSuggestion((i) => (i + direction + suggestions.length) % suggestions.length);
         return;
       }
       if (e.key === "Enter" || e.key === "Tab") {
@@ -355,17 +348,18 @@ export function Composer({
     }
   }
 
-  function handlePaste(e: ClipboardEvent<HTMLTextAreaElement>) {
-    const items = Array.from(e.clipboardData.items).filter((i) => i.kind === "file");
-    if (items.length === 0) return;
-    const pasted = items.map((i) => i.getAsFile()).filter((f): f is File => f !== null);
-    if (pasted.length > 0) {
-      e.preventDefault();
-      addFiles(pasted);
-    }
+  function handlePaste(e: ClipboardEvent<HTMLDivElement>) {
+    const pasted = Array.from(e.clipboardData.items)
+      .filter((item) => item.kind === "file")
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => file !== null);
+    if (pasted.length === 0) return;
+    e.preventDefault();
+    addFiles(pasted);
   }
 
   function handleDrop(e: DragEvent<HTMLDivElement>) {
+    if (e.dataTransfer.files.length === 0) return;
     e.preventDefault();
     addFiles(Array.from(e.dataTransfer.files));
   }
@@ -375,13 +369,24 @@ export function Composer({
     e.target.value = "";
   }
 
-  const overLimit = text.length > maxLength;
+  function handleCodeInsert(code: string, language: string) {
+    if (!editor || !codeModal) return;
+    const fence = "```" + language + "\n" + code.replace(/\n+$/, "") + "\n```";
+    editor.commands.insertContentAt(codeModal, fence, { contentType: "markdown" });
+    setCodeModal(null);
+    editor.commands.focus("end");
+  }
+
+  const overLimit = markdown.length > maxLength;
+  const empty = markdown.trim().length === 0 && files.length === 0;
 
   return (
     <div
       className="border-t border-[var(--border)] bg-[var(--surface-raised)] p-3"
       onDragOver={(e) => e.preventDefault()}
       onDrop={handleDrop}
+      onPasteCapture={handlePaste}
+      onKeyDownCapture={handleKeyDown}
     >
       {disabled && disabledReason && (
         <p className="mb-2 rounded-md bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger-fg)]">
@@ -407,20 +412,20 @@ export function Composer({
 
       {files.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
-          {files.map((f, i) => (
-            <div key={i} className="relative">
-              {f.previewUrl ? (
-                <img src={f.previewUrl} alt={f.file.name} className="h-16 w-16 rounded-lg object-cover" />
+          {files.map((pending, index) => (
+            <div key={`${pending.file.name}-${index}`} className="relative">
+              {pending.previewUrl ? (
+                <img src={pending.previewUrl} alt={pending.file.name} className="h-16 w-16 rounded-lg object-cover" />
               ) : (
-                <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-[var(--border)] text-xs">
+                <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-[var(--border)]">
                   <FileIcon size={20} className="text-[var(--text-muted)]" aria-hidden />
                 </div>
               )}
               <button
                 type="button"
-                onClick={() => removeFile(i)}
-                aria-label={`Remove ${f.file.name}`}
-                className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-xs text-white hover:bg-black"
+                onClick={() => removeFile(index)}
+                aria-label={`Remove ${pending.file.name}`}
+                className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-white hover:bg-black"
               >
                 <X size={12} aria-hidden />
               </button>
@@ -438,7 +443,6 @@ export function Composer({
           onSelect={applySuggestion}
         />
       )}
-
       {slashQuery && templateSuggestions.length > 0 && overlayPos && (
         <CannedReplySlashOverlay
           matches={templateSuggestions}
@@ -449,106 +453,59 @@ export function Composer({
         />
       )}
 
-      <div className="mb-1.5 flex gap-1 text-xs font-medium">
-        <button
-          type="button"
-          disabled={disabled}
-          aria-pressed={showPreview}
-          onClick={() => setShowPreview((v) => !v)}
-          className={clsx(
-            "flex items-center gap-1 rounded-md px-2 py-1",
-            showPreview
-              ? "bg-[var(--surface-muted)] text-[var(--text)]"
-              : "text-[var(--text-muted)] hover:text-[var(--text)]",
-          )}
-        >
-          <Eye size={12} aria-hidden />
-          Live preview
-        </button>
-      </div>
-
       <div className="flex items-end gap-2">
-        <input id="attachment-input" type="file" multiple className="hidden" onChange={handleFilePick} />
-        <label
-          htmlFor="attachment-input"
-          className="cursor-pointer rounded-lg p-2 hover:bg-[var(--surface-muted)]"
-          title="Attach file"
-        >
-          <Paperclip size={18} aria-hidden />
-        </label>
-
-        <div ref={pickerWrapperRef} className="relative">
-          <button
-            type="button"
-            onClick={() => setShowEmoji((v) => !v)}
-            className="rounded-lg p-2 hover:bg-[var(--surface-muted)]"
-            title="Emoji"
-            aria-label="Open emoji picker"
+        <div className="flex min-w-0 flex-1 items-end rounded-xl border border-[var(--border-strong)] bg-transparent px-1.5 focus-within:border-[var(--color-accent-500)]">
+          <input id={`attachment-input-${draftId ?? "message"}`} type="file" multiple className="hidden" onChange={handleFilePick} />
+          <label
+            htmlFor={`attachment-input-${draftId ?? "message"}`}
+            className="mb-1 cursor-pointer rounded-lg p-2 hover:bg-[var(--surface-muted)]"
+            title="Attach file"
           >
-            <Smile size={18} aria-hidden />
-          </button>
-          {showEmoji && (
-            <div className="absolute bottom-full left-0 mb-2 z-10">
-              <EmojiPicker
-                onClose={() => setShowEmoji(false)}
-                onSelect={(emoji) => {
-                  insertAtCursor(emoji);
-                  setShowEmoji(false);
-                }}
-              />
-            </div>
-          )}
-        </div>
+            <Paperclip size={18} aria-hidden />
+          </label>
 
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={handleTextChange}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          onSelect={(e) => syncOverlayQueries(e.currentTarget)}
-          onClick={(e) => syncOverlayQueries(e.currentTarget)}
-          placeholder="Type a message… (Enter to send, Shift+Enter for a new line)"
-          rows={1}
-          disabled={disabled}
-          className="max-h-32 min-h-[2.5rem] flex-1 resize-none rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm disabled:opacity-50"
-          style={{ height: "auto" }}
-          onInput={(e) => {
-            const el = e.currentTarget;
-            el.style.height = "auto";
-            el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
-          }}
-        />
+          <div ref={pickerWrapperRef} className="relative mb-1">
+            <button
+              type="button"
+              onClick={() => setShowEmoji((value) => !value)}
+              className="rounded-lg p-2 hover:bg-[var(--surface-muted)]"
+              title="Emoji"
+              aria-label="Open emoji picker"
+              aria-expanded={showEmoji}
+            >
+              <Smile size={18} aria-hidden />
+            </button>
+            {showEmoji && (
+              <div className="absolute bottom-full left-0 z-30 mb-2">
+                <EmojiPicker
+                  onClose={() => setShowEmoji(false)}
+                  onSelect={(emoji) => {
+                    insertAtCursor(emoji);
+                    setShowEmoji(false);
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          <EditorContent editor={editor} className="min-w-0 flex-1" />
+        </div>
 
         <button
           type="button"
           onClick={handleSend}
-          disabled={disabled || overLimit || (!text.trim() && files.length === 0)}
-          className="rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-40"
+          disabled={disabled || overLimit || empty}
+          className="h-11 shrink-0 rounded-xl bg-[var(--btn-bg)] px-4 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-40"
         >
           Send
         </button>
       </div>
 
-      {/* Still-editable textarea above stays live - this panel just mirrors
-          its rendered markdown underneath, updating on every keystroke
-          (previewHtml is gated on showPreview - see its own comment) rather
-          than replacing the input the way the old Write/Preview tab swap
-          did, which made it impossible to see formatting while typing. */}
-      {showPreview && (
-        <div className="mt-2 max-h-32 overflow-y-auto rounded-lg border border-[var(--border-strong)] bg-[var(--surface-muted)] px-3 py-2 text-sm">
-          {text.trim() ? (
-            <ExpandableProse html={previewHtml!} clamp={false} />
-          ) : (
-            <p className="text-[var(--text-muted)]">Nothing to preview yet.</p>
-          )}
-        </div>
+      {overLimit && (
+        <p className="mt-1.5 text-right text-xs text-[var(--danger-fg)]" role="alert">
+          Message is too long. Shorten it before sending.
+        </p>
       )}
-
-      <div className="mt-1 text-right text-xs text-[var(--text-muted)]">
-        {overLimit && <span className="text-[var(--danger-fg)]">Message is too long. </span>}
-        {text.length}/{maxLength}
-      </div>
 
       {codeModal && <CodeBlockModal onInsert={handleCodeInsert} onClose={() => setCodeModal(null)} />}
     </div>
