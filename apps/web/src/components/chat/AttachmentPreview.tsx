@@ -21,6 +21,7 @@ import { ImageLightbox } from "./preview/ImageLightbox.js";
 import { MarkdownPreview } from "./preview/MarkdownPreview.js";
 import { TextCodePreview } from "./preview/TextCodePreview.js";
 import { ThemedAudioPlayer } from "./preview/ThemedAudioPlayer.js";
+import { readResponseBytes } from "./preview/readResponseBytes.js";
 import { detectTextLanguage, DOCX_MIMETYPE, isCsv, isMarkdown, resolveFileMimetype } from "./preview/textFileTypes.js";
 
 function formatBytes(bytes: number): string {
@@ -63,7 +64,7 @@ interface Props {
 
 type LoadState =
   | { kind: "idle" }
-  | { kind: "loading" }
+  | { kind: "loading"; progress: number }
   | { kind: "loaded"; url: string; mimetype: string; bytes: Uint8Array<ArrayBuffer> }
   | { kind: "error" };
 
@@ -119,11 +120,13 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
   const load = useCallback(
     async (downloadAfterLoad = false) => {
       if (!meta) return;
-      setState({ kind: "loading" });
+      setState({ kind: "loading", progress: 0 });
       try {
         const response = await fetch(downloadUrl, { credentials: "include" });
         if (!response.ok) throw new Error("download failed");
-        const raw = new Uint8Array(await response.arrayBuffer());
+        const raw = await readResponseBytes(response, attachment.sizeBytes, (progress) => {
+          setState({ kind: "loading", progress });
+        });
         const plaintext = toBlobPart(decryptBlob(conversationKey, raw));
         const mimetype = resolveFileMimetype(meta.mimetype, meta.filename);
         const blob = new Blob([plaintext], { type: mimetype });
@@ -139,7 +142,7 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
         setState({ kind: "error" });
       }
     },
-    [conversationKey, downloadUrl, meta],
+    [attachment.sizeBytes, conversationKey, downloadUrl, meta],
   );
 
   useEffect(() => {
@@ -267,6 +270,36 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
     );
   }
 
+  if (state.kind === "loading" && kind !== "binary") {
+    const percent = Math.round(state.progress * 100);
+    return (
+      <div className="relative min-h-28 min-w-48 overflow-hidden rounded-lg border border-current/15 bg-[var(--surface-muted)] text-[var(--text)]">
+        <div className="flex h-28 items-center justify-center opacity-50 blur-[1px]">
+          <IconForMime mimetype={meta.mimetype} filename={meta.filename} size={34} />
+        </div>
+        <div className="absolute inset-x-0 bottom-0 bg-[var(--surface-raised)]/95 p-2">
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <span className="min-w-0 truncate">Downloading {meta.filename}</span>
+            <span className="shrink-0 tabular-nums">{percent}%</span>
+          </div>
+          <div
+            className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--border)]"
+            role="progressbar"
+            aria-label={`Downloading ${meta.filename}`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={percent}
+          >
+            <div
+              className="h-full rounded-full bg-[var(--color-accent-500)] transition-[width] duration-150"
+              style={{ width: `${percent}%` }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <button
       type="button"
@@ -279,7 +312,7 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
       <span className="text-xs">{formatBytes(meta.size)}</span>
       <span className="text-xs underline">
         {state.kind === "loading"
-          ? "Loading…"
+          ? `${Math.round(state.progress * 100)}%`
           : state.kind === "error"
             ? "Retry"
             : kind === "binary"
