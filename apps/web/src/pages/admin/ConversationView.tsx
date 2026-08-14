@@ -39,7 +39,7 @@ import { TypingIndicator } from "../../components/chat/TypingIndicator.js";
 import { FullScreenLoader } from "../../components/common/Loader.js";
 import { VisitorInsightsDrawer } from "../../components/admin/VisitorInsightsDrawer.js";
 import {
-  decryptMessageText,
+  decryptMessageTextWithStatus,
   encryptAttachmentMeta,
   encryptMessageText,
   encryptReaction,
@@ -86,19 +86,23 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   const draft = useEncryptedDraft("ADMIN", conversationId, conversationKey);
 
   const decryptDto = useCallback(
-    (dto: MessageDto): DisplayMessage => ({
-      id: dto.id,
-      senderType: dto.senderType,
-      text: dto.content && conversationKey ? decryptMessageText(conversationKey, dto.content) : "",
-      replyToId: dto.replyToId,
-      attachments: dto.attachments,
-      reactions: dto.reactions,
-      edited: dto.edited,
-      deleted: dto.deleted,
-      createdAt: dto.createdAt,
-      readAt: dto.readAt,
-      status: "sent",
-    }),
+    (dto: MessageDto): DisplayMessage => {
+      const decrypted = dto.content && conversationKey ? decryptMessageTextWithStatus(conversationKey, dto.content) : null;
+      return {
+        id: dto.id,
+        senderType: dto.senderType,
+        text: decrypted?.text ?? "",
+        decryptionError: decrypted?.error ?? undefined,
+        replyToId: dto.replyToId,
+        attachments: dto.attachments,
+        reactions: dto.reactions,
+        edited: dto.edited,
+        deleted: dto.deleted,
+        createdAt: dto.createdAt,
+        readAt: dto.readAt,
+        status: "sent",
+      };
+    },
     [conversationKey],
   );
 
@@ -115,19 +119,23 @@ export function ConversationView({ conversationId, onChanged }: Props) {
     } while (cursor);
     const key = identity ? getConversationKey(identity, conv.anonymousExchangePublicKey, conv.id) : null;
     setMessages(
-      all.map((dto) => ({
-        id: dto.id,
-        senderType: dto.senderType,
-        text: dto.content && key ? decryptMessageText(key, dto.content) : "",
-        replyToId: dto.replyToId,
-        attachments: dto.attachments,
-        reactions: dto.reactions,
-        edited: dto.edited,
-        deleted: dto.deleted,
-        createdAt: dto.createdAt,
-        readAt: dto.readAt,
-        status: "sent" as const,
-      })),
+      all.map((dto) => {
+        const decrypted = dto.content && key ? decryptMessageTextWithStatus(key, dto.content) : null;
+        return {
+          id: dto.id,
+          senderType: dto.senderType,
+          text: decrypted?.text ?? "",
+          decryptionError: decrypted?.error ?? undefined,
+          replyToId: dto.replyToId,
+          attachments: dto.attachments,
+          reactions: dto.reactions,
+          edited: dto.edited,
+          deleted: dto.deleted,
+          createdAt: dto.createdAt,
+          readAt: dto.readAt,
+          status: "sent" as const,
+        };
+      }),
     );
     const lastUser = [...all].reverse().find((m) => m.senderType === "USER");
     if (lastUser && !lastUser.readAt) markAdminRead(conversationId, lastUser.id).catch(() => {});
@@ -506,21 +514,21 @@ export function ConversationView({ conversationId, onChanged }: Props) {
         <div className="flex shrink-0 items-center gap-1">
           <button
             type="button"
-            onClick={() => setNoteOpen(true)}
-            title="Open private note"
-            aria-label="Open private note"
-            className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
-          >
-            <StickyNote size={18} aria-hidden />
-          </button>
-          <button
-            type="button"
             onClick={() => setInsightsOpen(true)}
             title="View visitor insights"
             aria-label="View visitor insights"
             className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
           >
             <Info size={18} aria-hidden />
+          </button>
+          <button
+            type="button"
+            onClick={() => setNoteOpen(true)}
+            title="Open private note"
+            aria-label="Open private note"
+            className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
+          >
+            <StickyNote size={18} aria-hidden />
           </button>
         </div>
       </header>

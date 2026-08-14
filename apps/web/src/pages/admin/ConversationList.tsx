@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { format } from "date-fns";
 import { ChevronDown } from "lucide-react";
@@ -13,7 +14,11 @@ import {
   unblockConversation,
   unmuteConversation,
 } from "../../api/admin.js";
-import { decryptAttachmentMeta, decryptMessageText, getConversationKey } from "../../crypto/conversationCrypto.js";
+import {
+  decryptAttachmentMeta,
+  decryptMessageTextWithStatus,
+  getConversationKey,
+} from "../../crypto/conversationCrypto.js";
 import { getAdminMessages } from "../../api/admin.js";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
 import { useRealtimeSocket } from "../../hooks/useRealtimeSocket.js";
@@ -73,7 +78,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [liveToken, setLiveToken] = useState(0);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [openMenu, setOpenMenu] = useState<{ id: string; top: number; left: number } | null>(null);
 
   // Keep the muted-conversation registry (used by GlobalNotifications) in
   // sync with whatever the list currently knows.
@@ -83,13 +88,22 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
 
   // Close the row dropdown on any outside click.
   useEffect(() => {
-    if (!openMenuId) return;
+    if (!openMenu) return;
     function handleDown(e: MouseEvent) {
-      if (!(e.target as Element | null)?.closest("[data-row-menu]")) setOpenMenuId(null);
+      if (!(e.target as Element | null)?.closest("[data-row-menu]")) setOpenMenu(null);
+    }
+    function closeMenu() {
+      setOpenMenu(null);
     }
     document.addEventListener("mousedown", handleDown);
-    return () => document.removeEventListener("mousedown", handleDown);
-  }, [openMenuId]);
+    window.addEventListener("resize", closeMenu);
+    window.addEventListener("scroll", closeMenu, true);
+    return () => {
+      document.removeEventListener("mousedown", handleDown);
+      window.removeEventListener("resize", closeMenu);
+      window.removeEventListener("scroll", closeMenu, true);
+    };
+  }, [openMenu]);
 
   // Filter/search changes are the only case where there's genuinely nothing
   // to show yet, so only they show the "Loading…" placeholder.
@@ -174,9 +188,12 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
           // content is non-null (and decrypts to "") for an attachment-only
           // message too - the composer always encrypts `text`, even empty -
           // so an empty decrypt only means "no caption", not "no preview".
-          const text = last.content ? decryptMessageText(key, last.content) : "";
+          const decrypted = last.content ? decryptMessageTextWithStatus(key, last.content) : null;
+          const text = decrypted?.text ?? "";
           const firstAttachment = last.attachments[0];
-          if (text.trim()) {
+          if (decrypted?.error) {
+            updates[conv.id] = { kind: "text", text: "Encrypted message unavailable" };
+          } else if (text.trim()) {
             updates[conv.id] = { kind: "text", text };
           } else if (firstAttachment) {
             const meta = decryptAttachmentMeta(key, firstAttachment.meta);
@@ -202,7 +219,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
   }, [conversations, identity]);
 
   async function runRowAction(conv: AdminConversationSummaryDto, action: string) {
-    setOpenMenuId(null);
+    setOpenMenu(null);
     try {
       switch (action) {
         case "archive":
@@ -275,9 +292,16 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
             const unread = conv.unreadCount > 0;
             return (
               <div key={conv.id} className="group relative border-b border-[var(--border)]">
-                <button
-                  type="button"
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onSelect(conv.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onSelect(conv.id);
+                    }
+                  }}
                   className={clsx(
                     "flex w-full flex-col gap-0.5 px-4 py-3 text-left transition-colors",
                     // The selected row keeps its accent tint on hover instead
@@ -361,44 +385,62 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                         <button
                           type="button"
                           aria-label="Conversation actions"
-                          aria-expanded={openMenuId === conv.id}
+                          aria-expanded={openMenu?.id === conv.id}
                           onClick={(e) => {
                             // The chevron sits inside the row's open-chat
                             // button - stop the click from bubbling up so
                             // opening the menu never navigates into the chat.
                             e.stopPropagation();
-                            setOpenMenuId(openMenuId === conv.id ? null : conv.id);
+                            if (openMenu?.id === conv.id) {
+                              setOpenMenu(null);
+                              return;
+                            }
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const width = 160;
+                            const estimatedHeight = 158;
+                            setOpenMenu({
+                              id: conv.id,
+                              left: Math.min(Math.max(8, rect.right - width), window.innerWidth - width - 8),
+                              top:
+                                rect.bottom + 4 + estimatedHeight <= window.innerHeight
+                                  ? rect.bottom + 4
+                                  : Math.max(8, rect.top - estimatedHeight - 4),
+                            });
                           }}
                           className={clsx(
                             "rounded p-1 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]",
-                            openMenuId === conv.id
+                            openMenu?.id === conv.id
                               ? "visible"
                               : "visible md:invisible md:group-hover:visible md:group-focus-within:visible",
                           )}
                         >
                           <ChevronDown size={16} aria-hidden />
                         </button>
-                        {openMenuId === conv.id && (
-                          <div
-                            role="menu"
-                            onClick={(e) => e.stopPropagation()}
-                            className="absolute right-0 top-full mt-1 w-40 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] py-1 shadow-lg"
-                          >
-                            <RowMenuItem onClick={() => runRowAction(conv, "archive")}>
-                              {conv.status === "ARCHIVED" ? "Unarchive" : "Archive"}
-                            </RowMenuItem>
-                            <RowMenuItem onClick={() => runRowAction(conv, "block")}>
-                              {conv.status === "BLOCKED" ? "Unblock" : "Block"}
-                            </RowMenuItem>
-                            <RowMenuItem onClick={() => runRowAction(conv, "mute")}>
-                              {conv.mutedAt ? "Unmute" : "Mute"}
-                            </RowMenuItem>
-                            <div className="my-1 h-px bg-[var(--border)]" role="separator" />
-                            <RowMenuItem destructive onClick={() => runRowAction(conv, "delete")}>
-                              Delete
-                            </RowMenuItem>
-                          </div>
-                        )}
+                        {openMenu?.id === conv.id &&
+                          createPortal(
+                            <div
+                              data-row-menu
+                              role="menu"
+                              onClick={(e) => e.stopPropagation()}
+                              className="fixed z-[100] w-40 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] py-1 shadow-xl"
+                              style={{ top: openMenu.top, left: openMenu.left }}
+                            >
+                              <RowMenuItem onClick={() => runRowAction(conv, "archive")}>
+                                {conv.status === "ARCHIVED" ? "Unarchive" : "Archive"}
+                              </RowMenuItem>
+                              <RowMenuItem onClick={() => runRowAction(conv, "block")}>
+                                {conv.status === "BLOCKED" ? "Unblock" : "Block"}
+                              </RowMenuItem>
+                              <RowMenuItem onClick={() => runRowAction(conv, "mute")}>
+                                {conv.mutedAt ? "Unmute" : "Mute"}
+                              </RowMenuItem>
+                              <div className="my-1 h-px bg-[var(--border)]" role="separator" />
+                              <RowMenuItem destructive onClick={() => runRowAction(conv, "delete")}>
+                                Delete
+                              </RowMenuItem>
+                            </div>,
+                            document.body,
+                          )}
                       </div>
                     </div>
                   </div>
@@ -419,7 +461,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                       </span>
                     )}
                   </div>
-                </button>
+                </div>
               </div>
             );
           })
