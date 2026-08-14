@@ -30,6 +30,17 @@ const NAV_ITEMS = [
 
 const SIDEBAR_COLLAPSED_KEY = "anonchat.adminSidebarCollapsed";
 
+function SidebarTooltip({ label }: { label: string }) {
+  return (
+    <span
+      role="tooltip"
+      className="pointer-events-none invisible absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--surface-raised)] px-2.5 py-1.5 text-xs font-medium text-[var(--text)] opacity-0 shadow-lg transition-opacity group-hover:visible group-hover:opacity-100 group-focus-visible:visible group-focus-visible:opacity-100"
+    >
+      {label}
+    </span>
+  );
+}
+
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { admin, logout } = useAdminSession();
   const { site } = useSite();
@@ -53,7 +64,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         to={item.to}
         end={item.end}
         onClick={closeMobileNav}
-        title={compact ? item.label : undefined}
         aria-label={
           compact
             ? `${item.label}${item.to === "/admin" && unreadCount > 0 ? `, ${unreadCount} unread conversations` : ""}`
@@ -61,7 +71,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         }
         className={({ isActive }) =>
           clsx(
-            "relative flex items-center rounded-lg py-2 text-sm",
+            "group relative flex items-center rounded-lg py-2 text-sm",
             compact ? "justify-center px-2" : "gap-2 px-3",
             isActive ? "bg-[var(--chip-bg)] font-medium text-[var(--chip-fg)]" : "hover:bg-[var(--surface-muted)]",
           )
@@ -82,6 +92,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             {!compact && (unreadCount > 9 ? "9+" : unreadCount)}
           </span>
         )}
+        {compact && (
+          <SidebarTooltip
+            label={`${item.label}${item.to === "/admin" && unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
+          />
+        )}
       </NavLink>
     ));
   }
@@ -98,7 +113,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Desktop sidebar (md and up). */}
       <nav
         className={clsx(
-          "hidden shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface-raised)] p-3 transition-[width] duration-200 md:flex",
+          "relative z-20 hidden shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface-raised)] p-3 transition-[width] duration-200 md:flex",
           sidebarCollapsed ? "w-16" : "w-56",
         )}
       >
@@ -113,25 +128,25 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             type="button"
             onClick={toggleSidebar}
             aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="shrink-0 rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--surface-muted)]"
+            className="group relative shrink-0 rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--surface-muted)]"
           >
             {sidebarCollapsed ? <PanelLeftOpen size={18} aria-hidden /> : <PanelLeftClose size={18} aria-hidden />}
+            {sidebarCollapsed && <SidebarTooltip label="Expand sidebar" />}
           </button>
         </div>
         <div className="flex-1 space-y-1">{renderNavLinks(sidebarCollapsed)}</div>
         <button
           type="button"
           onClick={() => logout()}
-          title={sidebarCollapsed ? "Logout" : undefined}
           aria-label={sidebarCollapsed ? "Logout" : undefined}
           className={clsx(
-            "flex items-center rounded-lg py-2 text-left text-sm text-[var(--text-muted)] hover:bg-[var(--surface-muted)]",
+            "group relative flex items-center rounded-lg py-2 text-left text-sm text-[var(--text-muted)] hover:bg-[var(--surface-muted)]",
             sidebarCollapsed ? "justify-center px-2" : "gap-2 px-3",
           )}
         >
           <LogOut size={18} className="shrink-0" aria-hidden />
           {!sidebarCollapsed && <span>Logout</span>}
+          {sidebarCollapsed && <SidebarTooltip label="Logout" />}
         </button>
       </nav>
 
