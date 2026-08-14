@@ -71,8 +71,10 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
             <DefaultAvatar name={ownerName} className="mx-auto mb-4 h-16 w-16 text-2xl" />
           ))}
         <h1 className="text-2xl font-semibold">Message {ownerName} anonymously</h1>
-        <p className="mt-2 text-sm text-[var(--text-muted)]">No email. No account. No name required.</p>
-        {site?.bio && <p className="mt-1 text-sm text-[var(--text-muted)]">{site.bio}</p>}
+        {site?.bio && <p className="mt-2 text-sm text-[var(--text-muted)]">{site.bio}</p>}
+        <p className={`${site?.bio ? "mt-1" : "mt-2"} text-sm text-[var(--text-muted)]`}>
+          No email. No account. No name required.
+        </p>
         <p className="mt-3 flex items-start justify-center gap-1.5 text-xs text-[var(--text-muted)]">
           <ShieldCheck size={14} className="mt-px shrink-0 text-[var(--link-fg)]" aria-hidden />
           End-to-end encrypted - only your identity and {ownerName}'s key can decrypt these messages.
