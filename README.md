@@ -14,13 +14,15 @@ system fits together.
 
 ## Features
 
-- Anonymous identity from a cryptographically random recovery key - no registration
+- Anonymous identity from a cryptographically random recovery key, with an optional visitor-chosen name
 - Persistent 1:1 conversation per identity, end-to-end encrypted
 - Real-time messaging over WebSocket, with offline/reconnect sync
 - Attachments (images, video, audio, documents) with in-chat previews, all encrypted
 - One shared TipTap note per conversation with encrypted rich text and playable media
 - Markdown-lite formatting, emoji shortcodes, reactions, replies, edit/delete
 - Admin dashboard: inbox with search/filters, archive/block/delete, canned replies, audit log
+- Public admin profile panel with avatar, bio, links, public key, and an optional photo gallery
+- Editable site title with the admin profile picture used automatically as the favicon
 - Admin 2FA (TOTP), session management (see and revoke active devices/IPs)
 - Pluggable attachment storage: local disk by default, or any S3-compatible provider
 - Installable PWA shell with opt-in Web Push notifications; responsive on mobile and desktop

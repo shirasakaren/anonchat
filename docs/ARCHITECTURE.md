@@ -43,9 +43,13 @@ There is no username/password/email for anonymous users. Instead:
 3. Registration sends only the two **public** keys plus a signature proving possession of the matching private key (`POST /api/anonymous/register`).
 4. Returning to the site (same browser or a new one after entering the recovery secret) re-derives the exact same keypairs and logs in via challenge-response: the server hands out a random challenge, the client signs it, the server verifies the signature against the stored public key and issues a session cookie.
 
+A visitor may attach an optional display name when creating the identity. It is ordinary profile metadata, not an authentication factor. The admin can separately set a private conversation alias. That alias is confined to admin-only DTOs and is never returned to the visitor or included in shared WebSocket events.
+
 The server never sees, stores, or can derive the recovery secret. Losing it (with no active session on any device) makes the account genuinely unrecoverable - this is called out explicitly in the UI, per spec section 5.
 
 Admin authentication is conventional (username + Argon2id-hashed password + optional TOTP), because the admin is not anonymous and needs strong, familiar account-recovery properties. Separately, the admin also holds an E2EE identity keypair (same primitives as anonymous users) used only for conversation encryption; see `SECURITY.md` for how its private key is cached in the admin's browser.
+
+The public site profile is stored in the singleton site-settings row. It includes the admin avatar, bio, contact links, PGP public key, and optional gallery photos. The browser tab title is configurable, while the favicon is derived only from the admin avatar so there is no second logo source to drift out of sync.
 
 ## Conversation key agreement
 
