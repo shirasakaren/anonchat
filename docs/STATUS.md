@@ -14,6 +14,27 @@ reviewed. Remaining items are either an optional product roadmap or operator-
 specific privacy/deployment obligations; see "Known gaps" and
 `docs/PRIVACY-TECHNICAL-ASSESSMENT.md`.
 
+## Profile media and dashboard polish follow-up (2026-08-14)
+
+- The public Photos gallery is now Media. Admins can upload images, animated
+  GIFs, or browser-playable MP4, WebM, OGG, and MOV videos. Existing photos
+  are migrated without loss.
+- New profile media uses the configured local or S3-compatible file storage
+  instead of embedding video-sized data URLs in PostgreSQL. Public media URLs
+  are immutable, and video responses support byte ranges for playback and
+  seeking.
+- GIFs animate immediately when the visitor profile opens. Videos wait for a
+  clear play action. Selecting an image or GIF opens the existing large image
+  viewer with backdrop close, click zoom, wheel zoom, pan, reset, and download.
+- A shared renderer keeps the visitor gallery and admin upload preview
+  consistent. The existing dashboard image and video limits also apply to
+  profile media.
+- Collapsed dashboard navigation icons now show themed hover and keyboard
+  focus tooltips, including unread context on Inbox.
+- Theme cards remove redundant Dark or Light suffixes, keep every name to one
+  line, reduce type size for longer labels, and show accent and message colors
+  before the light or dark surface swatch.
+
 ## Attachment limits and dashboard controls follow-up (2026-08-14)
 
 - Runtime limits moved from environment variables into persisted System

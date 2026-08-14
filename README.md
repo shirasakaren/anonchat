@@ -21,7 +21,7 @@ system fits together.
 - One shared TipTap note per conversation with encrypted rich text and playable media
 - Markdown-lite formatting, emoji shortcodes, reactions, replies, edit/delete
 - Admin dashboard: collapsible navigation, inbox search/filters, archive/block/delete, canned replies, and audit log
-- Public admin profile panel with avatar, bio, links, public key, and an optional photo gallery
+- Public admin profile panel with avatar, bio, links, public key, and optional image, animated GIF, and video media
 - Editable site title with the admin profile picture used automatically as the favicon
 - Admin 2FA (TOTP), session management (see and revoke active devices/IPs)
 - Pluggable attachment storage: local disk by default, or any S3-compatible provider
