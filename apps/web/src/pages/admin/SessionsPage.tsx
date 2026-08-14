@@ -24,39 +24,41 @@ export default function SessionsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl overflow-y-auto p-6">
-      <h1 className="mb-6 text-xl font-semibold">Active sessions</h1>
-      <div className="space-y-2">
-        {sessions.map((session) => (
-          <div
-            key={session.id}
-            className="flex items-center justify-between rounded-xl border border-[var(--border)] p-4"
-          >
-            <div>
-              <p className="text-sm font-medium">
-                {session.current && (
-                  <span className="mr-1.5 rounded bg-[var(--chip-bg)] px-1.5 py-0.5 text-xs text-[var(--chip-fg)]">
-                    This device
-                  </span>
-                )}
-                {session.ipAddress ?? "Unknown IP"}
-              </p>
-              <p className="text-xs text-[var(--text-muted)]">
-                {parseUserAgent(session.userAgent)} · Last active{" "}
-                {formatDistanceToNowStrict(new Date(session.lastSeenAt), { addSuffix: true })}
-              </p>
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto max-w-2xl p-6">
+        <h1 className="mb-6 text-xl font-semibold">Active sessions</h1>
+        <div className="space-y-2">
+          {sessions.map((session) => (
+            <div
+              key={session.id}
+              className="flex items-center justify-between rounded-xl border border-[var(--border)] p-4"
+            >
+              <div>
+                <p className="text-sm font-medium">
+                  {session.current && (
+                    <span className="mr-1.5 rounded bg-[var(--chip-bg)] px-1.5 py-0.5 text-xs text-[var(--chip-fg)]">
+                      This device
+                    </span>
+                  )}
+                  {session.ipAddress ?? "Unknown IP"}
+                </p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {parseUserAgent(session.userAgent)} · Last active{" "}
+                  {formatDistanceToNowStrict(new Date(session.lastSeenAt), { addSuffix: true })}
+                </p>
+              </div>
+              {!session.current && (
+                <button
+                  type="button"
+                  onClick={() => handleRevoke(session.id)}
+                  className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--danger-fg)] hover:bg-[var(--danger-bg)]"
+                >
+                  Revoke
+                </button>
+              )}
             </div>
-            {!session.current && (
-              <button
-                type="button"
-                onClick={() => handleRevoke(session.id)}
-                className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--danger-fg)] hover:bg-[var(--danger-bg)]"
-              >
-                Revoke
-              </button>
-            )}
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );

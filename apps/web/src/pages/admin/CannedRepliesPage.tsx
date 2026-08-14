@@ -44,83 +44,85 @@ export default function CannedRepliesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl overflow-y-auto p-6">
-      <h1 className="mb-6 text-xl font-semibold">Canned replies</h1>
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto max-w-2xl p-6">
+        <h1 className="mb-6 text-xl font-semibold">Canned replies</h1>
 
-      <form onSubmit={handleSubmit} className="mb-6 space-y-3 rounded-xl border border-[var(--border)] p-4">
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Title"
-          required
-          className="w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
-        />
-        <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder="Reply text"
-          required
-          rows={3}
-          className="w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
-        />
-        <div className="flex gap-2">
-          <button
-            type="submit"
-            className="rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)]"
-          >
-            {editingId ? "Update" : "Add"}
-          </button>
-          {editingId && (
+        <form onSubmit={handleSubmit} className="mb-6 space-y-3 rounded-xl border border-[var(--border)] p-4">
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Title"
+            required
+            className="w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+          />
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="Reply text"
+            required
+            rows={3}
+            className="w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+          />
+          <div className="flex gap-2">
             <button
-              type="button"
-              onClick={() => {
-                setEditingId(null);
-                setTitle("");
-                setBody("");
-              }}
-              className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm"
+              type="submit"
+              className="rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)]"
             >
-              Cancel
+              {editingId ? "Update" : "Add"}
             </button>
-          )}
-        </div>
-      </form>
+            {editingId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingId(null);
+                  setTitle("");
+                  setBody("");
+                }}
+                className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </form>
 
-      {replies.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--text-muted)]">
-          <p>No canned replies yet.</p>
-          <p className="mt-1">Add one above to reuse it while replying to conversations.</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {replies.map((reply) => (
-            <div key={reply.id} className="rounded-xl border border-[var(--border)] p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm font-medium">{reply.title}</p>
-                  <p className="mt-1 text-sm text-[var(--text-muted)]">{reply.body}</p>
-                </div>
-                <div className="flex gap-2 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => startEdit(reply)}
-                    className="text-[var(--link-fg)] hover:underline"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(reply.id)}
-                    className="text-[var(--danger-fg)] hover:underline"
-                  >
-                    Delete
-                  </button>
+        {replies.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--text-muted)]">
+            <p>No canned replies yet.</p>
+            <p className="mt-1">Add one above to reuse it while replying to conversations.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {replies.map((reply) => (
+              <div key={reply.id} className="rounded-xl border border-[var(--border)] p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm font-medium">{reply.title}</p>
+                    <p className="mt-1 text-sm text-[var(--text-muted)]">{reply.body}</p>
+                  </div>
+                  <div className="flex gap-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => startEdit(reply)}
+                      className="text-[var(--link-fg)] hover:underline"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(reply.id)}
+                      className="text-[var(--danger-fg)] hover:underline"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
