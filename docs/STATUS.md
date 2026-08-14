@@ -354,12 +354,6 @@ up):
   ~830KB (237KB gzipped) bundle; Vite's own build output flags this. Fine
   functionally, but `React.lazy` on the admin route tree would be a
   reasonable follow-up.
-- **No PWA service worker.** `apps/web/public/manifest.webmanifest` and
-  `icon.svg` exist and are linked from `index.html`, but there's no
-  registered service worker, so some browsers' stricter installability
-  criteria (notably Chrome/Android) won't offer "Add to Home Screen"
-  without one. Spec section 58 lists this as optional/recommended, not
-  required.
 - **GCP/Azure attachment storage requires external S3-compatible
   credentials** (or GCS's S3-compatible API for GCP specifically) because
   neither Cloud Run nor Container Apps has persistent local disk by default.

@@ -6,6 +6,7 @@ import { publishToAllAnonymousUsers, publishToAdmins } from "../../realtime/hub.
 import { adminExists, getAdminPublicKeys } from "../../services/admin.service.js";
 import { recordAudit } from "../../services/auditLog.service.js";
 import { isEmailConfigured } from "../../email/index.js";
+import { isPushConfigured } from "../../push/index.js";
 import { ALLOWED_AVATAR_MIME_TYPES, MAX_AVATAR_BYTES, fetchGravatarAvatarDataUrl } from "../../services/gravatar.js";
 import { getSiteSettings } from "../../services/siteSettings.service.js";
 import { Errors } from "../../utils/errors.js";
@@ -30,6 +31,8 @@ async function toSettingsDto(): Promise<SiteSettingsDto> {
     adminNotificationEmail: settings.adminNotificationEmail,
     adminEmailDigestEnabled: settings.adminEmailDigestEnabled,
     adminEmailDigestIntervalMinutes: settings.adminEmailDigestIntervalMinutes,
+    pushNotificationsAvailable: isPushConfigured(),
+    adminPushEnabled: settings.adminPushEnabled,
   };
 }
 
@@ -58,6 +61,7 @@ export function registerAdminSettingsRoutes(app: FastifyInstance): void {
         ...(body.adminEmailDigestIntervalMinutes !== undefined
           ? { adminEmailDigestIntervalMinutes: body.adminEmailDigestIntervalMinutes }
           : {}),
+        ...(body.adminPushEnabled !== undefined ? { adminPushEnabled: body.adminPushEnabled } : {}),
       },
     });
     await recordAudit(admin.id, "settings.updated");

@@ -17,6 +17,7 @@ import { registerAuditLogRoutes } from "./routes/admin/auditLog.js";
 import { registerCannedReplyRoutes } from "./routes/admin/cannedReplies.js";
 import { registerAdminConversationRoutes } from "./routes/admin/conversations.js";
 import { registerOnboardingRoutes } from "./routes/admin/onboarding.js";
+import { registerAdminPushRoutes } from "./routes/admin/push.js";
 import { registerAdminSettingsRoutes } from "./routes/admin/settings.js";
 import { registerAnonymousRoutes } from "./routes/anonymous.js";
 import { registerConversationRoutes } from "./routes/conversation.js";
@@ -105,6 +106,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       registerAdminAuthRoutes(api);
       registerAdminConversationRoutes(api);
       registerAdminSettingsRoutes(api);
+      registerAdminPushRoutes(api);
       registerCannedReplyRoutes(api);
       registerAuditLogRoutes(api);
       registerWsRoutes(api);

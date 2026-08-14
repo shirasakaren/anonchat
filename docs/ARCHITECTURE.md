@@ -66,6 +66,12 @@ Fastify's WebSocket plugin authenticates the upgrade request using the same sess
 
 On reconnect, the client doesn't use a bespoke WebSocket replay protocol - it just re-fetches messages since its last-seen cursor over REST, which is already the durable source of truth. This satisfies "synchronize missed messages" (spec section 9) with less moving machinery.
 
+## Notifications
+
+Foreground updates continue to use the authenticated WebSocket connection. Optional Web Push covers closed/background tabs through a minimal service worker and a self-hosted VAPID keypair; permission is requested only after the person clicks an enable control. Push payloads are deliberately generic and contain no message plaintext. Repeated notifications use a stable tag so the operating system replaces an existing Anonchat alert instead of building an unbounded stack.
+
+Email is optional and supports either ordinary SMTP or Resend. Visitor reply email is an explicit, one-address opt-in offered after the first sent message. Admin email is a configurable digest with an operator-enforced minimum interval, rather than one email per incoming message. Neither email path includes message content because the server cannot decrypt it.
+
 ## Storage abstraction
 
 `StorageAdapter` (`put`/`get`/`delete`) has two implementations: local disk (default, zero config) and an S3-compatible client (works unmodified against AWS S3, Cloudflare R2, Backblaze B2, or self-hosted MinIO by pointing `S3_ENDPOINT` at it). Attachment bytes stored through either adapter are already ciphertext by the time the server sees them.

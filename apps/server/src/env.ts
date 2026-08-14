@@ -91,6 +91,20 @@ const EnvSchema = z.object({
   // a burst of consecutive admin replies collapses into one email instead
   // of one per message.
   REPLY_EMAIL_MIN_INTERVAL_MINUTES: z.coerce.number().int().positive().default(2),
+
+  // Web Push is entirely inert without all three set - generate a keypair
+  // with `pnpm run push:generate-vapid-keys` (apps/server/scripts). Subject
+  // must be a "mailto:you@example.com" or "https://..." contact URL per the
+  // VAPID spec (browsers may use it to reach the sender about abuse).
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z
+    .string()
+    .refine(
+      (value) => value.startsWith("mailto:") || value.startsWith("https://"),
+      "VAPID_SUBJECT must start with mailto: or https://",
+    )
+    .optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -131,6 +145,13 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
       console.error(`EMAIL_DRIVER=resend requires: ${missing.join(", ")}`);
       process.exit(1);
     }
+  }
+  const vapidKeys = ["VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "VAPID_SUBJECT"] as const;
+  const vapidSet = vapidKeys.filter((key) => parsed.data[key]);
+  if (vapidSet.length > 0 && vapidSet.length < vapidKeys.length) {
+    // eslint-disable-next-line no-console
+    console.error(`Web Push requires all three of ${vapidKeys.join(", ")} to be set (or none, to disable it).`);
+    process.exit(1);
   }
   cached = parsed.data;
   return cached;

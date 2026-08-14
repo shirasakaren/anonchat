@@ -35,8 +35,9 @@ model AnonymousUser {
   notificationEmail       String?
   notificationEmailSentAt DateTime?
 
-  conversation Conversation?
-  sessions     AnonymousSession[]
+  conversation      Conversation?
+  sessions          AnonymousSession[]
+  pushSubscriptions PushSubscription[]
 
   @@map("anonymous_users")
 }
@@ -180,9 +181,10 @@ model Admin {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sessions      AdminSession[]
-  cannedReplies CannedReply[]
-  auditLogs     AuditLog[]
+  sessions          AdminSession[]
+  cannedReplies     CannedReply[]
+  auditLogs         AuditLog[]
+  pushSubscriptions PushSubscription[]
 
   @@map("admins")
 }
@@ -226,6 +228,11 @@ model SiteSettings {
   adminEmailDigestIntervalMinutes Int       @default(15)
   lastAdminDigestSentAt           DateTime?
 
+  /// Server-side kill switch for admin push, independent of the browser
+  /// permission grant itself - push is also entirely inert without VAPID_*
+  /// configured server-side (see apps/server/src/push/).
+  adminPushEnabled Boolean @default(true)
+
   updatedAt DateTime @updatedAt
 
   @@map("site_settings")
@@ -256,4 +263,24 @@ model AuditLog {
 
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+/// A browser's Web Push registration. adminId and anonymousUserId may both
+/// be set: PushManager exposes one subscription per origin, so a browser
+/// used for both roles must share the endpoint without one role silently
+/// disabling the other. At least one owner is maintained by the routes.
+model PushSubscription {
+  id              String         @id @default(cuid())
+  adminId         String?
+  admin           Admin?         @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  anonymousUserId String?
+  anonymousUser   AnonymousUser? @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+  endpoint        String         @unique
+  p256dh          String
+  auth            String
+  createdAt       DateTime       @default(now())
+
+  @@index([adminId])
+  @@index([anonymousUserId])
+  @@map("push_subscriptions")
 }

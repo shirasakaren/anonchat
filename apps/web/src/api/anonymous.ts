@@ -2,6 +2,7 @@ import { bytesToBase64url, signChallenge, type Identity } from "@anonchat/crypto
 import { buildLoginChallengeMessage, buildRegistrationProofMessage } from "@anonchat/shared";
 import type { ChallengeResponse, MeResponse, RegisterResponse } from "@anonchat/shared";
 import { api } from "./client.js";
+import type { PushSubscriptionKeys } from "../push/webPush.js";
 
 export function registerAnonymousIdentity(identity: Identity): Promise<RegisterResponse> {
   const signingPublicKey = bytesToBase64url(identity.signingPublicKey);
@@ -38,4 +39,12 @@ export function logoutAnonymous(): Promise<void> {
 /** Opts this identity into (or, with "", out of) an email when the admin replies. */
 export function setNotificationEmail(email: string): Promise<void> {
   return api.post<void>("/anonymous/notification-email", { email });
+}
+
+export function subscribeUserPush(subscription: PushSubscriptionKeys): Promise<void> {
+  return api.post<void>("/anonymous/push/subscribe", subscription);
+}
+
+export function unsubscribeUserPush(endpoint: string): Promise<{ unsubscribeBrowser: boolean }> {
+  return api.post("/anonymous/push/unsubscribe", { endpoint });
 }

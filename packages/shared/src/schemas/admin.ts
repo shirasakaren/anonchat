@@ -55,6 +55,7 @@ export const SiteSettingsRequestSchema = z.object({
   adminNotificationEmail: z.union([z.literal(""), z.string().email().max(320)]).optional(),
   adminEmailDigestEnabled: z.boolean().optional(),
   adminEmailDigestIntervalMinutes: z.coerce.number().int().min(1).max(1440).optional(),
+  adminPushEnabled: z.boolean().optional(),
 });
 export type SiteSettingsRequestInput = z.infer<typeof SiteSettingsRequestSchema>;
 
@@ -156,4 +157,8 @@ export interface SiteSettingsDto {
   adminNotificationEmail: string | null;
   adminEmailDigestEnabled: boolean;
   adminEmailDigestIntervalMinutes: number;
+  /** Push notifications are inert unless the server also has VAPID_*
+   *  configured - see docs/ARCHITECTURE.md. */
+  pushNotificationsAvailable: boolean;
+  adminPushEnabled: boolean;
 }

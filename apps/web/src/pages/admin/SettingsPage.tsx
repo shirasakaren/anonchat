@@ -10,11 +10,15 @@ import {
   beginTotpSetup,
   verifyTotpSetup,
   disableTotp,
+  subscribeAdminPush,
+  unsubscribeAdminPush,
 } from "../../api/admin.js";
 import { ApiError } from "../../api/client.js";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
 import { useAdminNotifications } from "../../hooks/useAdminNotifications.js";
+import { useSite } from "../../context/SiteContext.js";
 import { useTheme } from "../../context/ThemeContext.js";
+import { getExistingPushSubscription, subscribeToPush, unsubscribeFromPush } from "../../push/webPush.js";
 import { FullScreenLoader } from "../../components/common/Loader.js";
 import { ThemePicker } from "../../components/common/ThemePicker.js";
 import { AvatarCropper } from "../../components/common/AvatarCropper.js";
@@ -23,6 +27,7 @@ import { DefaultAvatar } from "../../components/common/DefaultAvatar.js";
 export default function SettingsPage() {
   const { admin, refreshAdmin } = useAdminSession();
   const { isSoundEnabled, setSoundEnabled, requestPermission } = useAdminNotifications();
+  const { site } = useSite();
   const { theme: currentTheme, setTheme: applyTheme } = useTheme();
   const [soundOn, setSoundOn] = useState(true);
   const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">("default");
@@ -51,6 +56,10 @@ export default function SettingsPage() {
   const [digestInterval, setDigestInterval] = useState(15);
   const [digestSaving, setDigestSaving] = useState(false);
   const [digestSaved, setDigestSaved] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(true);
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
 
   useEffect(() => {
     getSettings().then((s) => {
@@ -64,10 +73,12 @@ export default function SettingsPage() {
       setDigestEmail(s.adminNotificationEmail ?? "");
       setDigestEnabled(s.adminEmailDigestEnabled);
       setDigestInterval(s.adminEmailDigestIntervalMinutes);
+      setPushEnabled(s.adminPushEnabled);
     });
     setSoundOn(isSoundEnabled());
     if ("Notification" in window) setNotifPermission(Notification.permission);
     else setNotifPermission("unsupported");
+    getExistingPushSubscription().then((sub) => setPushSubscribed(sub !== null));
   }, [isSoundEnabled]);
 
   if (!settings) return <FullScreenLoader />;
@@ -131,6 +142,48 @@ export default function SettingsPage() {
     } finally {
       setDigestSaving(false);
     }
+  }
+
+  async function handleSubscribePush() {
+    if (!site?.vapidPublicKey) return;
+    setPushBusy(true);
+    setPushError(null);
+    try {
+      const subscription = await subscribeToPush(site.vapidPublicKey);
+      if (!subscription) {
+        setPushError("Push permission wasn't granted.");
+        return;
+      }
+      await subscribeAdminPush(subscription);
+      setPushSubscribed(true);
+    } catch {
+      setPushError("Couldn't enable push notifications. Please try again.");
+    } finally {
+      setPushBusy(false);
+    }
+  }
+
+  async function handleUnsubscribePush() {
+    setPushBusy(true);
+    setPushError(null);
+    try {
+      const existing = await getExistingPushSubscription();
+      if (existing) {
+        const result = await unsubscribeAdminPush(existing.endpoint);
+        if (result.unsubscribeBrowser) await unsubscribeFromPush();
+      }
+      setPushSubscribed(false);
+    } catch {
+      setPushError("Couldn't disable push notifications. Please try again.");
+    } finally {
+      setPushBusy(false);
+    }
+  }
+
+  async function handlePushEnabledToggle(enabled: boolean) {
+    setPushEnabled(enabled);
+    const updated = await updateSettings({ adminPushEnabled: enabled });
+    setSettings(updated);
   }
 
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -393,6 +446,43 @@ export default function SettingsPage() {
               </button>
             )}
           </div>
+        </section>
+
+        <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
+          <h2 className="mb-3 text-sm font-semibold">Push notifications</h2>
+          <p className="mb-3 text-xs text-[var(--text-muted)]">
+            An instant notification for each new message, even when this tab (or browser) is closed - unlike the email
+            digest below, which batches instead of firing per-message.
+          </p>
+          {!settings.pushNotificationsAvailable ? (
+            <p className="mb-3 rounded-lg bg-[var(--surface-muted)] px-3 py-2 text-xs text-[var(--text-muted)]">
+              Not available yet - this server has no VAPID_* keys configured (see .env.example).
+            </p>
+          ) : (
+            <>
+              <div className="mb-3 flex items-center justify-between text-sm">
+                <span className="text-[var(--text-muted)]">This device</span>
+                <button
+                  type="button"
+                  onClick={pushSubscribed ? handleUnsubscribePush : handleSubscribePush}
+                  disabled={pushBusy}
+                  className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs disabled:opacity-50"
+                >
+                  {pushBusy ? "Working…" : pushSubscribed ? "Disable" : "Enable"}
+                </button>
+              </div>
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={pushEnabled}
+                  onChange={(e) => void handlePushEnabledToggle(e.target.checked)}
+                  className="accent-[var(--color-accent-500)]"
+                />
+                Send push notifications
+              </label>
+              {pushError && <p className="mt-2 text-xs text-[var(--danger-fg)]">{pushError}</p>}
+            </>
+          )}
         </section>
 
         <section className="mb-8 rounded-xl border border-[var(--border)] p-4">

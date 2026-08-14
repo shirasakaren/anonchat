@@ -24,6 +24,7 @@ import { DeleteMessageModal } from "../components/chat/DeleteMessageModal.js";
 import { getLocallyDeletedMessageIds, hideMessageLocally } from "../components/chat/locallyDeletedMessages.js";
 import { MessageBubble } from "../components/chat/MessageBubble.js";
 import { NotificationEmailPrompt } from "../components/chat/NotificationEmailPrompt.js";
+import { PushBellButton } from "../components/chat/PushBellButton.js";
 import {
   dismissNotificationEmailPrompt,
   isNotificationEmailPromptDismissed,
@@ -358,6 +359,7 @@ export default function Chat() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <PushBellButton vapidPublicKey={site.vapidPublicKey} />
           <span className="rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-xs font-mono">
             #{session.publicId}
           </span>

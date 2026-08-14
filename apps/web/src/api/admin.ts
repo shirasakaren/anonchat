@@ -9,10 +9,12 @@ import type {
   CannedReplyDto,
   MessageDto,
   MessagePage,
+  SiteSettingsRequestInput,
   SiteSettingsDto,
 } from "@anonchat/shared";
 import { api, apiFetch } from "./client.js";
 import type { OutgoingAttachment } from "./conversation.js";
+import type { PushSubscriptionKeys } from "../push/webPush.js";
 
 export function onboardAdmin(params: {
   username: string;
@@ -80,19 +82,7 @@ export function getSettings(): Promise<SiteSettingsDto> {
   return api.get<SiteSettingsDto>("/admin/settings");
 }
 
-export function updateSettings(
-  patch: Partial<{
-    displayName: string;
-    bio: string;
-    contactLinks: { label: string; url: string }[];
-    pgpPublicKey: string;
-    presenceEnabled: boolean;
-    theme: string;
-    adminNotificationEmail: string;
-    adminEmailDigestEnabled: boolean;
-    adminEmailDigestIntervalMinutes: number;
-  }>,
-): Promise<SiteSettingsDto> {
+export function updateSettings(patch: SiteSettingsRequestInput): Promise<SiteSettingsDto> {
   return api.patch<SiteSettingsDto>("/admin/settings", patch);
 }
 
@@ -106,6 +96,14 @@ export async function uploadAvatar(file: File | Blob): Promise<SiteSettingsDto> 
  *  never the display name or bio Gravatar also exposes. */
 export function importGravatarAvatar(email: string): Promise<SiteSettingsDto> {
   return api.post<SiteSettingsDto>("/admin/avatar/gravatar", { email });
+}
+
+export function subscribeAdminPush(subscription: PushSubscriptionKeys): Promise<void> {
+  return api.post<void>("/admin/push/subscribe", subscription);
+}
+
+export function unsubscribeAdminPush(endpoint: string): Promise<{ unsubscribeBrowser: boolean }> {
+  return api.post("/admin/push/unsubscribe", { endpoint });
 }
 
 export function listConversations(query: {

@@ -17,4 +17,7 @@ export interface PublicSiteInfoDto {
     messageEditWindowMinutes: number;
   };
   turnstileSiteKey: string | null;
+  /** Null when this server has no VAPID_* configured - Web Push is entirely
+   *  unavailable in that case (see docs/ARCHITECTURE.md). */
+  vapidPublicKey: string | null;
 }

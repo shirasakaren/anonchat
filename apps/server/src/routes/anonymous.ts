@@ -4,6 +4,8 @@ import {
   ANON_SESSION_COOKIE,
   ChallengeRequestSchema,
   NotificationEmailRequestSchema,
+  PushSubscriptionRequestSchema,
+  PushUnsubscribeRequestSchema,
   RecoverRequestSchema,
   RegisterRequestSchema,
 } from "@anonchat/shared";
@@ -120,6 +122,43 @@ export function registerAnonymousRoutes(app: FastifyInstance): void {
       data: { notificationEmail: email || null },
     });
     reply.status(204).send();
+  });
+
+  // Web Push registration for this identity's own device - entirely the
+  // visitor's own opt-in, no admin-side toggle (see pushNotification.service.ts).
+  app.post("/anonymous/push/subscribe", { preHandler: requireAnon }, async (request, reply) => {
+    const user = request.anonUser!;
+    const body = PushSubscriptionRequestSchema.parse(request.body);
+    await prisma.pushSubscription.upsert({
+      where: { endpoint: body.endpoint },
+      create: {
+        endpoint: body.endpoint,
+        p256dh: body.keys.p256dh,
+        auth: body.keys.auth,
+        anonymousUserId: user.id,
+        adminId: null,
+      },
+      // Preserve admin ownership when one browser is used for both sides;
+      // PushManager exposes one subscription per service worker/origin.
+      update: { p256dh: body.keys.p256dh, auth: body.keys.auth, anonymousUserId: user.id },
+    });
+    reply.status(204).send();
+  });
+
+  app.post("/anonymous/push/unsubscribe", { preHandler: requireAnon }, async (request, reply) => {
+    const user = request.anonUser!;
+    const { endpoint } = PushUnsubscribeRequestSchema.parse(request.body);
+    const subscription = await prisma.pushSubscription.findFirst({ where: { endpoint, anonymousUserId: user.id } });
+    let unsubscribeBrowser = true;
+    if (subscription) {
+      if (subscription.adminId) {
+        await prisma.pushSubscription.update({ where: { id: subscription.id }, data: { anonymousUserId: null } });
+        unsubscribeBrowser = false;
+      } else {
+        await prisma.pushSubscription.delete({ where: { id: subscription.id } });
+      }
+    }
+    reply.send({ unsubscribeBrowser });
   });
 
   app.post("/anonymous/logout", async (request, reply) => {

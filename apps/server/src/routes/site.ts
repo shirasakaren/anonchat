@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { PublicSiteInfoDto } from "@anonchat/shared";
 import { loadEnv } from "../env.js";
+import { isPushConfigured } from "../push/index.js";
 import { adminExists, getAdminPublicKeys } from "../services/admin.service.js";
 import { getSiteSettings } from "../services/siteSettings.service.js";
 
@@ -30,6 +31,7 @@ export function registerSiteRoutes(app: FastifyInstance): void {
         messageEditWindowMinutes: env.MESSAGE_EDIT_WINDOW_MINUTES,
       },
       turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null,
+      vapidPublicKey: isPushConfigured() ? env.VAPID_PUBLIC_KEY! : null,
     };
     return response;
   });

@@ -22,7 +22,7 @@ system fits together.
 - Admin dashboard: inbox with search/filters, archive/block/delete, canned replies, audit log
 - Admin 2FA (TOTP), session management (see and revoke active devices/IPs)
 - Pluggable attachment storage: local disk by default, or any S3-compatible provider
-- PWA manifest and icon included; responsive on mobile and desktop (no service worker yet - see `docs/STATUS.md`)
+- Installable PWA shell with opt-in Web Push notifications; responsive on mobile and desktop
 - Minimal required configuration; everything else has a sane default
 
 ## Quick start (self-hosted, recommended)

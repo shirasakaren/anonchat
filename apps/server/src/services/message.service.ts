@@ -6,6 +6,7 @@ import { publishToConversation } from "../realtime/hub.js";
 import { getStorageAdapter } from "../storage/index.js";
 import { Errors } from "../utils/errors.js";
 import { MESSAGE_INCLUDE, toMessageDto, toReactionDto } from "../utils/dto.js";
+import { maybeSendAdminPush, maybeSendUserPush } from "./pushNotification.service.js";
 import { maybeSendReplyNotification } from "./replyNotification.service.js";
 
 export interface PendingAttachment {
@@ -102,11 +103,14 @@ export async function createMessage(params: {
       conversationId: params.conversationId,
       message: dto,
     });
+    // Fire-and-forget: neither an SMTP/Resend round trip nor a Web Push
+    // send should add latency to the message-send response, and both
+    // sendEmail and the push module already swallow/log their own failures.
     if (params.senderType === "ADMIN") {
-      // Fire-and-forget: an SMTP/Resend round trip shouldn't add latency to
-      // the admin's own send-message response, and sendEmail already
-      // swallows/logs its own failures.
       void maybeSendReplyNotification(params.conversationId);
+      void maybeSendUserPush(conversation);
+    } else {
+      void maybeSendAdminPush(conversation);
     }
     return dto;
   } catch (error) {
