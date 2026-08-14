@@ -18,12 +18,17 @@ interface ThemePickerProps {
  * what theme the rest of the page is in.
  */
 function ThemeCard({ theme, active, onClick }: { theme: ThemeMeta; active: boolean; onClick: () => void }) {
+  // Variant is already communicated by the Dark/Light group heading, so
+  // repeating it in longer card names adds noise and causes wrapping.
+  const displayName = theme.name.replace(/\s+(Dark|Light)$/u, "");
+
   return (
     <button
       type="button"
       data-theme={theme.id}
       onClick={onClick}
       aria-pressed={active}
+      title={theme.name}
       className={clsx(
         "group relative grid aspect-square w-full grid-rows-[3fr_1.75fr_1.25fr] overflow-hidden rounded-2xl border-2 text-left transition",
         active ? "border-[var(--color-accent-500)]" : "border-[var(--border)] hover:border-[var(--color-accent-300)]",
@@ -40,18 +45,21 @@ function ThemeCard({ theme, active, onClick }: { theme: ThemeMeta; active: boole
 
       {/* Middle 1.75/6 - theme name, anchored bottom-left. */}
       <div
-        className="flex items-end justify-start px-3 pb-1"
+        className="flex min-w-0 items-end justify-start px-3 pb-1"
         style={{ background: "var(--surface-raised)", color: "var(--text)" }}
       >
-        <span className="text-sm font-semibold leading-tight">{theme.name}</span>
+        <span
+          className={clsx(
+            "block min-w-0 max-w-full truncate whitespace-nowrap font-semibold leading-none",
+            displayName.length > 10 ? "text-xs" : "text-sm",
+          )}
+        >
+          {displayName}
+        </span>
       </div>
 
       {/* Bottom 1.25/6 - solid color swatches, anchored bottom-left. */}
       <div className="flex items-end justify-start gap-1.5 px-3 pb-3" style={{ background: "var(--surface-raised)" }}>
-        <span
-          className="h-3.5 w-3.5 rounded-full border border-[var(--border)]"
-          style={{ background: "var(--surface-muted)" }}
-        />
         <span
           className="h-3.5 w-3.5 rounded-full border border-[var(--border)]"
           style={{ background: "var(--color-accent-500)" }}
@@ -59,6 +67,10 @@ function ThemeCard({ theme, active, onClick }: { theme: ThemeMeta; active: boole
         <span
           className="h-3.5 w-3.5 rounded-full border border-[var(--border)]"
           style={{ background: "var(--bubble-user)" }}
+        />
+        <span
+          className="h-3.5 w-3.5 rounded-full border border-[var(--border)]"
+          style={{ background: "var(--surface-muted)" }}
         />
       </div>
 
