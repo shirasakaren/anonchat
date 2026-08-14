@@ -25,15 +25,7 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function IconForMime({
-  mimetype,
-  filename,
-  size = 16,
-}: {
-  mimetype: string;
-  filename: string;
-  size?: number;
-}) {
+export function IconForMime({ mimetype, filename, size = 16 }: { mimetype: string; filename: string; size?: number }) {
   if (mimetype.startsWith("image/")) return <ImageIcon size={size} aria-hidden />;
   if (mimetype.startsWith("video/")) return <Video size={size} aria-hidden />;
   if (mimetype.startsWith("audio/")) return <Music size={size} aria-hidden />;

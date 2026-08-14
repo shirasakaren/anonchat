@@ -28,9 +28,7 @@ import { IconForMime } from "../../components/chat/AttachmentPreview.js";
  *  sent. `kind` distinguishes that case so the row can show a real
  *  type-specific icon + label instead. */
 type PreviewState =
-  | { kind: "text"; text: string }
-  | { kind: "deleted" }
-  | { kind: "attachment"; mimetype: string; filename: string };
+  { kind: "text"; text: string } | { kind: "deleted" } | { kind: "attachment"; mimetype: string; filename: string };
 
 /** Coarse category label to sit next to the icon - GIF called out
  *  specifically (not lumped into "Photo") since it's visually distinct and

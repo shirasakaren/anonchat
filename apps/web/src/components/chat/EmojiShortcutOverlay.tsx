@@ -28,12 +28,7 @@ export function EmojiShortcutOverlay({ matches, selectedIndex, top, left, onSele
   if (matches.length === 0) return null;
 
   return (
-    <div
-      role="listbox"
-      aria-label="Emoji suggestions"
-      className="fixed z-20 -translate-y-full"
-      style={{ top, left }}
-    >
+    <div role="listbox" aria-label="Emoji suggestions" className="fixed z-20 -translate-y-full" style={{ top, left }}>
       <div className="relative rounded-2xl border border-[var(--border)] bg-[var(--surface-raised)] p-1.5 shadow-lg">
         <div className="flex max-w-[min(90vw,20rem)] gap-1 overflow-x-auto overflow-y-hidden scroll-smooth">
           {matches.map((match, i) => (
