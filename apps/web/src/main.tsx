@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { ThemeProvider } from "./context/ThemeContext.js";
 import App from "./App.js";
 import "./index.css";
+import { ToastProvider } from "./context/ToastContext.js";
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
@@ -13,7 +14,9 @@ if ("serviceWorker" in navigator) {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider>
-      <App />
+      <ToastProvider>
+        <App />
+      </ToastProvider>
     </ThemeProvider>
   </StrictMode>,
 );
