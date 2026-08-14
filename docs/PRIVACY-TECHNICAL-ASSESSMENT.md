@@ -92,7 +92,7 @@ No critical code-level privacy defect remains from this review. Two high-priorit
 - **Status:** Open operator obligation
 - **Evidence:** Optional integrations can disclose data to hosting/PostgreSQL providers, S3-compatible storage, SMTP or Resend, browser push services, and ipwho.is. Code cannot determine the chosen vendor, region, contract, or onward transfers.
 - **Risk:** Undocumented recipients, missing Article 28 terms, or unsupported international transfers.
-- **Required action:** Maintain a processor/subprocessor register, sign appropriate processing terms, configure regions, assess transfer mechanisms, limit credentials/permissions, and list actual recipients in the notice. Enabling `VISITOR_GEOLOCATION_PROVIDER=ipwhois` sends the visitor IP to that external provider after consent.
+- **Required action:** Maintain a processor/subprocessor register, sign appropriate processing terms, configure regions, assess transfer mechanisms, limit credentials/permissions, and list actual recipients in the notice. Enabling coarse geolocation in the admin dashboard sends the visitor IP to ipwho.is after consent.
 - **References:** GDPR Articles 13(1)(e)–(f), 28, 32 and Chapter V.
 
 ### P-06 — Consent-version changes do not trigger re-consent

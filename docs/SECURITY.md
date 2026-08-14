@@ -6,8 +6,8 @@ Anonchat is marketed as **"anonymous to the owner and the public," not "impossib
 
 - Other anonymous users can never read, enumerate, or infer the existence of anyone else's conversation. Every API call and WebSocket subscription is authorized against the caller's own session server-side - never against a client-supplied id (spec sections 27-29).
 - Message content, attachment bytes, reaction emoji, and shared-note documents/media are end-to-end encrypted (see below). Someone with read access to the database, backups, or the host - but without the admin's browser/device or an anonymous user's recovery secret - sees only ciphertext and metadata (timestamps, sender type, message sizes).
-- The server operator (whoever runs the container) can see connection metadata (IP addresses, if enabled) and could modify server code to behave maliciously. E2EE does not protect against a compromised or malicious server _build_; it protects the data at rest and in transit against passive access to storage/infrastructure. This is the same honest boundary every E2EE messenger operates under.
-- We do not attempt to hide a user's IP address from the server at the network layer (no built-in Tor/mixnet). `STORE_IP_ADDRESSES` controls whether that address is _persisted_; the server always sees it on the wire like any web app.
+- The server operator (whoever runs the container) can see connection metadata (IP addresses, if dashboard retention is enabled) and could modify server code to behave maliciously. E2EE does not protect against a compromised or malicious server _build_; it protects the data at rest and in transit against passive access to storage/infrastructure. This is the same honest boundary every E2EE messenger operates under.
+- We do not attempt to hide a user's IP address from the server at the network layer (no built-in Tor/mixnet). The System settings control whether that address is _persisted_; the server always sees it on the wire like any web app.
 
 ## Cryptographic design
 

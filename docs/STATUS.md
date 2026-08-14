@@ -14,6 +14,30 @@ reviewed. Remaining items are either an optional product roadmap or operator-
 specific privacy/deployment obligations; see "Known gaps" and
 `docs/PRIVACY-TECHNICAL-ASSESSMENT.md`.
 
+## Attachment limits and dashboard controls follow-up (2026-08-14)
+
+- Runtime limits moved from environment variables into persisted System
+  settings. The admin can set a global upload ceiling, recommended per-type
+  limits for image, video, audio, document, and other files, files per
+  message, message and identity rate limits, link preview behavior, visitor
+  IP/geolocation choices, and notification timing.
+- The server applies the current database-backed global ceiling to every
+  multipart request. The browser checks the encrypted file metadata against
+  the matching per-type limit before upload and explains the exact limit in
+  an in-app toast.
+- Text, code, CSV, Markdown, and DOCX attachments remain compact file cards in
+  the transcript. Selecting Preview decrypts them and opens the large local
+  viewer. Wide rows are contained by a local horizontal scrollbar and retain
+  safe space from the viewport edge.
+- Video attachments use one responsive 16:9 display size across source
+  resolutions, include a clear centered play control, and retain a direct
+  download action. Uploading videos show a blurred local frame, play marker,
+  and real upload progress.
+- Chat, attachment, and settings failures now produce accessible in-app toast
+  feedback instead of disappearing into the console or silent state.
+- The desktop admin sidebar can collapse to a persistent icon-only rail and
+  expand again; mobile navigation continues to use the labeled drawer.
+
 ## Attachment and document preview follow-up (2026-08-14)
 
 - Selecting, pasting, or dropping attachments returns focus to the existing
@@ -25,8 +49,8 @@ specific privacy/deployment obligations; see "Known gaps" and
 - Browser MIME gaps are filled from encrypted filename extensions for common
   image, SVG, video, audio, document, archive, and source-code formats. Unknown
   and binary formats remain sendable and download-only.
-- Images, animated SVG, video, audio, text, code, CSV, Markdown, and DOCX files
-  decrypt and preview automatically. PDF opens in a full local browser viewer.
+- Images, animated SVG, video, audio, and PDF decrypt automatically. Text,
+  code, CSV, Markdown, and DOCX files stay compact until Preview is selected.
 - PDF uses the browser's page/search/print/zoom tools. DOCX, Markdown, CSV,
   HTML, JSX, and other source/text formats use a large themed viewer with local
   scrolling, zoom, reset-to-top, download, backdrop close, and Escape close.

@@ -17,16 +17,24 @@ system fits together.
 - Anonymous identity from a cryptographically random recovery key, with an optional visitor-chosen name
 - Persistent 1:1 conversation per identity, end-to-end encrypted
 - Real-time messaging over WebSocket, with offline/reconnect sync
-- Encrypted attachments with upload/download progress, inline media, and full local document/code previews
+- Encrypted attachments with upload/download progress, inline media, compact file cards, and full local document/code previews
 - One shared TipTap note per conversation with encrypted rich text and playable media
 - Markdown-lite formatting, emoji shortcodes, reactions, replies, edit/delete
-- Admin dashboard: inbox with search/filters, archive/block/delete, canned replies, audit log
+- Admin dashboard: collapsible navigation, inbox search/filters, archive/block/delete, canned replies, and audit log
 - Public admin profile panel with avatar, bio, links, public key, and an optional photo gallery
 - Editable site title with the admin profile picture used automatically as the favicon
 - Admin 2FA (TOTP), session management (see and revoke active devices/IPs)
 - Pluggable attachment storage: local disk by default, or any S3-compatible provider
 - Installable PWA shell with opt-in Web Push notifications; responsive on mobile and desktop
 - Minimal required configuration; everything else has a sane default
+
+Operational preferences live in the admin dashboard, not environment files.
+The system settings page controls the global upload ceiling, per-type upload
+limits, files per message, rate limits, link previews, visitor IP storage,
+coarse geolocation, and notification timing. New installations default to a
+100 MB global ceiling with recommended lower limits for images, audio,
+documents, and other files. The server retains a fixed 250 MB safety ceiling
+for resource protection.
 
 ## Quick start (self-hosted, recommended)
 
@@ -49,8 +57,9 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-See [`.env.example`](.env.example) for every configuration option and its
-default.
+See [`.env.example`](.env.example) for the infrastructure, secret, email,
+push, and storage configuration that must be available before the process
+starts. Product and runtime preferences are configured after sign-in.
 
 ## Local development
 
