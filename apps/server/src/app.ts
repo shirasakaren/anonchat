@@ -66,7 +66,11 @@ export async function buildApp(): Promise<FastifyInstance> {
         // preview card (see /api/link-preview), which needed no CSP change
         // at all since the browser only ever talks to this app's own
         // origin for that.
-        frameSrc: ["'self'", "https://www.youtube-nocookie.com", "https://player.vimeo.com"],
+        // Decrypted PDF attachments are rendered from a temporary local
+        // blob URL. `blob:` is deliberately limited to frames here; the
+        // document bytes never leave the browser or gain script access to
+        // another origin.
+        frameSrc: ["'self'", "blob:", "https://www.youtube-nocookie.com", "https://player.vimeo.com"],
       },
     },
     crossOriginResourcePolicy: { policy: "same-origin" },
