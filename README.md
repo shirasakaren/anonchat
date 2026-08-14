@@ -18,6 +18,7 @@ system fits together.
 - Persistent 1:1 conversation per identity, end-to-end encrypted
 - Real-time messaging over WebSocket, with offline/reconnect sync
 - Attachments (images, video, audio, documents) with in-chat previews, all encrypted
+- One shared TipTap note per conversation with encrypted rich text and playable media
 - Markdown-lite formatting, emoji shortcodes, reactions, replies, edit/delete
 - Admin dashboard: inbox with search/filters, archive/block/delete, canned replies, audit log
 - Admin 2FA (TOTP), session management (see and revoke active devices/IPs)

@@ -306,6 +306,91 @@ select:disabled {
   margin-top: 0.5rem;
 }
 
+/* TipTap shared-note editor. All colors come from the active Anonchat
+   theme, so the editor follows the same light/dark/custom palette rather
+   than bringing its own white document surface. */
+.note-editor-content {
+  min-height: 100%;
+  padding: 1.25rem;
+  color: var(--text);
+  outline: none;
+  overflow-wrap: anywhere;
+}
+
+.note-editor-content > * + * {
+  margin-top: 0.7rem;
+}
+
+.note-editor-content h1 {
+  font-size: 1.75rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.note-editor-content h2 {
+  font-size: 1.35rem;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.note-editor-content h3 {
+  font-size: 1.1rem;
+  line-height: 1.3;
+  font-weight: 650;
+}
+
+.note-editor-content ul,
+.note-editor-content ol {
+  padding-left: 1.5rem;
+}
+
+.note-editor-content ul {
+  list-style: disc;
+}
+
+.note-editor-content ol {
+  list-style: decimal;
+}
+
+.note-editor-content blockquote {
+  border-left: 3px solid var(--border-strong);
+  padding-left: 0.9rem;
+  color: var(--text-muted);
+}
+
+.note-editor-content pre {
+  overflow-x: auto;
+  border-radius: 0.65rem;
+  background: var(--surface-muted);
+  padding: 0.8rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8rem;
+}
+
+.note-editor-content code:not(pre code) {
+  border-radius: 0.3rem;
+  background: var(--surface-muted);
+  padding: 0.1rem 0.3rem;
+  font-size: 0.86em;
+}
+
+.note-editor-content a {
+  color: var(--link-fg);
+  text-decoration: underline;
+}
+
+.note-editor-content p.is-editor-empty:first-child::before {
+  float: left;
+  height: 0;
+  color: var(--text-muted);
+  pointer-events: none;
+  content: attr(data-placeholder);
+}
+
+.note-asset {
+  margin-block: 0.8rem;
+}
+
 .prose-message h1,
 .prose-message h2,
 .prose-message h3 {

@@ -14,7 +14,7 @@ Anonchat is a self-hosted, end-to-end encrypted, anonymous 1:1 messaging inbox. 
 
 ## Why true end-to-end encryption
 
-The product spec's non-negotiable is "end-to-end security," and section 66 also lists literal end-to-end encryption as a supported capability. We built the strong version: **message content, attachment bytes, and reaction emoji are encrypted client-side and the server only ever stores and relays ciphertext.** Concretely, this protects conversation content against anyone with access to the database or the underlying infrastructure who is _not_ one of the two conversation participants - a DB dump, a backup leak, or a compromised hosting account reveals metadata (who talked to whom, when, how much) but not what was said.
+The product spec's non-negotiable is "end-to-end security," and section 66 also lists literal end-to-end encryption as a supported capability. We built the strong version: **message content, attachment bytes, reaction emoji, and shared-note documents/media are encrypted client-side and the server only ever stores and relays ciphertext.** Concretely, this protects conversation content against anyone with access to the database or the underlying infrastructure who is _not_ one of the two conversation participants - a DB dump, a backup leak, or a compromised hosting account reveals metadata (who talked to whom, when, how much) but not what was said.
 
 This is a deliberate, non-default-obvious choice with real consequences, documented here rather than hidden:
 
@@ -56,7 +56,13 @@ sharedSecret = X25519(myExchangeSecretKey, theirExchangePublicKey)
 conversationKey = HKDF-SHA256(sharedSecret, info = "anonchat-conversation-v1:" + conversationId)
 ```
 
-Neither side ever transmits this key. Messages, reaction emoji, and attachment metadata are encrypted with XChaCha20-Poly1305 under this key before they ever leave the browser.
+Neither side ever transmits this key. Messages, reaction emoji, attachment metadata, and the TipTap shared-note JSON are encrypted with XChaCha20-Poly1305 under this key before they ever leave the browser. Binary note media follows the same nonce-prefixed encrypted-blob format as message attachments; the browser decrypts it into a temporary `blob:` URL only while rendering the note.
+
+## Shared conversation note
+
+Each conversation has at most one note, shared only by that anonymous identity and the admin. The editor is loaded on demand so TipTap does not inflate the initial chat bundle. It supports headings, lists, quotes, code, links, and encrypted image/video/audio/file embeds. Changes autosave after an idle debounce and publish a ciphertext-only WebSocket event; concurrent edits use last-write-wins while an open editor warns before replacing unsaved local work with a newer remote version.
+
+The server caps uploads, rate-limits note writes/downloads, scopes every route to the authenticated conversation, and deletes note media when its node is removed or the conversation is permanently deleted.
 
 ## Real-time transport
 

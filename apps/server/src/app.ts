@@ -23,6 +23,7 @@ import { registerAnonymousRoutes } from "./routes/anonymous.js";
 import { registerConversationRoutes } from "./routes/conversation.js";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerLinkPreviewRoutes } from "./routes/linkPreview.js";
+import { registerNoteRoutes } from "./routes/notes.js";
 import { registerSiteRoutes } from "./routes/site.js";
 import { registerVisitorInsightsRoutes } from "./routes/visitorInsights.js";
 import { ensureCsrfCookie, verifyCsrf } from "./security/csrf.js";
@@ -102,6 +103,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 
       registerSiteRoutes(api);
       registerLinkPreviewRoutes(api);
+      registerNoteRoutes(api);
       registerAnonymousRoutes(api);
       registerConversationRoutes(api);
       registerOnboardingRoutes(api);

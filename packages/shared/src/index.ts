@@ -11,3 +11,4 @@ export * from "./schemas/site.js";
 export * from "./schemas/linkPreview.js";
 export * from "./schemas/push.js";
 export * from "./schemas/visitorInsights.js";
+export * from "./schemas/note.js";

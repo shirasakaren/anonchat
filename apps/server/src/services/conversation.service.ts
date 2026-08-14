@@ -249,15 +249,15 @@ export async function setConversationMuted(conversationId: string, muted: boolea
 export async function hardDeleteConversation(conversationId: string): Promise<void> {
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
-    include: { messages: { include: { attachments: true } } },
+    include: { messages: { include: { attachments: true } }, noteAssets: true },
   });
   if (!conversation) throw Errors.notFound();
 
   const storage = getStorageAdapter();
   await Promise.allSettled(
-    conversation.messages
-      .flatMap((message) => message.attachments)
-      .map((attachment) => storage.delete(attachment.storageKey)),
+    [...conversation.messages.flatMap((message) => message.attachments), ...conversation.noteAssets].map((attachment) =>
+      storage.delete(attachment.storageKey),
+    ),
   );
 
   await prisma.$transaction([

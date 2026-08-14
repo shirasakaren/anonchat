@@ -5,7 +5,7 @@
 Anonchat is marketed as **"anonymous to the owner and the public," not "impossible to identify"** (spec section 67). Concretely:
 
 - Other anonymous users can never read, enumerate, or infer the existence of anyone else's conversation. Every API call and WebSocket subscription is authorized against the caller's own session server-side - never against a client-supplied id (spec sections 27-29).
-- Message content, attachment bytes, and reaction emoji are end-to-end encrypted (see below). Someone with read access to the database, backups, or the host - but without the admin's browser/device or an anonymous user's recovery secret - sees only ciphertext and metadata (timestamps, sender type, message sizes).
+- Message content, attachment bytes, reaction emoji, and shared-note documents/media are end-to-end encrypted (see below). Someone with read access to the database, backups, or the host - but without the admin's browser/device or an anonymous user's recovery secret - sees only ciphertext and metadata (timestamps, sender type, message sizes).
 - The server operator (whoever runs the container) can see connection metadata (IP addresses, if enabled) and could modify server code to behave maliciously. E2EE does not protect against a compromised or malicious server _build_; it protects the data at rest and in transit against passive access to storage/infrastructure. This is the same honest boundary every E2EE messenger operates under.
 - We do not attempt to hide a user's IP address from the server at the network layer (no built-in Tor/mixnet). `STORE_IP_ADDRESSES` controls whether that address is _persisted_; the server always sees it on the wire like any web app.
 
@@ -13,17 +13,17 @@ Anonchat is marketed as **"anonymous to the owner and the public," not "impossib
 
 All primitives come from the audited [`@noble`](https://paulmillr.com/noble/) libraries (`@noble/curves`, `@noble/ciphers`, `@noble/hashes`), used identically in the browser and in Node.
 
-| Purpose                                             | Primitive                                                                                               |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Identity signing keypair                            | Ed25519, seed derived via HKDF-SHA256                                                                   |
-| Identity exchange keypair                           | X25519, seed derived via HKDF-SHA256 (independent branch from the same secret - not a curve conversion) |
-| Conversation key agreement                          | X25519 ECDH + HKDF-SHA256, domain-separated per conversation id                                         |
-| Message / attachment-metadata / reaction encryption | XChaCha20-Poly1305 (24-byte random nonce per message - safe without a counter)                          |
-| Login/recovery proof                                | Ed25519 signature over a server-issued, single-use, 120-second challenge                                |
-| Registration proof-of-possession                    | Ed25519 signature over a domain-tagged message containing both submitted public keys                    |
-| Admin password hashing                              | Argon2id                                                                                                |
-| Browser-local key caching (admin)                   | scrypt (N=2^17, r=8, p=1) password-derived key wrapping the cached secret with XChaCha20-Poly1305       |
-| Admin TOTP secret at rest                           | XChaCha20-Poly1305 with a key derived from `SESSION_SECRET` via HKDF (see below)                        |
+| Purpose                                                    | Primitive                                                                                               |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Identity signing keypair                                   | Ed25519, seed derived via HKDF-SHA256                                                                   |
+| Identity exchange keypair                                  | X25519, seed derived via HKDF-SHA256 (independent branch from the same secret - not a curve conversion) |
+| Conversation key agreement                                 | X25519 ECDH + HKDF-SHA256, domain-separated per conversation id                                         |
+| Message / attachment-metadata / reaction / note encryption | XChaCha20-Poly1305 (24-byte random nonce per item - safe without a counter)                             |
+| Login/recovery proof                                       | Ed25519 signature over a server-issued, single-use, 120-second challenge                                |
+| Registration proof-of-possession                           | Ed25519 signature over a domain-tagged message containing both submitted public keys                    |
+| Admin password hashing                                     | Argon2id                                                                                                |
+| Browser-local key caching (admin)                          | scrypt (N=2^17, r=8, p=1) password-derived key wrapping the cached secret with XChaCha20-Poly1305       |
+| Admin TOTP secret at rest                                  | XChaCha20-Poly1305 with a key derived from `SESSION_SECRET` via HKDF (see below)                        |
 
 ### Anonymous identity
 

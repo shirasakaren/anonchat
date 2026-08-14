@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   decryptAttachmentMeta,
   decryptMessageText,
+  decryptNoteDocument,
   decryptReaction,
   encryptAttachmentMeta,
   encryptMessageText,
+  encryptNoteDocument,
   encryptReaction,
   getConversationKey,
 } from "./conversationCrypto.js";
@@ -62,6 +64,22 @@ describe("conversationCrypto", () => {
     const { aliceKey, bobKey } = makeConversationKeyPair("conv-6");
     const payload = encryptReaction(aliceKey, "👍");
     expect(decryptReaction(bobKey, payload)).toBe("👍");
+  });
+
+  it("round-trips a structured shared-note document between participants", () => {
+    const { aliceKey, bobKey } = makeConversationKeyPair("conv-note");
+    const document = {
+      type: "doc",
+      content: [{ type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "Private note" }] }],
+    };
+    const payload = encryptNoteDocument(aliceKey, document);
+    expect(decryptNoteDocument(bobKey, payload)).toEqual(document);
+  });
+
+  it("does not expose an undecryptable note document", () => {
+    const { aliceKey } = makeConversationKeyPair("conv-note-invalid");
+    const wrongKey = deriveIdentity(generateRecoverySecret()).exchangeSecretKey;
+    expect(decryptNoteDocument(wrongKey, encryptNoteDocument(aliceKey, { type: "doc" }))).toBeNull();
   });
 
   it("produces different keys for different conversation ids", () => {

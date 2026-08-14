@@ -52,7 +52,7 @@ function cookieHeader(jar: Jar): string {
 async function call(
   app: FastifyInstance,
   jar: Jar,
-  method: "GET" | "POST" | "PATCH" | "DELETE",
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
   url: string,
   payload?: unknown,
 ) {
@@ -191,6 +191,53 @@ describe("anonchat integration", () => {
     });
     expect(recoverRes.status).toBe(200);
     expect(recoverRes.body.conversationId).toBe(conversationId);
+  });
+
+  it("shares one end-to-end encrypted rich note between the visitor and admin", async () => {
+    const userJar = newJar();
+    await primeCsrf(app, userJar);
+    const user = makeIdentity();
+    const registerRes = await call(app, userJar, "POST", "/anonymous/register", {
+      signingPublicKey: bytesToBase64url(user.identity.signingPublicKey),
+      exchangePublicKey: bytesToBase64url(user.identity.exchangePublicKey),
+      proof: bytesToBase64url(user.proof),
+    });
+    const { conversationId, adminPublicKeys } = registerRes.body;
+    const userKey = deriveConversationKey(
+      user.identity.exchangeSecretKey,
+      base64urlToBytes(adminPublicKeys.exchangePublicKey),
+      conversationId,
+    );
+    const adminKey = deriveConversationKey(
+      adminIdentity.exchangeSecretKey,
+      user.identity.exchangePublicKey,
+      conversationId,
+    );
+
+    const visitorDocument = {
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "Shared privately" }] }],
+    };
+    const saveByVisitor = await call(app, userJar, "PUT", "/conversation/note", {
+      content: encryptJSON(userKey, { document: visitorDocument }),
+    });
+    expect(saveByVisitor.status).toBe(200);
+
+    const adminRead = await call(app, adminJar, "GET", `/admin/conversations/${conversationId}/note`);
+    expect(adminRead.status).toBe(200);
+    expect(decryptJSON<{ document: unknown }>(adminKey, adminRead.body.note.content).document).toEqual(visitorDocument);
+
+    const adminDocument = {
+      type: "doc",
+      content: [{ type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Updated by admin" }] }],
+    };
+    const saveByAdmin = await call(app, adminJar, "PUT", `/admin/conversations/${conversationId}/note`, {
+      content: encryptJSON(adminKey, { document: adminDocument }),
+    });
+    expect(saveByAdmin.status).toBe(200);
+
+    const visitorRead = await call(app, userJar, "GET", "/conversation/note");
+    expect(decryptJSON<{ document: unknown }>(userKey, visitorRead.body.note.content).document).toEqual(adminDocument);
   });
 
   it("rejects login with a signature from the wrong identity", async () => {

@@ -1,5 +1,5 @@
 import type { EncryptedPayload } from "@anonchat/crypto";
-import type { ConversationDto, MessageDto, MessagePage } from "@anonchat/shared";
+import type { ConversationDto, ConversationNoteDto, MessageDto, MessagePage, NoteAssetDto } from "@anonchat/shared";
 import { api, apiFetch } from "./client.js";
 
 export function getConversation(): Promise<ConversationDto> {
@@ -58,4 +58,27 @@ export function markRead(upToMessageId: string): Promise<{ upToMessageId: string
 
 export function attachmentUrl(id: string): string {
   return `/api/conversation/attachments/${id}`;
+}
+
+export function getNote(): Promise<{ note: ConversationNoteDto | null }> {
+  return api.get("/conversation/note");
+}
+
+export function saveNote(content: EncryptedPayload): Promise<ConversationNoteDto> {
+  return api.put("/conversation/note", { content });
+}
+
+export function uploadNoteAsset(meta: EncryptedPayload, blob: Blob): Promise<NoteAssetDto> {
+  const form = new FormData();
+  form.append("meta", JSON.stringify(meta));
+  form.append("asset", blob, "encrypted-note-asset");
+  return apiFetch("/conversation/note/assets", { method: "POST", body: form });
+}
+
+export function noteAssetUrl(id: string): string {
+  return `/api/conversation/note/assets/${encodeURIComponent(id)}`;
+}
+
+export function deleteNoteAsset(id: string): Promise<void> {
+  return api.delete(`/conversation/note/assets/${encodeURIComponent(id)}`);
 }

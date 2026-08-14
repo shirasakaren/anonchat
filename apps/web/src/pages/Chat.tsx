@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { encryptBlob } from "@anonchat/crypto";
-import type { MessageDto, ServerWsEvent } from "@anonchat/shared";
+import { StickyNote } from "lucide-react";
+import type { ConversationNoteDto, MessageDto, ServerWsEvent } from "@anonchat/shared";
 import {
   attachmentUrl,
   deleteMessage,
@@ -45,6 +46,8 @@ import {
 } from "../crypto/conversationCrypto.js";
 import type { DisplayMessage } from "../components/chat/types.js";
 
+const SharedNoteDrawer = lazy(() => import("../components/note/SharedNoteDrawer.js"));
+
 export default function Chat() {
   // Chat only ever mounts once PublicApp has confirmed both are resolved
   // (status === "ready" and site is loaded) - asserted here rather than
@@ -64,6 +67,8 @@ export default function Chat() {
   const [adminOnline, setAdminOnline] = useState<boolean | null>(null);
   const [adminTyping, setAdminTyping] = useState(false);
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [incomingNote, setIncomingNote] = useState<ConversationNoteDto | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pendingFilesRef = useRef<Map<string, { text: string; files: File[]; replyToId: string | null }>>(new Map());
@@ -147,6 +152,10 @@ export default function Chat() {
         }
         case "reaction.updated": {
           setMessages((prev) => prev.map((m) => (m.id === event.messageId ? { ...m, reactions: event.reactions } : m)));
+          break;
+        }
+        case "note.updated": {
+          if (event.conversationId === session.conversationId) setIncomingNote(event.note);
           break;
         }
         case "conversation.read": {
@@ -363,6 +372,15 @@ export default function Chat() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setNoteOpen(true)}
+            title="Open private note"
+            aria-label="Open private note"
+            className="rounded-lg p-1.5 text-[var(--text-muted)] hover:bg-[var(--surface-muted)]"
+          >
+            <StickyNote size={18} aria-hidden />
+          </button>
           <VisitorInsightsControl conversationId={session.conversationId} config={site.visitorInsights} />
           <PushBellButton vapidPublicKey={site.vapidPublicKey} />
           <span className="rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-xs font-mono">
@@ -452,6 +470,19 @@ export default function Chat() {
           onDeleteForEveryone={() => void handleDeleteForEveryone(deleteTarget)}
           onCancel={() => setDeleteTarget(null)}
         />
+      )}
+      {noteOpen && (
+        <Suspense fallback={null}>
+          <SharedNoteDrawer
+            role="USER"
+            conversationId={session.conversationId}
+            conversationKey={conversationKey}
+            maxAssetSizeMb={site.limits.maxAttachmentSizeMb}
+            incomingNote={incomingNote}
+            readOnly={isBlocked}
+            onClose={() => setNoteOpen(false)}
+          />
+        </Suspense>
       )}
 
       {showNotificationPrompt && (

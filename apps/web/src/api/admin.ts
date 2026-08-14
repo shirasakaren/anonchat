@@ -7,8 +7,10 @@ import type {
   AdminSummaryDto,
   AuditLogEntryDto,
   CannedReplyDto,
+  ConversationNoteDto,
   MessageDto,
   MessagePage,
+  NoteAssetDto,
   SiteSettingsRequestInput,
   SiteSettingsDto,
   VisitorInsightDto,
@@ -220,6 +222,35 @@ export function permanentlyDeleteConversation(id: string): Promise<void> {
 
 export function adminAttachmentUrl(conversationId: string, attachmentId: string): string {
   return `/api/admin/conversations/${conversationId}/attachments/${attachmentId}`;
+}
+
+export function getAdminNote(conversationId: string): Promise<{ note: ConversationNoteDto | null }> {
+  return api.get(`/admin/conversations/${conversationId}/note`);
+}
+
+export function saveAdminNote(conversationId: string, content: EncryptedPayload): Promise<ConversationNoteDto> {
+  return api.put(`/admin/conversations/${conversationId}/note`, { content });
+}
+
+export function uploadAdminNoteAsset(
+  conversationId: string,
+  meta: EncryptedPayload,
+  blob: Blob,
+): Promise<NoteAssetDto> {
+  const form = new FormData();
+  form.append("meta", JSON.stringify(meta));
+  form.append("asset", blob, "encrypted-note-asset");
+  return apiFetch(`/admin/conversations/${conversationId}/note/assets`, { method: "POST", body: form });
+}
+
+export function adminNoteAssetUrl(conversationId: string, assetId: string): string {
+  return `/api/admin/conversations/${encodeURIComponent(conversationId)}/note/assets/${encodeURIComponent(assetId)}`;
+}
+
+export function deleteAdminNoteAsset(conversationId: string, assetId: string): Promise<void> {
+  return api.delete(
+    `/admin/conversations/${encodeURIComponent(conversationId)}/note/assets/${encodeURIComponent(assetId)}`,
+  );
 }
 
 export function listCannedReplies(): Promise<CannedReplyDto[]> {

@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { encryptBlob } from "@anonchat/crypto";
-import { Info, Pencil } from "lucide-react";
+import { Info, Pencil, StickyNote } from "lucide-react";
 import {
   DEFAULT_MAX_MESSAGE_LENGTH,
   type AdminConversationDto,
   type CannedReplyDto,
+  type ConversationNoteDto,
   type MessageDto,
   type ServerWsEvent,
 } from "@anonchat/shared";
@@ -46,6 +47,8 @@ import {
 } from "../../crypto/conversationCrypto.js";
 import type { DisplayMessage } from "../../components/chat/types.js";
 
+const SharedNoteDrawer = lazy(() => import("../../components/note/SharedNoteDrawer.js"));
+
 interface Props {
   conversationId: string;
   onChanged: () => void;
@@ -68,6 +71,8 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   const [userOnline, setUserOnline] = useState(false);
   const [cannedReplies, setCannedReplies] = useState<CannedReplyDto[]>([]);
   const [insightsOpen, setInsightsOpen] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [incomingNote, setIncomingNote] = useState<ConversationNoteDto | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pendingRef = useRef<Map<string, { text: string; files: File[]; replyToId: string | null }>>(new Map());
@@ -196,6 +201,9 @@ export function ConversationView({ conversationId, onChanged }: Props) {
         case "reaction.updated":
           if (!belongsHere(event.conversationId)) return;
           setMessages((prev) => prev.map((m) => (m.id === event.messageId ? { ...m, reactions: event.reactions } : m)));
+          break;
+        case "note.updated":
+          if (event.conversationId === conversationId) setIncomingNote(event.note);
           break;
         case "conversation.read":
           if (!belongsHere(event.conversationId)) return;
@@ -489,15 +497,26 @@ export function ConversationView({ conversationId, onChanged }: Props) {
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setInsightsOpen(true)}
-          title="View visitor insights"
-          aria-label="View visitor insights"
-          className="shrink-0 rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
-        >
-          <Info size={18} aria-hidden />
-        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setNoteOpen(true)}
+            title="Open private note"
+            aria-label="Open private note"
+            className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
+          >
+            <StickyNote size={18} aria-hidden />
+          </button>
+          <button
+            type="button"
+            onClick={() => setInsightsOpen(true)}
+            title="View visitor insights"
+            aria-label="View visitor insights"
+            className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
+          >
+            <Info size={18} aria-hidden />
+          </button>
+        </div>
       </header>
 
       <ConnectionBanner status={wsStatus} />
@@ -565,6 +584,18 @@ export function ConversationView({ conversationId, onChanged }: Props) {
         />
       )}
       {insightsOpen && <VisitorInsightsDrawer conversationId={conversationId} onClose={() => setInsightsOpen(false)} />}
+      {noteOpen && conversationKey && (
+        <Suspense fallback={null}>
+          <SharedNoteDrawer
+            role="ADMIN"
+            conversationId={conversationId}
+            conversationKey={conversationKey}
+            maxAssetSizeMb={site?.limits.maxAttachmentSizeMb ?? 25}
+            incomingNote={incomingNote}
+            onClose={() => setNoteOpen(false)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

@@ -90,7 +90,9 @@ model Conversation {
   /// don't fire admin notifications. Never sent to the anonymous user.
   mutedAt         DateTime?
 
-  messages Message[]
+  messages   Message[]
+  note       ConversationNote?
+  noteAssets NoteAsset[]
 
   @@index([status, lastMessageAt])
   @@map("conversations")
@@ -158,6 +160,38 @@ model MessageReaction {
 
   @@unique([messageId, senderType])
   @@map("message_reactions")
+}
+
+/// One shared, end-to-end encrypted rich note per conversation. The server
+/// can coordinate updates but cannot read the TipTap JSON document.
+model ConversationNote {
+  id             String       @id @default(cuid())
+  conversationId String       @unique
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  contentCiphertext Bytes
+  contentNonce      Bytes
+  updatedBy         SenderType
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@map("conversation_notes")
+}
+
+/// Encrypted binary media embedded in the shared note. Filename and MIME
+/// type live only inside metaCiphertext; bytes in storage are ciphertext.
+model NoteAsset {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  storageKey     String       @unique
+  metaCiphertext Bytes
+  metaNonce      Bytes
+  sizeBytes      Int
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+  @@map("note_assets")
 }
 
 // ---------------------------------------------------------------------------

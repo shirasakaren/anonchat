@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ConversationDto, MessageDto, ReactionDto } from "./schemas/conversation.js";
+import type { ConversationNoteDto } from "./schemas/note.js";
 import type { SenderType } from "./enums.js";
 
 // ---- Client -> Server -------------------------------------------------
@@ -19,6 +20,7 @@ export type ServerWsEvent =
   | { type: "message.updated"; conversationId: string; message: MessageDto }
   | { type: "message.deleted"; conversationId: string; messageId: string }
   | { type: "reaction.updated"; conversationId: string; messageId: string; reactions: ReactionDto[] }
+  | { type: "note.updated"; conversationId: string; note: ConversationNoteDto }
   | { type: "conversation.updated"; conversation: ConversationDto }
   | {
       type: "conversation.read";

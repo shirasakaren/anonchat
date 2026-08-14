@@ -21,6 +21,10 @@ export interface ReactionEnvelope {
   emoji: string;
 }
 
+export interface NoteEnvelope {
+  document: unknown;
+}
+
 export function getConversationKey(
   myIdentity: Identity,
   theirExchangePublicKeyB64: string,
@@ -64,6 +68,18 @@ export function encryptReaction(key: Uint8Array, emoji: string): EncryptedPayloa
 export function decryptReaction(key: Uint8Array, payload: EncryptedPayload): string | null {
   try {
     return decryptJSON<ReactionEnvelope>(key, payload).emoji;
+  } catch {
+    return null;
+  }
+}
+
+export function encryptNoteDocument(key: Uint8Array, document: unknown): EncryptedPayload {
+  return encryptJSON<NoteEnvelope>(key, { document });
+}
+
+export function decryptNoteDocument(key: Uint8Array, payload: EncryptedPayload): unknown {
+  try {
+    return decryptJSON<NoteEnvelope>(key, payload).document;
   } catch {
     return null;
   }
