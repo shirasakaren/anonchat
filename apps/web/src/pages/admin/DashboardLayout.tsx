@@ -1,7 +1,19 @@
 import { useState, type ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import clsx from "clsx";
-import { Menu, X, MessageSquare, Settings, ShieldCheck, ClipboardList, ScrollText, UserRound } from "lucide-react";
+import {
+  Menu,
+  X,
+  MessageSquare,
+  Settings,
+  ShieldCheck,
+  ClipboardList,
+  ScrollText,
+  UserRound,
+  LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from "lucide-react";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
 import { useUnreadCount } from "../../hooks/useUnreadCount.js";
 import { LaunchGuideModal } from "../../components/admin/LaunchGuideModal.js";
@@ -16,10 +28,15 @@ const NAV_ITEMS = [
   { to: "/admin/audit-log", label: "Audit log", icon: ScrollText },
 ];
 
+const SIDEBAR_COLLAPSED_KEY = "anonchat.adminSidebarCollapsed";
+
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { admin, logout } = useAdminSession();
   const { site } = useSite();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true",
+  );
   const [showLaunchGuide, setShowLaunchGuide] = useState(() => {
     const shouldShow = sessionStorage.getItem("anonchat.showLaunchGuide") === "true";
     if (shouldShow) sessionStorage.removeItem("anonchat.showLaunchGuide");
@@ -29,44 +46,92 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const closeMobileNav = () => setMobileNavOpen(false);
 
-  const navLinks = NAV_ITEMS.map((item) => (
-    <NavLink
-      key={item.to}
-      to={item.to}
-      end={item.end}
-      onClick={closeMobileNav}
-      className={({ isActive }) =>
-        clsx(
-          "flex items-center gap-2 rounded-lg px-3 py-2 text-sm",
-          isActive ? "bg-[var(--chip-bg)] font-medium text-[var(--chip-fg)]" : "hover:bg-[var(--surface-muted)]",
-        )
-      }
-    >
-      <item.icon size={16} aria-hidden />
-      {item.label}
-      {item.to === "/admin" && unreadCount > 0 && (
-        <span className="ml-auto rounded-full bg-[var(--btn-bg)] px-1.5 py-0.5 text-xs font-medium text-[var(--btn-fg)]">
-          {unreadCount > 9 ? "9+" : unreadCount}
-        </span>
-      )}
-    </NavLink>
-  ));
+  function renderNavLinks(compact: boolean) {
+    return NAV_ITEMS.map((item) => (
+      <NavLink
+        key={item.to}
+        to={item.to}
+        end={item.end}
+        onClick={closeMobileNav}
+        title={compact ? item.label : undefined}
+        aria-label={
+          compact
+            ? `${item.label}${item.to === "/admin" && unreadCount > 0 ? `, ${unreadCount} unread conversations` : ""}`
+            : undefined
+        }
+        className={({ isActive }) =>
+          clsx(
+            "relative flex items-center rounded-lg py-2 text-sm",
+            compact ? "justify-center px-2" : "gap-2 px-3",
+            isActive ? "bg-[var(--chip-bg)] font-medium text-[var(--chip-fg)]" : "hover:bg-[var(--surface-muted)]",
+          )
+        }
+      >
+        <item.icon size={18} className="shrink-0" aria-hidden />
+        {!compact && <span className="truncate">{item.label}</span>}
+        {item.to === "/admin" && unreadCount > 0 && (
+          <span
+            className={clsx(
+              "rounded-full bg-[var(--btn-bg)] font-medium text-[var(--btn-fg)]",
+              compact
+                ? "absolute right-1 top-1 h-2.5 w-2.5 border-2 border-[var(--surface-raised)]"
+                : "ml-auto px-1.5 py-0.5 text-xs",
+            )}
+            aria-hidden={compact || undefined}
+          >
+            {!compact && (unreadCount > 9 ? "9+" : unreadCount)}
+          </span>
+        )}
+      </NavLink>
+    ));
+  }
+
+  function toggleSidebar() {
+    setSidebarCollapsed((collapsed) => {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(!collapsed));
+      return !collapsed;
+    });
+  }
 
   return (
     <div className="flex h-screen">
       {/* Desktop sidebar (md and up). */}
-      <nav className="hidden w-56 flex-col border-r border-[var(--border)] bg-[var(--surface-raised)] p-3 md:flex">
-        <div className="mb-4 px-2">
-          <p className="truncate text-sm font-semibold">{site?.siteTitle ?? "Anonchat"}</p>
-          <p className="truncate text-xs text-[var(--text-muted)]">{admin?.displayName}</p>
+      <nav
+        className={clsx(
+          "hidden shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface-raised)] p-3 transition-[width] duration-200 md:flex",
+          sidebarCollapsed ? "w-16" : "w-56",
+        )}
+      >
+        <div className={clsx("mb-4 flex min-h-9 items-start", sidebarCollapsed ? "justify-center" : "gap-2 px-2")}>
+          {!sidebarCollapsed && (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">{site?.siteTitle ?? "Anonchat"}</p>
+              <p className="truncate text-xs text-[var(--text-muted)]">{admin?.displayName}</p>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="shrink-0 rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--surface-muted)]"
+          >
+            {sidebarCollapsed ? <PanelLeftOpen size={18} aria-hidden /> : <PanelLeftClose size={18} aria-hidden />}
+          </button>
         </div>
-        <div className="flex-1 space-y-1">{navLinks}</div>
+        <div className="flex-1 space-y-1">{renderNavLinks(sidebarCollapsed)}</div>
         <button
           type="button"
           onClick={() => logout()}
-          className="rounded-lg px-3 py-2 text-left text-sm text-[var(--text-muted)] hover:bg-[var(--surface-muted)]"
+          title={sidebarCollapsed ? "Logout" : undefined}
+          aria-label={sidebarCollapsed ? "Logout" : undefined}
+          className={clsx(
+            "flex items-center rounded-lg py-2 text-left text-sm text-[var(--text-muted)] hover:bg-[var(--surface-muted)]",
+            sidebarCollapsed ? "justify-center px-2" : "gap-2 px-3",
+          )}
         >
-          Logout
+          <LogOut size={18} className="shrink-0" aria-hidden />
+          {!sidebarCollapsed && <span>Logout</span>}
         </button>
       </nav>
 
@@ -107,16 +172,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <X size={16} aria-hidden />
               </button>
             </div>
-            <div className="flex-1 space-y-1">{navLinks}</div>
+            <div className="flex-1 space-y-1">{renderNavLinks(false)}</div>
             <button
               type="button"
               onClick={() => {
                 closeMobileNav();
                 void logout();
               }}
-              className="rounded-lg px-3 py-2 text-left text-sm text-[var(--text-muted)] hover:bg-[var(--surface-muted)]"
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-[var(--text-muted)] hover:bg-[var(--surface-muted)]"
             >
-              Logout
+              <LogOut size={18} aria-hidden />
+              <span>Logout</span>
             </button>
           </nav>
         </div>
