@@ -59,8 +59,17 @@ export const GravatarImportRequestSchema = z.object({
 });
 export type GravatarImportRequestInput = z.infer<typeof GravatarImportRequestSchema>;
 
+/** No spaces - the title doubles as the "/name" typed in the composer to
+ *  trigger this template (see cannedReplySlash.ts on the client), so it
+ *  needs to behave like a single command token. */
+export const CannedReplyTitleSchema = z
+  .string()
+  .min(1)
+  .max(40)
+  .regex(/^[a-zA-Z0-9_-]+$/, "letters, numbers, underscore, dash only - no spaces");
+
 export const CannedReplyRequestSchema = z.object({
-  title: z.string().min(1).max(80),
+  title: CannedReplyTitleSchema,
   body: z.string().min(1).max(4000),
 });
 export type CannedReplyRequestInput = z.infer<typeof CannedReplyRequestSchema>;

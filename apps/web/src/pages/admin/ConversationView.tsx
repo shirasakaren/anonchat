@@ -5,6 +5,7 @@ import { Pencil } from "lucide-react";
 import {
   DEFAULT_MAX_MESSAGE_LENGTH,
   type AdminConversationDto,
+  type CannedReplyDto,
   type MessageDto,
   type ServerWsEvent,
 } from "@anonchat/shared";
@@ -13,6 +14,7 @@ import {
   editAdminMessage,
   getAdminConversation,
   getAdminMessages,
+  listCannedReplies,
   markAdminRead,
   sendAdminMessage,
   setAdminReaction,
@@ -42,7 +44,6 @@ import {
   toBlobPart,
 } from "../../crypto/conversationCrypto.js";
 import type { DisplayMessage } from "../../components/chat/types.js";
-import { CannedReplyPicker } from "./CannedReplyPicker.js";
 
 interface Props {
   conversationId: string;
@@ -64,6 +65,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   const [aliasDraft, setAliasDraft] = useState("");
   const [aliasBusy, setAliasBusy] = useState(false);
   const [userOnline, setUserOnline] = useState(false);
+  const [cannedReplies, setCannedReplies] = useState<CannedReplyDto[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pendingRef = useRef<Map<string, { text: string; files: File[]; replyToId: string | null }>>(new Map());
@@ -140,6 +142,12 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Fetched once, not per-conversation - canned replies aren't scoped to a
+  // single conversation, unlike everything else `load()` re-fetches above.
+  useEffect(() => {
+    listCannedReplies().then(setCannedReplies);
+  }, []);
 
   // ConversationView is reused (not remounted) across conversations - Inbox
   // renders it without a `key`, so switching chats only changes this prop.
@@ -524,8 +532,6 @@ export function ConversationView({ conversationId, onChanged }: Props) {
         <div ref={bottomRef} />
       </div>
 
-      <CannedReplyPicker onPick={(body) => handleSend(body, [])} />
-
       <Composer
         maxLength={site?.limits.maxMessageLength ?? DEFAULT_MAX_MESSAGE_LENGTH}
         maxAttachments={site?.limits.maxAttachmentsPerMessage ?? 5}
@@ -537,6 +543,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
         onCancelEdit={() => setEditing(null)}
         onSend={handleSend}
         onTypingChange={(isTyping) => wsSend({ type: isTyping ? "typing.start" : "typing.stop", conversationId })}
+        cannedReplies={cannedReplies}
       />
 
       {deleteTarget && (

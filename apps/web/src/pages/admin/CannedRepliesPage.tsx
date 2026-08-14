@@ -1,13 +1,23 @@
 import { useEffect, useState } from "react";
 import type { CannedReplyDto } from "@anonchat/shared";
 import { createCannedReply, deleteCannedReply, listCannedReplies, updateCannedReply } from "../../api/admin.js";
+import { ApiError } from "../../api/client.js";
 import { FullScreenLoader } from "../../components/common/Loader.js";
+
+/** Titles double as the "/name" typed in the composer to trigger a
+ *  template, so they can't contain spaces - auto-format as the admin types
+ *  (spaces/other punctuation -> dashes) rather than only rejecting on
+ *  submit, matching CannedReplyTitleSchema on the server. */
+function sanitizeTitle(value: string): string {
+  return value.replace(/\s+/g, "-").replace(/[^a-zA-Z0-9_-]/g, "");
+}
 
 export default function CannedRepliesPage() {
   const [replies, setReplies] = useState<CannedReplyDto[] | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   function load() {
     listCannedReplies().then(setReplies);
@@ -21,15 +31,20 @@ export default function CannedRepliesPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (editingId) {
-      await updateCannedReply(editingId, title, body);
-    } else {
-      await createCannedReply(title, body);
+    setError(null);
+    try {
+      if (editingId) {
+        await updateCannedReply(editingId, title, body);
+      } else {
+        await createCannedReply(title, body);
+      }
+      setTitle("");
+      setBody("");
+      setEditingId(null);
+      load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not save that template.");
     }
-    setTitle("");
-    setBody("");
-    setEditingId(null);
-    load();
   }
 
   function startEdit(reply: CannedReplyDto) {
@@ -49,21 +64,33 @@ export default function CannedRepliesPage() {
         <h1 className="mb-6 text-xl font-semibold">Canned replies</h1>
 
         <form onSubmit={handleSubmit} className="mb-6 space-y-3 rounded-xl border border-[var(--border)] p-4">
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Title"
-            required
-            className="w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
-          />
+          <div>
+            <div className="flex items-center rounded-lg border border-[var(--border-strong)]">
+              <span className="pl-3 text-sm text-[var(--text-muted)]" aria-hidden>
+                /
+              </span>
+              <input
+                value={title}
+                onChange={(e) => setTitle(sanitizeTitle(e.target.value))}
+                placeholder="template-name"
+                required
+                maxLength={40}
+                className="w-full bg-transparent py-2 pl-1 pr-3 text-sm outline-none"
+              />
+            </div>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
+              Type <code>/{title || "template-name"}</code> in the composer to use this template.
+            </p>
+          </div>
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            placeholder="Reply text"
+            placeholder="Reply text (markdown supported)"
             required
             rows={3}
             className="w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
           />
+          {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
           <div className="flex gap-2">
             <button
               type="submit"

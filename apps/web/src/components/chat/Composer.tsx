@@ -10,6 +10,7 @@ import {
 } from "react";
 import clsx from "clsx";
 import { X, Paperclip, Smile, File as FileIcon, Eye } from "lucide-react";
+import type { CannedReplyDto } from "@anonchat/shared";
 import {
   expandEmojiShortcuts,
   findActiveShortcodeQuery,
@@ -17,8 +18,10 @@ import {
   searchShortcodes,
   type ShortcodeMatch,
 } from "./emojiShortcuts.js";
+import { findActiveSlashQuery, searchCannedReplies } from "./cannedReplySlash.js";
 import { getCaretCoordinates } from "./caretCoordinates.js";
 import { EmojiShortcutOverlay } from "./EmojiShortcutOverlay.js";
+import { CannedReplySlashOverlay } from "./CannedReplySlashOverlay.js";
 import { EmojiPicker } from "./emoji/EmojiPicker.js";
 import { justCompletedFreshCodeFence } from "./codeFenceDetection.js";
 import { CodeBlockModal } from "./CodeBlockModal.js";
@@ -61,6 +64,10 @@ interface Props {
   onSend: (text: string, files: File[]) => void;
   onTypingChange?: (isTyping: boolean) => void;
   initialText?: string;
+  /** Admin-only: enables the "/template" autocomplete below. Anonymous
+   *  users' composer simply never passes this, so the trigger never
+   *  activates for them. */
+  cannedReplies?: CannedReplyDto[];
 }
 
 export function Composer({
@@ -75,11 +82,13 @@ export function Composer({
   onSend,
   onTypingChange,
   initialText,
+  cannedReplies,
 }: Props) {
   const [text, setText] = useState(initialText ?? "");
   const [files, setFiles] = useState<PendingFile[]>([]);
   const [showEmoji, setShowEmoji] = useState(false);
   const [shortcodeQuery, setShortcodeQuery] = useState<{ start: number; query: string } | null>(null);
+  const [slashQuery, setSlashQuery] = useState<{ query: string } | null>(null);
   const [selectedSuggestion, setSelectedSuggestion] = useState(0);
   const [overlayPos, setOverlayPos] = useState<{ top: number; left: number } | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -88,6 +97,8 @@ export function Composer({
   const pickerWrapperRef = useRef<HTMLDivElement>(null);
 
   const suggestions = shortcodeQuery ? searchShortcodes(shortcodeQuery.query, SHORTCODE_SUGGESTION_LIMIT) : [];
+  const templateSuggestions =
+    slashQuery && cannedReplies?.length ? searchCannedReplies(cannedReplies, slashQuery.query) : [];
 
   // Gated on showPreview, not just memoized on text - marked + DOMPurify +
   // highlight.js runs its full pipeline here, and that cost should only
@@ -141,18 +152,24 @@ export function Composer({
     });
   }
 
-  /** Re-derives the in-progress ":partial" shortcode (if any) from the
-   *  textarea's current value and cursor position - called after every text
-   *  change and every cursor move, since moving the cursor away from a
-   *  half-typed shortcode should close the suggestion list too. Also
-   *  recomputes the overlay's anchor position, since the cursor (and so
-   *  where the overlay needs to float above) moves along with it. */
-  function syncShortcodeQuery(el: HTMLTextAreaElement) {
+  /** Re-derives the in-progress ":partial" shortcode and/or "/template"
+   *  query (if either is active) from the textarea's current value and
+   *  cursor position - called after every text change and every cursor
+   *  move, since moving the cursor away should close whichever suggestion
+   *  list is open. Also recomputes the overlay's anchor position, since the
+   *  cursor (and so where the overlay needs to float above) moves with it.
+   *  The two triggers can never both match at once (one requires "/" as
+   *  the very first character, the other a ":" immediately before the
+   *  cursor), so there's no ordering/priority concern between them. */
+  function syncOverlayQueries(el: HTMLTextAreaElement) {
     const cursor = el.selectionStart ?? el.value.length;
-    const active = findActiveShortcodeQuery(el.value.slice(0, cursor));
-    setShortcodeQuery(active);
+    const textBeforeCursor = el.value.slice(0, cursor);
+    const activeShortcode = findActiveShortcodeQuery(textBeforeCursor);
+    const activeSlash = cannedReplies?.length ? findActiveSlashQuery(textBeforeCursor) : null;
+    setShortcodeQuery(activeShortcode);
+    setSlashQuery(activeSlash);
     setSelectedSuggestion(0);
-    setOverlayPos(active ? computeOverlayPosition(el, cursor) : null);
+    setOverlayPos(activeShortcode || activeSlash ? computeOverlayPosition(el, cursor) : null);
   }
 
   function handleTextChange(e: ChangeEvent<HTMLTextAreaElement>) {
@@ -181,7 +198,7 @@ export function Composer({
       return;
     }
     updateText(el.value);
-    syncShortcodeQuery(el);
+    syncOverlayQueries(el);
   }
 
   function handleCodeInsert(code: string, language: string) {
@@ -209,6 +226,26 @@ export function Composer({
     const newCursor = shortcodeQuery.start + match.emoji.length;
     updateText(newValue);
     setShortcodeQuery(null);
+    el.focus();
+    requestAnimationFrame(() => el.setSelectionRange(newCursor, newCursor));
+  }
+
+  /** Fills the template's body into the composer (replacing the "/query"
+   *  typed so far) rather than sending immediately - still editable before
+   *  the admin hits Send, unlike the old toggle-and-chip-list canned-reply
+   *  picker this replaces. */
+  function applyTemplate(reply: CannedReplyDto) {
+    const el = textareaRef.current;
+    if (!el) return;
+    // The slash trigger only ever matches from position 0 (see
+    // findActiveSlashQuery), so the "/query" span being replaced always
+    // starts at the beginning of the text - but anything after the cursor
+    // (if the admin repositioned it mid-command) still needs to survive.
+    const cursor = el.selectionStart ?? text.length;
+    const newValue = reply.body + text.slice(cursor);
+    const newCursor = reply.body.length;
+    updateText(newValue);
+    setSlashQuery(null);
     el.focus();
     requestAnimationFrame(() => el.setSelectionRange(newCursor, newCursor));
   }
@@ -249,12 +286,40 @@ export function Composer({
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    // Up/Down (not Left/Right) - this overlay is a vertical list (see
+    // CannedReplySlashOverlay), unlike the emoji strip below. Can never be
+    // active at the same time as the shortcode overlay (see
+    // syncOverlayQueries's doc comment), so there's no ordering concern
+    // between the two blocks.
+    if (slashQuery && templateSuggestions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedSuggestion((i) => (i + 1) % templateSuggestions.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedSuggestion((i) => (i - 1 + templateSuggestions.length) % templateSuggestions.length);
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        const picked = templateSuggestions[selectedSuggestion];
+        if (picked) applyTemplate(picked);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setSlashQuery(null);
+        return;
+      }
+    }
     // Left/Right (not Up/Down) - the overlay is a single horizontally-
     // scrolling strip (see EmojiShortcutOverlay), matching WhatsApp's own
     // shortcut picker. This fully takes over the arrow keys while a
     // shortcode is in progress, the same way Enter/Tab already do below -
     // moving the text cursor away from a half-typed ":code" implicitly
-    // abandons it anyway (syncShortcodeQuery closes the overlay on the
+    // abandons it anyway (syncOverlayQueries closes the overlay on the
     // resulting selection-change event).
     if (shortcodeQuery && suggestions.length > 0) {
       if (e.key === "ArrowRight") {
@@ -369,6 +434,16 @@ export function Composer({
         />
       )}
 
+      {slashQuery && templateSuggestions.length > 0 && overlayPos && (
+        <CannedReplySlashOverlay
+          matches={templateSuggestions}
+          selectedIndex={selectedSuggestion}
+          top={overlayPos.top}
+          left={overlayPos.left}
+          onSelect={applyTemplate}
+        />
+      )}
+
       <div className="mb-1.5 flex gap-1 text-xs font-medium">
         <button
           type="button"
@@ -426,8 +501,8 @@ export function Composer({
           onChange={handleTextChange}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          onSelect={(e) => syncShortcodeQuery(e.currentTarget)}
-          onClick={(e) => syncShortcodeQuery(e.currentTarget)}
+          onSelect={(e) => syncOverlayQueries(e.currentTarget)}
+          onClick={(e) => syncOverlayQueries(e.currentTarget)}
           placeholder="Type a message… (Enter to send, Shift+Enter for a new line)"
           rows={1}
           disabled={disabled}
