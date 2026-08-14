@@ -23,6 +23,11 @@ import { withDateSeparators } from "../components/chat/dateSeparators.js";
 import { DeleteMessageModal } from "../components/chat/DeleteMessageModal.js";
 import { getLocallyDeletedMessageIds, hideMessageLocally } from "../components/chat/locallyDeletedMessages.js";
 import { MessageBubble } from "../components/chat/MessageBubble.js";
+import { NotificationEmailPrompt } from "../components/chat/NotificationEmailPrompt.js";
+import {
+  dismissNotificationEmailPrompt,
+  isNotificationEmailPromptDismissed,
+} from "../components/chat/notificationEmailPromptDismissed.js";
 import { TypingIndicator } from "../components/chat/TypingIndicator.js";
 import { DefaultAvatar } from "../components/common/DefaultAvatar.js";
 import { FullScreenLoader } from "../components/common/Loader.js";
@@ -54,6 +59,7 @@ export default function Chat() {
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => getLocallyDeletedMessageIds(session.conversationId));
   const [adminOnline, setAdminOnline] = useState<boolean | null>(null);
   const [adminTyping, setAdminTyping] = useState(false);
+  const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pendingFilesRef = useRef<Map<string, { text: string; files: File[]; replyToId: string | null }>>(new Map());
@@ -197,6 +203,14 @@ export default function Chat() {
           return { meta, blob: new Blob([toBlobPart(encryptedBlob)]) };
         }),
       );
+      // Captured before the update below - zero USER messages so far means
+      // this send is about to become the first one ever, which is exactly
+      // when the optional "email me on reply" prompt should appear (see
+      // NotificationEmailPrompt.tsx). Computed outside the setMessages
+      // updater since triggering another state update from inside one is
+      // the kind of side effect React's updater functions should stay free of.
+      const isFirstUserMessage = !messages.some((m) => m.senderType === "USER");
+
       const payload = encryptMessageText(conversationKey, text);
       const dto = await sendMessage({ content: payload, replyToId, attachments });
       setMessages((prev) => {
@@ -207,6 +221,9 @@ export default function Chat() {
         if (withoutOptimistic.some((m) => m.id === dto.id)) return withoutOptimistic;
         return [...withoutOptimistic, decryptDto(dto)].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
       });
+      if (isFirstUserMessage && !isNotificationEmailPromptDismissed(session.conversationId)) {
+        setShowNotificationPrompt(true);
+      }
       pendingFilesRef.current.delete(localId);
     } catch (err) {
       setMessages((prev) =>
@@ -410,6 +427,16 @@ export default function Chat() {
           onDeleteForMe={() => handleDeleteForMe(deleteTarget)}
           onDeleteForEveryone={() => void handleDeleteForEveryone(deleteTarget)}
           onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {showNotificationPrompt && (
+        <NotificationEmailPrompt
+          adminName={site.displayName}
+          onDone={() => {
+            dismissNotificationEmailPrompt(session.conversationId);
+            setShowNotificationPrompt(false);
+          }}
         />
       )}
     </main>

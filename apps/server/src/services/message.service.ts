@@ -6,6 +6,7 @@ import { publishToConversation } from "../realtime/hub.js";
 import { getStorageAdapter } from "../storage/index.js";
 import { Errors } from "../utils/errors.js";
 import { MESSAGE_INCLUDE, toMessageDto, toReactionDto } from "../utils/dto.js";
+import { maybeSendReplyNotification } from "./replyNotification.service.js";
 
 export interface PendingAttachment {
   meta: EncryptedPayloadInput;
@@ -101,6 +102,12 @@ export async function createMessage(params: {
       conversationId: params.conversationId,
       message: dto,
     });
+    if (params.senderType === "ADMIN") {
+      // Fire-and-forget: an SMTP/Resend round trip shouldn't add latency to
+      // the admin's own send-message response, and sendEmail already
+      // swallows/logs its own failures.
+      void maybeSendReplyNotification(params.conversationId);
+    }
     return dto;
   } catch (error) {
     await Promise.allSettled(storageKeys.map((key) => storage.delete(key)));

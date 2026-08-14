@@ -46,6 +46,11 @@ export default function SettingsPage() {
   const [gravatarEmail, setGravatarEmail] = useState("");
   const [gravatarBusy, setGravatarBusy] = useState(false);
   const [gravatarError, setGravatarError] = useState<string | null>(null);
+  const [digestEmail, setDigestEmail] = useState("");
+  const [digestEnabled, setDigestEnabled] = useState(false);
+  const [digestInterval, setDigestInterval] = useState(15);
+  const [digestSaving, setDigestSaving] = useState(false);
+  const [digestSaved, setDigestSaved] = useState(false);
 
   useEffect(() => {
     getSettings().then((s) => {
@@ -56,6 +61,9 @@ export default function SettingsPage() {
       setPgpPublicKey(s.pgpPublicKey ?? "");
       setPresenceEnabled(s.presenceEnabled);
       setThemeState(s.theme);
+      setDigestEmail(s.adminNotificationEmail ?? "");
+      setDigestEnabled(s.adminEmailDigestEnabled);
+      setDigestInterval(s.adminEmailDigestIntervalMinutes);
     });
     setSoundOn(isSoundEnabled());
     if ("Notification" in window) setNotifPermission(Notification.permission);
@@ -105,6 +113,23 @@ export default function SettingsPage() {
       setTimeout(() => setSaved(false), 2000);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleSaveDigest() {
+    setDigestSaving(true);
+    setDigestSaved(false);
+    try {
+      const updated = await updateSettings({
+        adminNotificationEmail: digestEmail,
+        adminEmailDigestEnabled: digestEnabled,
+        adminEmailDigestIntervalMinutes: digestInterval,
+      });
+      setSettings(updated);
+      setDigestSaved(true);
+      setTimeout(() => setDigestSaved(false), 2000);
+    } finally {
+      setDigestSaving(false);
     }
   }
 
@@ -370,7 +395,64 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-[var(--border)] p-4">
+        <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
+          <h2 className="mb-3 text-sm font-semibold">Email digest</h2>
+          <p className="mb-3 text-xs text-[var(--text-muted)]">
+            A periodic summary email ("N new messages") instead of one email per message - message content is end-to-end
+            encrypted, so it can never be included.
+          </p>
+          {!settings.emailNotificationsAvailable && (
+            <p className="mb-3 rounded-lg bg-[var(--surface-muted)] px-3 py-2 text-xs text-[var(--text-muted)]">
+              Not available yet - this server has no EMAIL_DRIVER configured (see .env.example).
+            </p>
+          )}
+          <label className="mb-3 flex items-center gap-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={digestEnabled}
+              disabled={!settings.emailNotificationsAvailable}
+              onChange={(e) => setDigestEnabled(e.target.checked)}
+              className="accent-[var(--color-accent-500)]"
+            />
+            Email me a digest of new messages
+          </label>
+          <label className="mb-3 block text-sm font-medium">
+            Notification email
+            <input
+              type="email"
+              value={digestEmail}
+              disabled={!settings.emailNotificationsAvailable}
+              onChange={(e) => setDigestEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm disabled:opacity-50"
+            />
+          </label>
+          <label className="mb-3 block text-sm font-medium">
+            Digest every
+            <span className="ml-1 inline-flex items-center gap-1.5 align-middle">
+              <input
+                type="number"
+                min={1}
+                max={1440}
+                value={digestInterval}
+                disabled={!settings.emailNotificationsAvailable}
+                onChange={(e) => setDigestInterval(Number(e.target.value))}
+                className="w-20 rounded-lg border border-[var(--border-strong)] bg-transparent px-2 py-1 text-sm disabled:opacity-50"
+              />
+              minutes, at most
+            </span>
+          </label>
+          <button
+            type="button"
+            onClick={handleSaveDigest}
+            disabled={digestSaving || !settings.emailNotificationsAvailable}
+            className="rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
+          >
+            {digestSaving ? "Saving…" : digestSaved ? "Saved!" : "Save"}
+          </button>
+        </section>
+
+        <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
           <h2 className="mb-3 text-sm font-semibold">Two-factor authentication</h2>
           {admin?.totpEnabled ? (
             <div className="flex items-center justify-between">

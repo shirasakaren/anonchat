@@ -3,6 +3,7 @@ import { base64urlToBytes } from "@anonchat/crypto";
 import {
   ANON_SESSION_COOKIE,
   ChallengeRequestSchema,
+  NotificationEmailRequestSchema,
   RecoverRequestSchema,
   RegisterRequestSchema,
 } from "@anonchat/shared";
@@ -105,6 +106,20 @@ export function registerAnonymousRoutes(app: FastifyInstance): void {
       adminPublicKeys: adminPublicKeys ?? { signingPublicKey: "", exchangePublicKey: "" },
     };
     return response;
+  });
+
+  // Entirely optional (spec: "tell that it's fully optional"): stores an
+  // email purely so this identity can be notified when the admin replies.
+  // Never required, never shown to the admin as a contact method, never
+  // used for anything but this one notification.
+  app.post("/anonymous/notification-email", { preHandler: requireAnon }, async (request, reply) => {
+    const user = request.anonUser!;
+    const { email } = NotificationEmailRequestSchema.parse(request.body);
+    await prisma.anonymousUser.update({
+      where: { id: user.id },
+      data: { notificationEmail: email || null },
+    });
+    reply.status(204).send();
   });
 
   app.post("/anonymous/logout", async (request, reply) => {

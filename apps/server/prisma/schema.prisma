@@ -18,16 +18,22 @@ enum AnonymousUserStatus {
 }
 
 model AnonymousUser {
-  id                 String              @id @default(cuid())
-  publicId           String              @unique
-  signingPublicKey   Bytes
-  exchangePublicKey  Bytes
-  status             AnonymousUserStatus @default(ACTIVE)
+  id                String              @id @default(cuid())
+  publicId          String              @unique
+  signingPublicKey  Bytes
+  exchangePublicKey Bytes
+  status            AnonymousUserStatus @default(ACTIVE)
   /// Only populated when STORE_IP_ADDRESSES=true. Used purely for abuse
   /// mitigation (e.g. blocking a device creating many identities).
-  registrationIp     String?
-  createdAt          DateTime            @default(now())
-  lastSeenAt         DateTime            @default(now())
+  registrationIp    String?
+  createdAt         DateTime            @default(now())
+  lastSeenAt        DateTime            @default(now())
+
+  /// Optional, opt-in only: offered once after this identity's first sent
+  /// message, purely so it can be emailed when the admin replies. Never
+  /// required, never used for anything else. See docs/SECURITY.md.
+  notificationEmail       String?
+  notificationEmailSentAt DateTime?
 
   conversation Conversation?
   sessions     AnonymousSession[]
@@ -112,6 +118,10 @@ model Message {
   reactions   MessageReaction[]
 
   @@index([conversationId, createdAt])
+  /// Supports the admin digest's "how many USER messages arrived since the
+  /// last digest, system-wide" sweep (notificationDigest.service.ts) -
+  /// distinct from the composite index above, which is scoped per-conversation.
+  @@index([senderType, createdAt])
   @@map("messages")
 }
 
@@ -159,7 +169,7 @@ model Admin {
   displayName  String
   avatarUrl    String?
 
-  totpEnabled       Boolean @default(false)
+  totpEnabled          Boolean @default(false)
   /// AES/XChaCha-encrypted at rest with a key derived from SESSION_SECRET.
   totpSecretCiphertext Bytes?
   totpSecretNonce      Bytes?
@@ -178,14 +188,14 @@ model Admin {
 }
 
 model AdminSession {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   adminId    String
-  admin      Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
-  tokenHash  String   @unique
+  admin      Admin     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
   ipAddress  String?
   userAgent  String?
-  createdAt  DateTime @default(now())
-  lastSeenAt DateTime @default(now())
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
   expiresAt  DateTime
   revokedAt  DateTime?
 
@@ -204,7 +214,19 @@ model SiteSettings {
   presenceEnabled  Boolean @default(true)
   /// Theme identifier, e.g. "monochrome-dark", "paper", "forest-dark".
   theme            String  @default("monochrome-dark")
-  updatedAt        DateTime @updatedAt
+
+  /// Where the admin's new-message digest email is sent. Email
+  /// notifications are entirely inert without both this AND EMAIL_DRIVER
+  /// configured server-side (see apps/server/src/email/).
+  adminNotificationEmail          String?
+  adminEmailDigestEnabled         Boolean   @default(false)
+  /// Admin-configurable, but never allowed below
+  /// ADMIN_DIGEST_MIN_INTERVAL_MINUTES (an operator-level floor) - see
+  /// notificationDigest.service.ts.
+  adminEmailDigestIntervalMinutes Int       @default(15)
+  lastAdminDigestSentAt           DateTime?
+
+  updatedAt DateTime @updatedAt
 
   @@map("site_settings")
 }

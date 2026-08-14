@@ -24,6 +24,10 @@ import { registerHealthRoutes } from "./routes/health.js";
 import { registerLinkPreviewRoutes } from "./routes/linkPreview.js";
 import { registerSiteRoutes } from "./routes/site.js";
 import { ensureCsrfCookie, verifyCsrf } from "./security/csrf.js";
+// Side-effect import: starts the in-process admin-digest sweep timer (see
+// its own doc comment), the same way rate limiting and login challenges
+// start their own cleanup timers just by being imported.
+import "./services/notificationDigest.service.js";
 import { handleError } from "./utils/errors.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

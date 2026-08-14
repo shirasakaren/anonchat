@@ -51,6 +51,10 @@ export const SiteSettingsRequestSchema = z.object({
   pgpPublicKey: z.string().max(20_000).optional(),
   presenceEnabled: z.boolean().optional(),
   theme: z.string().min(1).max(64).optional(),
+  /// "" clears it.
+  adminNotificationEmail: z.union([z.literal(""), z.string().email().max(320)]).optional(),
+  adminEmailDigestEnabled: z.boolean().optional(),
+  adminEmailDigestIntervalMinutes: z.coerce.number().int().min(1).max(1440).optional(),
 });
 export type SiteSettingsRequestInput = z.infer<typeof SiteSettingsRequestSchema>;
 
@@ -146,4 +150,10 @@ export interface SiteSettingsDto {
   presenceEnabled: boolean;
   theme: string;
   adminPublicKeys: z.infer<typeof PublicKeysSchema> | null;
+  /** Email notifications are inert unless the server also has EMAIL_DRIVER
+   *  configured - see docs/ARCHITECTURE.md. */
+  emailNotificationsAvailable: boolean;
+  adminNotificationEmail: string | null;
+  adminEmailDigestEnabled: boolean;
+  adminEmailDigestIntervalMinutes: number;
 }

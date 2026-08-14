@@ -67,6 +67,30 @@ const EnvSchema = z.object({
   S3_ACCESS_KEY_ID: z.string().optional(),
   S3_SECRET_ACCESS_KEY: z.string().optional(),
   S3_FORCE_PATH_STYLE: boolFromEnv,
+
+  // "none" (default - email notifications disabled entirely), "smtp", or
+  // "resend". Powers both the admin's new-message digest and the visitor's
+  // optional "email me when they reply" opt-in - see docs/ARCHITECTURE.md.
+  EMAIL_DRIVER: z.enum(["none", "smtp", "resend"]).default("none"),
+  EMAIL_FROM: z.string().optional(),
+
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_SECURE: boolFromEnv,
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+
+  RESEND_API_KEY: z.string().optional(),
+
+  // Floor on how often the admin digest can fire, regardless of the
+  // per-admin interval set in Settings - keeps a misconfigured very-low
+  // interval from turning into a mail flood.
+  ADMIN_DIGEST_MIN_INTERVAL_MINUTES: z.coerce.number().int().positive().default(5),
+
+  // Floor on how often a single visitor can be emailed "you have a reply" -
+  // a burst of consecutive admin replies collapses into one email instead
+  // of one per message.
+  REPLY_EMAIL_MIN_INTERVAL_MINUTES: z.coerce.number().int().positive().default(2),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -89,6 +113,22 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     if (missing.length > 0) {
       // eslint-disable-next-line no-console
       console.error(`STORAGE_DRIVER=s3 requires: ${missing.join(", ")}`);
+      process.exit(1);
+    }
+  }
+  if (parsed.data.EMAIL_DRIVER === "smtp") {
+    const missing = ["SMTP_HOST", "EMAIL_FROM"].filter((key) => !parsed.data[key as keyof Env]);
+    if (missing.length > 0) {
+      // eslint-disable-next-line no-console
+      console.error(`EMAIL_DRIVER=smtp requires: ${missing.join(", ")}`);
+      process.exit(1);
+    }
+  }
+  if (parsed.data.EMAIL_DRIVER === "resend") {
+    const missing = ["RESEND_API_KEY", "EMAIL_FROM"].filter((key) => !parsed.data[key as keyof Env]);
+    if (missing.length > 0) {
+      // eslint-disable-next-line no-console
+      console.error(`EMAIL_DRIVER=resend requires: ${missing.join(", ")}`);
       process.exit(1);
     }
   }

@@ -5,6 +5,7 @@ import { prisma } from "../../db.js";
 import { publishToAllAnonymousUsers, publishToAdmins } from "../../realtime/hub.js";
 import { adminExists, getAdminPublicKeys } from "../../services/admin.service.js";
 import { recordAudit } from "../../services/auditLog.service.js";
+import { isEmailConfigured } from "../../email/index.js";
 import { ALLOWED_AVATAR_MIME_TYPES, MAX_AVATAR_BYTES, fetchGravatarAvatarDataUrl } from "../../services/gravatar.js";
 import { getSiteSettings } from "../../services/siteSettings.service.js";
 import { Errors } from "../../utils/errors.js";
@@ -25,6 +26,10 @@ async function toSettingsDto(): Promise<SiteSettingsDto> {
     presenceEnabled: settings.presenceEnabled,
     theme: settings.theme,
     adminPublicKeys,
+    emailNotificationsAvailable: isEmailConfigured(),
+    adminNotificationEmail: settings.adminNotificationEmail,
+    adminEmailDigestEnabled: settings.adminEmailDigestEnabled,
+    adminEmailDigestIntervalMinutes: settings.adminEmailDigestIntervalMinutes,
   };
 }
 
@@ -44,6 +49,15 @@ export function registerAdminSettingsRoutes(app: FastifyInstance): void {
         ...(body.pgpPublicKey !== undefined ? { pgpPublicKey: body.pgpPublicKey || null } : {}),
         ...(body.presenceEnabled !== undefined ? { presenceEnabled: body.presenceEnabled } : {}),
         ...(body.theme !== undefined ? { theme: body.theme } : {}),
+        ...(body.adminNotificationEmail !== undefined
+          ? { adminNotificationEmail: body.adminNotificationEmail || null }
+          : {}),
+        ...(body.adminEmailDigestEnabled !== undefined
+          ? { adminEmailDigestEnabled: body.adminEmailDigestEnabled }
+          : {}),
+        ...(body.adminEmailDigestIntervalMinutes !== undefined
+          ? { adminEmailDigestIntervalMinutes: body.adminEmailDigestIntervalMinutes }
+          : {}),
       },
     });
     await recordAudit(admin.id, "settings.updated");

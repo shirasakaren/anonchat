@@ -88,6 +88,9 @@ export function updateSettings(
     pgpPublicKey: string;
     presenceEnabled: boolean;
     theme: string;
+    adminNotificationEmail: string;
+    adminEmailDigestEnabled: boolean;
+    adminEmailDigestIntervalMinutes: number;
   }>,
 ): Promise<SiteSettingsDto> {
   return api.patch<SiteSettingsDto>("/admin/settings", patch);

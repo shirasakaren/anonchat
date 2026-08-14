@@ -34,3 +34,8 @@ export function getAnonymousMe(): Promise<MeResponse> {
 export function logoutAnonymous(): Promise<void> {
   return api.post<void>("/anonymous/logout");
 }
+
+/** Opts this identity into (or, with "", out of) an email when the admin replies. */
+export function setNotificationEmail(email: string): Promise<void> {
+  return api.post<void>("/anonymous/notification-email", { email });
+}

@@ -20,6 +20,12 @@ export const RecoverRequestSchema = z.object({
 });
 export type RecoverRequestInput = z.infer<typeof RecoverRequestSchema>;
 
+/** Opt-in "email me when there's a reply" - see docs/SECURITY.md. "" clears it. */
+export const NotificationEmailRequestSchema = z.object({
+  email: z.union([z.literal(""), z.string().email().max(320)]),
+});
+export type NotificationEmailRequestInput = z.infer<typeof NotificationEmailRequestSchema>;
+
 export interface RegisterResponse {
   publicId: string;
   conversationId: string;
