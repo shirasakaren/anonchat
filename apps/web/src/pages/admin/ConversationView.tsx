@@ -362,19 +362,15 @@ export function ConversationView({ conversationId, onChanged }: Props) {
     }
   }
 
-  async function clearAlias() {
-    if (aliasBusy) return;
-    setAliasBusy(true);
-    try {
-      const updated = await updateConversationAlias(conversationId, "");
-      setConversation(updated);
-      onChanged();
-    } catch {
-      // best-effort
-    } finally {
-      setAliasBusy(false);
-      setEditingAlias(false);
-    }
+  /** True cancel: discards the draft and closes the editor without saving
+   *  anything, same as the input's own Escape handler. This button used to
+   *  be labeled "Clear" and actually wiped+saved an empty alias - a
+   *  destructive action mislabeled as a no-op cancel. Removing an existing
+   *  nickname is still possible the ordinary way: empty the field and hit
+   *  Save. */
+  function cancelAliasEdit() {
+    setAliasDraft(conversation?.adminAlias ?? "");
+    setEditingAlias(false);
   }
 
   return (
@@ -416,17 +412,16 @@ export function ConversationView({ conversationId, onChanged }: Props) {
                 </button>
                 <button
                   type="button"
-                  disabled={aliasBusy}
                   onMouseDown={(e) => {
-                    // Keep focus in the input so its onBlur save doesn't race
-                    // (and win over) the clear action - mousedown fires before
-                    // the blur, so preventDefault here stops the blur entirely.
+                    // mousedown fires before the input's onBlur save, so
+                    // preventDefault here stops that blur (and the save it
+                    // would otherwise trigger) from racing this cancel.
                     e.preventDefault();
-                    void clearAlias();
+                    cancelAliasEdit();
                   }}
-                  className="rounded-md border border-[var(--border)] px-2 py-1 text-xs hover:bg-[var(--surface-muted)] disabled:opacity-50"
+                  className="rounded-md border border-[var(--border)] px-2 py-1 text-xs hover:bg-[var(--surface-muted)]"
                 >
-                  Clear
+                  Cancel
                 </button>
               </form>
             ) : (
