@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { encryptBlob } from "@anonchat/crypto";
-import { StickyNote, Trash2 } from "lucide-react";
+import { ChevronRight, StickyNote, Trash2 } from "lucide-react";
 import type { ConversationNoteDto, MessageDto, ServerWsEvent } from "@anonchat/shared";
 import {
   attachmentUrl,
@@ -38,6 +38,7 @@ import {
 import { TypingIndicator } from "../components/chat/TypingIndicator.js";
 import { DefaultAvatar } from "../components/common/DefaultAvatar.js";
 import { FullScreenLoader } from "../components/common/Loader.js";
+import { AdminProfilePanel } from "../components/chat/AdminProfilePanel.js";
 import {
   decryptMessageTextWithStatus,
   encryptAttachmentMeta,
@@ -72,6 +73,9 @@ export default function Chat() {
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [incomingNote, setIncomingNote] = useState<ConversationNoteDto | null>(null);
+  const [profileOpen, setProfileOpen] = useState(
+    () => sessionStorage.getItem("anonchat.adminProfileHidden") !== "true",
+  );
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pendingFilesRef = useRef<Map<string, { text: string; files: File[]; replyToId: string | null }>>(new Map());
@@ -365,6 +369,16 @@ export default function Chat() {
   }, [messages]);
 
   const isBlocked = session.conversationStatus === "BLOCKED";
+  function showProfile() {
+    sessionStorage.removeItem("anonchat.adminProfileHidden");
+    setProfileOpen(true);
+  }
+
+  function hideProfile() {
+    sessionStorage.setItem("anonchat.adminProfileHidden", "true");
+    setProfileOpen(false);
+  }
+
   const canEdit = (message: DisplayMessage) => {
     if (!site.limits.messageEditWindowMinutes) return false;
     const ageMs = Date.now() - new Date(message.createdAt).getTime();
@@ -372,139 +386,149 @@ export default function Chat() {
   };
 
   return (
-    <main className="flex h-screen flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface-raised)] px-4 py-2.5">
-        <div className="flex items-center gap-2.5">
-          {site.avatarUrl ? (
-            <img src={site.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
-          ) : (
-            <DefaultAvatar name={site.displayName} className="h-8 w-8 text-sm" />
-          )}
-          <div>
-            <h1 className="text-sm font-semibold leading-tight">{site.displayName}</h1>
-            {site.presenceEnabled && adminOnline !== null && (
-              <p className="text-xs leading-tight text-[var(--text-muted)]">{adminOnline ? "Online" : "Offline"}</p>
+    <main className="flex h-screen overflow-hidden">
+      {profileOpen && <AdminProfilePanel site={site} onClose={hideProfile} />}
+      <div className={profileOpen ? "hidden min-w-0 flex-1 flex-col sm:flex" : "flex min-w-0 flex-1 flex-col"}>
+        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface-raised)] px-4 py-2.5">
+          <button
+            type="button"
+            onClick={showProfile}
+            aria-label="Show admin profile"
+            aria-expanded={profileOpen}
+            className="flex items-center gap-2.5 rounded-lg text-left hover:bg-[var(--surface-muted)]"
+          >
+            {!profileOpen && <ChevronRight size={16} className="ml-1 shrink-0 text-[var(--text-muted)]" aria-hidden />}
+            {site.avatarUrl ? (
+              <img src={site.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
+            ) : (
+              <DefaultAvatar name={site.displayName} className="h-8 w-8 text-sm" />
             )}
-          </div>
-        </div>
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
-          <VisitorInsightsControl conversationId={session.conversationId} config={site.visitorInsights} />
-          <NotificationPreferencesButton
-            vapidPublicKey={site.vapidPublicKey}
-            emailAvailable={site.emailNotificationsAvailable}
-          />
-          <button
-            type="button"
-            onClick={() => setNoteOpen(true)}
-            title="Open private note"
-            aria-label="Open private note"
-            className="rounded-lg p-1.5 text-[var(--text-muted)] hover:bg-[var(--surface-muted)]"
-          >
-            <StickyNote size={18} aria-hidden />
-          </button>
-          <span className="max-w-48 truncate rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-xs">
-            {session.displayName ? `${session.displayName} · ` : ""}
-            <span className="font-mono">#{session.publicId}</span>
-          </span>
-          <button type="button" onClick={() => logout()} className="text-xs text-[var(--text-muted)] underline">
-            Switch identity
-          </button>
-          {site.privacyPolicyUrl && (
-            <a
-              href={site.privacyPolicyUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs text-[var(--text-muted)] underline underline-offset-2 hover:text-[var(--text)]"
-            >
-              Privacy
-            </a>
-          )}
-          <button
-            type="button"
-            onClick={() => setDeleteIdentityOpen(true)}
-            title="Delete this identity and its data"
-            aria-label="Delete this identity and its data"
-            className="rounded-lg p-1.5 text-[var(--text-muted)] hover:bg-[var(--danger-bg)] hover:text-[var(--danger-fg)]"
-          >
-            <Trash2 size={17} aria-hidden />
-          </button>
-        </div>
-      </header>
-
-      <ConnectionBanner status={wsStatus} />
-
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        {loadingHistory ? (
-          <FullScreenLoader label="Loading your conversation…" />
-        ) : messages.length === 0 ? (
-          <div className="flex h-full items-center justify-center px-4">
-            <div className="w-full max-w-xl rounded-2xl border border-[var(--border)] bg-[var(--surface-raised)] p-5 shadow-sm">
-              <div className="mb-3 flex items-center gap-2.5">
-                {site.avatarUrl ? (
-                  <img src={site.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover" />
-                ) : (
-                  <DefaultAvatar name={site.displayName} className="h-9 w-9 text-sm" />
-                )}
-                <div>
-                  <p className="text-sm font-semibold">{site.displayName}</p>
-                  <p className="text-xs text-[var(--text-muted)]">Welcome message</p>
-                </div>
-              </div>
-              {welcomeHtml ? (
-                <ExpandableProse html={welcomeHtml} clamp={false} />
-              ) : (
-                <p className="text-sm text-[var(--text-muted)]">Send a message below to start the conversation.</p>
+            <div>
+              <h1 className="text-sm font-semibold leading-tight">{site.displayName}</h1>
+              {site.presenceEnabled && adminOnline !== null && (
+                <p className="text-xs leading-tight text-[var(--text-muted)]">{adminOnline ? "Online" : "Offline"}</p>
               )}
             </div>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {threadItems.map((item) =>
-              item.kind === "separator" ? (
-                <DateSeparator key={item.key} label={item.label} />
-              ) : (
-                <MessageBubble
-                  key={item.key}
-                  message={item.message}
-                  isOwn={item.message.senderType === "USER"}
-                  conversationKey={conversationKey}
-                  attachmentUrlFor={attachmentUrl}
-                  canEdit={canEdit(item.message)}
-                  disableActions={isBlocked}
-                  showReadReceipt={item.message.id === lastReadOwnMessageId}
-                  replyPreview={
-                    item.message.replyToId ? messages.find((m) => m.id === item.message.replyToId)?.text : undefined
-                  }
-                  onReply={() => setReplyTo(item.message)}
-                  onEdit={() => setEditing(item.message)}
-                  onDelete={() => setDeleteTarget(item.message)}
-                  onReact={(emoji) => handleReact(item.message, emoji)}
-                  onRetry={() => handleRetry(item.message)}
-                />
-              ),
+          </button>
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
+            <VisitorInsightsControl conversationId={session.conversationId} config={site.visitorInsights} />
+            <NotificationPreferencesButton
+              vapidPublicKey={site.vapidPublicKey}
+              emailAvailable={site.emailNotificationsAvailable}
+            />
+            <button
+              type="button"
+              onClick={() => setNoteOpen(true)}
+              title="Open private note"
+              aria-label="Open private note"
+              className="rounded-lg p-1.5 text-[var(--text-muted)] hover:bg-[var(--surface-muted)]"
+            >
+              <StickyNote size={18} aria-hidden />
+            </button>
+            <span className="max-w-48 truncate rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-xs">
+              {session.displayName ? `${session.displayName} · ` : ""}
+              <span className="font-mono">#{session.publicId}</span>
+            </span>
+            <button type="button" onClick={() => logout()} className="text-xs text-[var(--text-muted)] underline">
+              Switch identity
+            </button>
+            {site.privacyPolicyUrl && (
+              <a
+                href={site.privacyPolicyUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-[var(--text-muted)] underline underline-offset-2 hover:text-[var(--text)]"
+              >
+                Privacy
+              </a>
             )}
+            <button
+              type="button"
+              onClick={() => setDeleteIdentityOpen(true)}
+              title="Delete this identity and its data"
+              aria-label="Delete this identity and its data"
+              className="rounded-lg p-1.5 text-[var(--text-muted)] hover:bg-[var(--danger-bg)] hover:text-[var(--danger-fg)]"
+            >
+              <Trash2 size={17} aria-hidden />
+            </button>
           </div>
-        )}
-        {adminTyping && <TypingIndicator label={`${site.displayName} is typing…`} />}
-        <div ref={bottomRef} />
-      </div>
+        </header>
 
-      <Composer
-        maxLength={site.limits.maxMessageLength}
-        maxAttachments={site.limits.maxAttachmentsPerMessage}
-        disabled={isBlocked}
-        disabledReason={isBlocked ? "You can no longer send messages in this conversation." : undefined}
-        replyPreview={replyTo?.text}
-        onCancelReply={() => setReplyTo(null)}
-        editingPreview={editing ? "editing message" : undefined}
-        initialText={editing?.text}
-        onCancelEdit={() => setEditing(null)}
-        onSend={handleSend}
-        onTypingChange={handleTypingChange}
-        draftId={`user:${session.conversationId}`}
-        draftText={draft.draftText}
-        onDraftChange={draft.updateDraft}
-      />
+        <ConnectionBanner status={wsStatus} />
+
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          {loadingHistory ? (
+            <FullScreenLoader label="Loading your conversation…" />
+          ) : messages.length === 0 ? (
+            <div className="flex h-full items-center justify-center px-4">
+              <div className="w-full max-w-xl rounded-2xl border border-[var(--border)] bg-[var(--surface-raised)] p-5 shadow-sm">
+                <div className="mb-3 flex items-center gap-2.5">
+                  {site.avatarUrl ? (
+                    <img src={site.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover" />
+                  ) : (
+                    <DefaultAvatar name={site.displayName} className="h-9 w-9 text-sm" />
+                  )}
+                  <div>
+                    <p className="text-sm font-semibold">{site.displayName}</p>
+                    <p className="text-xs text-[var(--text-muted)]">Welcome message</p>
+                  </div>
+                </div>
+                {welcomeHtml ? (
+                  <ExpandableProse html={welcomeHtml} clamp={false} />
+                ) : (
+                  <p className="text-sm text-[var(--text-muted)]">Send a message below to start the conversation.</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {threadItems.map((item) =>
+                item.kind === "separator" ? (
+                  <DateSeparator key={item.key} label={item.label} />
+                ) : (
+                  <MessageBubble
+                    key={item.key}
+                    message={item.message}
+                    isOwn={item.message.senderType === "USER"}
+                    conversationKey={conversationKey}
+                    attachmentUrlFor={attachmentUrl}
+                    canEdit={canEdit(item.message)}
+                    disableActions={isBlocked}
+                    showReadReceipt={item.message.id === lastReadOwnMessageId}
+                    replyPreview={
+                      item.message.replyToId ? messages.find((m) => m.id === item.message.replyToId)?.text : undefined
+                    }
+                    onReply={() => setReplyTo(item.message)}
+                    onEdit={() => setEditing(item.message)}
+                    onDelete={() => setDeleteTarget(item.message)}
+                    onReact={(emoji) => handleReact(item.message, emoji)}
+                    onRetry={() => handleRetry(item.message)}
+                  />
+                ),
+              )}
+            </div>
+          )}
+          {adminTyping && <TypingIndicator label={`${site.displayName} is typing…`} />}
+          <div ref={bottomRef} />
+        </div>
+
+        <Composer
+          maxLength={site.limits.maxMessageLength}
+          maxAttachments={site.limits.maxAttachmentsPerMessage}
+          disabled={isBlocked}
+          disabledReason={isBlocked ? "You can no longer send messages in this conversation." : undefined}
+          replyPreview={replyTo?.text}
+          onCancelReply={() => setReplyTo(null)}
+          editingPreview={editing ? "editing message" : undefined}
+          initialText={editing?.text}
+          onCancelEdit={() => setEditing(null)}
+          onSend={handleSend}
+          onTypingChange={handleTypingChange}
+          draftId={`user:${session.conversationId}`}
+          draftText={draft.draftText}
+          onDraftChange={draft.updateDraft}
+        />
+      </div>
 
       {deleteTarget && (
         <DeleteMessageModal
