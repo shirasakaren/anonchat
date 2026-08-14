@@ -24,7 +24,7 @@ import { ThemePicker } from "../../components/common/ThemePicker.js";
 import { AvatarCropper } from "../../components/common/AvatarCropper.js";
 import { DefaultAvatar } from "../../components/common/DefaultAvatar.js";
 
-export default function SettingsPage() {
+export default function SettingsPage({ view = "system" }: { view?: "profile" | "system" }) {
   const { admin, refreshAdmin } = useAdminSession();
   const { isSoundEnabled, setSoundEnabled, requestPermission } = useAdminNotifications();
   const { site } = useSite();
@@ -124,19 +124,29 @@ export default function SettingsPage() {
     setSoundEnabled(enabled);
   }
 
-  async function handleSave() {
+  async function handleSaveProfile() {
     setSaving(true);
     setSaved(false);
     try {
       const updated = await updateSettings({
         displayName,
         bio,
-        welcomeMessage,
         contactLinks,
         pgpPublicKey,
-        privacyPolicyUrl,
-        presenceEnabled,
       });
+      setSettings(updated);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSaveSystem() {
+    setSaving(true);
+    setSaved(false);
+    try {
+      const updated = await updateSettings({ welcomeMessage, privacyPolicyUrl, presenceEnabled });
       setSettings(updated);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -280,8 +290,14 @@ export default function SettingsPage() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-2xl p-6">
-        <h1 className="mb-6 text-xl font-semibold">Settings</h1>
+        <h1 className="mb-1 text-xl font-semibold">{view === "profile" ? "Profile" : "System settings"}</h1>
+        <p className="mb-6 text-sm text-[var(--text-muted)]">
+          {view === "profile"
+            ? "Manage the identity and public information visitors see."
+            : "Configure messaging, appearance, notifications, privacy, and account security."}
+        </p>
 
+        {view === "profile" && (
         <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
           <h2 className="mb-3 text-sm font-semibold">Profile</h2>
           <div className="mb-3 flex items-center gap-3">
@@ -372,34 +388,6 @@ export default function SettingsPage() {
             />
           </label>
           <label className="mb-3 block text-sm font-medium">
-            First-contact welcome message
-            <textarea
-              rows={4}
-              maxLength={4000}
-              value={welcomeMessage}
-              onChange={(e) => setWelcomeMessage(e.target.value)}
-              placeholder="Welcome! How can I help?"
-              className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
-            />
-            <span className="mt-1 block text-xs font-normal text-[var(--text-muted)]">
-              Shown before a visitor sends their first message. Markdown is supported.
-            </span>
-          </label>
-          <label className="mb-3 block text-sm font-medium">
-            Privacy policy URL
-            <input
-              type="url"
-              value={privacyPolicyUrl}
-              onChange={(e) => setPrivacyPolicyUrl(e.target.value)}
-              placeholder="https://example.com/privacy"
-              className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
-            />
-            <span className="mt-1 block text-xs font-normal text-[var(--text-muted)]">
-              Link to an operator-authored notice covering data use, retention, service providers, rights, and contact
-              details. It appears on the public landing page and in chat.
-            </span>
-          </label>
-          <label className="mb-3 block text-sm font-medium">
             PGP public key
             <textarea
               rows={3}
@@ -409,16 +397,6 @@ export default function SettingsPage() {
               className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 font-mono text-xs"
             />
           </label>
-          <label className="mb-3 flex items-center gap-2 text-sm font-medium">
-            <input
-              type="checkbox"
-              checked={presenceEnabled}
-              onChange={(e) => setPresenceEnabled(e.target.checked)}
-              className="accent-[var(--color-accent-500)]"
-            />
-            Show online status to visitors
-          </label>
-
           <p className="mb-2 text-sm font-medium">Contact links</p>
           {contactLinks.map((link, i) => (
             <div key={i} className="mb-2 flex gap-2">
@@ -459,13 +437,67 @@ export default function SettingsPage() {
           <div className="mt-6 border-t border-[var(--border)] pt-4">
             <button
               type="button"
-              onClick={handleSave}
+              onClick={handleSaveProfile}
               disabled={saving}
               className="rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
             >
               {saving ? "Saving…" : saved ? "Saved!" : "Save changes"}
             </button>
           </div>
+        </section>
+        )}
+
+        {view === "system" && (
+          <>
+        <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
+          <h2 className="mb-1 text-sm font-semibold">Messaging & public experience</h2>
+          <p className="mb-4 text-xs text-[var(--text-muted)]">
+            Control what visitors see before and during a conversation.
+          </p>
+          <label className="mb-4 block text-sm font-medium">
+            First-contact welcome message
+            <textarea
+              rows={4}
+              maxLength={4000}
+              value={welcomeMessage}
+              onChange={(e) => setWelcomeMessage(e.target.value)}
+              placeholder="Welcome! Send a message below to start an anonymous, end-to-end encrypted conversation."
+              className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+            />
+            <span className="mt-1 block text-xs font-normal text-[var(--text-muted)]">
+              Shown after a visitor authenticates and before their first message. Markdown is supported.
+            </span>
+          </label>
+          <label className="mb-4 flex items-center gap-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={presenceEnabled}
+              onChange={(e) => setPresenceEnabled(e.target.checked)}
+              className="accent-[var(--color-accent-500)]"
+            />
+            Show online status to visitors
+          </label>
+          <label className="mb-4 block text-sm font-medium">
+            Privacy policy URL
+            <input
+              type="url"
+              value={privacyPolicyUrl}
+              onChange={(e) => setPrivacyPolicyUrl(e.target.value)}
+              placeholder="https://example.com/privacy"
+              className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+            />
+            <span className="mt-1 block text-xs font-normal text-[var(--text-muted)]">
+              Appears on the public landing page and inside chat.
+            </span>
+          </label>
+          <button
+            type="button"
+            onClick={handleSaveSystem}
+            disabled={saving}
+            className="rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
+          >
+            {saving ? "Saving…" : saved ? "Saved!" : "Save messaging settings"}
+          </button>
         </section>
 
         <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
@@ -709,6 +741,8 @@ export default function SettingsPage() {
             </button>
           )}
         </section>
+          </>
+        )}
       </div>
     </div>
   );

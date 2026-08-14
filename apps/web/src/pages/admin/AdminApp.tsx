@@ -27,7 +27,8 @@ function AdminAppInner() {
         <Routes>
           <Route path="/" element={<Inbox />} />
           <Route path="/c/:conversationId" element={<Inbox />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/profile" element={<SettingsPage view="profile" />} />
+          <Route path="/settings" element={<SettingsPage view="system" />} />
           <Route path="/sessions" element={<SessionsPage />} />
           <Route path="/canned-replies" element={<CannedRepliesPage />} />
           <Route path="/audit-log" element={<AuditLogPage />} />

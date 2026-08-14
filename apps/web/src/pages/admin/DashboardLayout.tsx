@@ -1,13 +1,14 @@
 import { useState, type ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import clsx from "clsx";
-import { Menu, X, MessageSquare, Settings, ShieldCheck, ClipboardList, ScrollText } from "lucide-react";
+import { Menu, X, MessageSquare, Settings, ShieldCheck, ClipboardList, ScrollText, UserRound } from "lucide-react";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
 import { useUnreadCount } from "../../hooks/useUnreadCount.js";
 
 const NAV_ITEMS = [
   { to: "/admin", label: "Inbox", icon: MessageSquare, end: true },
-  { to: "/admin/settings", label: "Settings", icon: Settings },
+  { to: "/admin/profile", label: "Profile", icon: UserRound },
+  { to: "/admin/settings", label: "System settings", icon: Settings },
   { to: "/admin/sessions", label: "Sessions", icon: ShieldCheck },
   { to: "/admin/canned-replies", label: "Canned replies", icon: ClipboardList },
   { to: "/admin/audit-log", label: "Audit log", icon: ScrollText },
