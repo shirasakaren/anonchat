@@ -50,7 +50,7 @@ export function DocumentLightbox({ filename, url, onClose, children, pdf = false
         role="dialog"
         aria-modal="true"
         aria-label={`Preview ${filename}`}
-        className="flex h-full w-full max-w-6xl flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl"
+        className="flex h-full w-full min-w-0 max-w-6xl flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header className="flex min-h-12 items-center justify-between gap-2 border-b border-[var(--border)] px-3">
@@ -113,8 +113,11 @@ export function DocumentLightbox({ filename, url, onClose, children, pdf = false
         {pdf ? (
           <iframe title={filename} src={url} className="min-h-0 flex-1 bg-white" />
         ) : (
-          <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto bg-[var(--surface)] p-3 sm:p-6">
-            <div className="mx-auto max-w-5xl" style={{ zoom }}>
+          <div
+            ref={scrollRef}
+            className="min-h-0 min-w-0 max-w-full flex-1 overflow-auto bg-[var(--surface)] p-3 sm:p-6"
+          >
+            <div className="mx-auto w-full min-w-0 max-w-5xl overflow-hidden" style={{ zoom }}>
               {children}
             </div>
           </div>

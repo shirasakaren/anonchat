@@ -38,12 +38,15 @@ export function TextCodePreview({ bytes, language, fullScreen = false }: Props) 
 
   return (
     <pre
-      className={`prose-message m-0 overflow-auto rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-xs text-[var(--text)] ${fullScreen ? "min-h-full" : "max-h-80"}`}
+      className={`prose-message m-0 w-full min-w-0 max-w-full overflow-auto overscroll-contain rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-xs text-[var(--text)] ${fullScreen ? "min-h-full" : "max-h-80"}`}
     >
       {content.html === null ? (
-        <code className={`language-${language}`}>{content.text}</code>
+        <code className={`block min-w-max language-${language}`}>{content.text}</code>
       ) : (
-        <code className={`hljs language-${language}`} dangerouslySetInnerHTML={{ __html: content.html }} />
+        <code
+          className={`hljs block min-w-max language-${language}`}
+          dangerouslySetInnerHTML={{ __html: content.html }}
+        />
       )}
     </pre>
   );

@@ -90,9 +90,9 @@ export function CsvPreview({ bytes, fullScreen = false }: Props) {
 
   return (
     <div
-      className={`overflow-auto rounded-lg border border-[var(--border)] text-[var(--text)] ${fullScreen ? "min-h-full" : "max-h-96"}`}
+      className={`w-full min-w-0 max-w-full overflow-auto overscroll-contain rounded-lg border border-[var(--border)] text-[var(--text)] ${fullScreen ? "min-h-full" : "max-h-96"}`}
     >
-      <table className="w-full border-collapse text-xs">
+      <table className="w-max min-w-full border-collapse text-xs">
         <thead className="sticky top-0 bg-[var(--surface-muted)]">
           <tr>
             {header.map((cell, i) => (

@@ -114,7 +114,7 @@ export function MessageBubble({
         </div>
       )}
 
-      <div className="flex max-w-[80%] items-end gap-1">
+      <div className="flex min-w-0 max-w-[80%] items-end gap-1">
         {isOwn && (
           <MessageActions
             canEdit={canEdit}
@@ -136,7 +136,7 @@ export function MessageBubble({
             // long unbroken string overrides max-w-[80%] entirely instead
             // of wrapping, since the bubble never gets small enough for
             // .prose-message's own overflow-wrap to kick in.
-            "min-w-0 rounded-2xl px-3.5 py-2 text-sm shadow-sm",
+            "min-w-0 max-w-full overflow-hidden rounded-2xl px-3.5 py-2 text-sm shadow-sm",
             isOwn
               ? "bg-[var(--bubble-user)] text-[var(--bubble-user-text)]"
               : "bg-[var(--bubble-admin)] text-[var(--bubble-admin-text)]",
@@ -161,7 +161,7 @@ export function MessageBubble({
                 />
               )}
               {message.attachments.length > 0 && (
-                <div className="mb-2 space-y-2">
+                <div className="mb-2 min-w-0 max-w-full space-y-2 overflow-hidden">
                   {message.attachments.map((a) => (
                     <AttachmentPreview
                       key={a.id}

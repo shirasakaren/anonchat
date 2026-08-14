@@ -1,4 +1,4 @@
-import { File, Music, Video } from "lucide-react";
+import { File, Music, Play, Video } from "lucide-react";
 import { resolveFileMimetype } from "./preview/textFileTypes.js";
 import type { PendingAttachmentPreview } from "./types.js";
 
@@ -37,12 +37,17 @@ export function PendingAttachmentTransfer({
           {attachment.previewUrl && attachment.mimetype.startsWith("image/") ? (
             <img src={attachment.previewUrl} alt="" className="h-36 w-full scale-105 object-cover opacity-60 blur-md" />
           ) : attachment.previewUrl && attachment.mimetype.startsWith("video/") ? (
-            <video
-              src={attachment.previewUrl}
-              muted
-              preload="metadata"
-              className="h-36 w-full scale-105 object-cover opacity-60 blur-md"
-            />
+            <div className="relative aspect-video w-[32rem] max-w-full">
+              <video
+                src={attachment.previewUrl}
+                muted
+                preload="metadata"
+                className="h-full w-full scale-105 object-cover opacity-60 blur-md"
+              />
+              <span className="absolute left-1/2 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-black/65 text-white">
+                <Play size={21} fill="currentColor" aria-hidden />
+              </span>
+            </div>
           ) : (
             <div className="flex h-28 items-center justify-center">
               {attachment.mimetype.startsWith("audio/") ? (

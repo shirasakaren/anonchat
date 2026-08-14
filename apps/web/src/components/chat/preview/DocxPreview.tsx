@@ -78,7 +78,7 @@ export function DocxPreview({ bytes, fullScreen = false }: Props) {
   }
   return (
     <div
-      className={`prose-message overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[var(--text)] ${fullScreen ? "min-h-full" : "max-h-96"}`}
+      className={`prose-message w-full min-w-0 max-w-full overflow-auto overscroll-contain rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[var(--text)] ${fullScreen ? "min-h-full" : "max-h-96"}`}
       dangerouslySetInnerHTML={{ __html: state.html }}
     />
   );

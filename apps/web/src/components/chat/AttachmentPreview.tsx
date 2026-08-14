@@ -8,6 +8,7 @@ import {
   Maximize2,
   Music,
   Paperclip,
+  Play,
   Video,
   ZoomIn,
 } from "lucide-react";
@@ -83,6 +84,70 @@ function PreviewFooter({ filename, size, url }: { filename: string; size: number
   );
 }
 
+function CompactFileCard({
+  mimetype,
+  filename,
+  size,
+  action,
+  onClick,
+  disabled = false,
+}: {
+  mimetype: string;
+  filename: string;
+  size: number;
+  action: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex w-full min-w-0 max-w-full items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-left text-sm hover:ring-1 hover:ring-inset hover:ring-[var(--border-strong)] disabled:opacity-60"
+    >
+      <IconForMime mimetype={mimetype} filename={filename} />
+      <span className="min-w-0 flex-1 truncate">{filename}</span>
+      <span className="shrink-0 text-xs opacity-70">{formatBytes(size)}</span>
+      <span className="shrink-0 text-xs underline">{action}</span>
+    </button>
+  );
+}
+
+function VideoAttachmentPlayer({ url, filename, onError }: { url: string; filename: string; onError: () => void }) {
+  const [playing, setPlaying] = useState(false);
+
+  return (
+    <div className="relative aspect-video w-[32rem] min-w-0 max-w-full overflow-hidden rounded-lg bg-black">
+      <video
+        src={url}
+        controls
+        preload="metadata"
+        playsInline
+        aria-label={filename}
+        className="h-full w-full object-contain"
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => setPlaying(false)}
+        onError={onError}
+      />
+      {!playing && (
+        <button
+          type="button"
+          onClick={(event) => {
+            const video = event.currentTarget.previousElementSibling;
+            if (video instanceof HTMLVideoElement) void video.play();
+          }}
+          aria-label={`Play ${filename}`}
+          className="absolute left-1/2 top-1/2 grid size-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-black/70 text-white shadow-lg transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        >
+          <Play size={24} fill="currentColor" aria-hidden />
+        </button>
+      )}
+    </div>
+  );
+}
+
 function DocumentPreviewContent({
   kind,
   bytes,
@@ -120,7 +185,7 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
   const kind = meta ? previewKind(meta.mimetype, meta.filename) : "binary";
 
   const load = useCallback(
-    async (downloadAfterLoad = false) => {
+    async (downloadAfterLoad = false, openDocumentAfterLoad = false) => {
       if (!meta) return;
       setState({ kind: "loading", progress: 0 });
       try {
@@ -134,6 +199,7 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
         const blob = new Blob([plaintext], { type: mimetype });
         const url = URL.createObjectURL(blob);
         setState({ kind: "loaded", url, mimetype, bytes: plaintext });
+        if (openDocumentAfterLoad) setDocumentOpen(true);
         if (downloadAfterLoad) {
           const anchor = document.createElement("a");
           anchor.href = url;
@@ -152,7 +218,8 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
   );
 
   useEffect(() => {
-    if (meta && kind !== "binary" && state.kind === "idle") void load();
+    const isTextDocument = kind === "docx" || kind === "csv" || kind === "markdown" || kind === "text";
+    if (meta && kind !== "binary" && !isTextDocument && state.kind === "idle") void load();
   }, [kind, load, meta, state.kind]);
 
   const loadedUrl = state.kind === "loaded" ? state.url : null;
@@ -189,8 +256,17 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
 
     if (kind === "video") {
       return (
-        <div>
-          <video src={state.url} controls preload="metadata" className="max-h-72 max-w-full rounded-lg bg-black" />
+        <div className="min-w-0 max-w-full overflow-hidden">
+          <VideoAttachmentPlayer
+            url={state.url}
+            filename={meta.filename}
+            onError={() =>
+              showToast({
+                title: "Video could not be played",
+                message: "This browser may not support the video's codec. You can still download the original file.",
+              })
+            }
+          />
           <PreviewFooter filename={meta.filename} size={meta.size} url={state.url} />
         </div>
       );
@@ -230,23 +306,14 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
 
     if (kind === "docx" || kind === "csv" || kind === "markdown" || kind === "text") {
       return (
-        <div>
-          <div className="relative">
-            <DocumentPreviewContent
-              kind={kind}
-              bytes={state.bytes}
-              mimetype={state.mimetype}
-              filename={meta.filename}
-            />
-            <button
-              type="button"
-              onClick={() => setDocumentOpen(true)}
-              aria-label={`Open full preview of ${meta.filename}`}
-              className="absolute right-2 top-2 rounded-md bg-[var(--surface-raised)] p-2 text-[var(--text)] shadow-sm hover:bg-[var(--surface-muted)]"
-            >
-              <Maximize2 size={16} aria-hidden />
-            </button>
-          </div>
+        <div className="min-w-0 max-w-full overflow-hidden">
+          <CompactFileCard
+            mimetype={state.mimetype}
+            filename={meta.filename}
+            size={meta.size}
+            action="Preview"
+            onClick={() => setDocumentOpen(true)}
+          />
           <PreviewFooter filename={meta.filename} size={meta.size} url={state.url} />
           {documentOpen && (
             <DocumentLightbox filename={meta.filename} url={state.url} onClose={() => setDocumentOpen(false)}>
@@ -273,6 +340,21 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
         <span className="min-w-0 flex-1 truncate">{meta.filename}</span>
         <Download size={14} aria-hidden />
       </a>
+    );
+  }
+
+  const isTextDocument = kind === "docx" || kind === "csv" || kind === "markdown" || kind === "text";
+
+  if (state.kind === "loading" && isTextDocument) {
+    return (
+      <CompactFileCard
+        mimetype={meta.mimetype}
+        filename={meta.filename}
+        size={meta.size}
+        action={`${Math.round(state.progress * 100)}%`}
+        onClick={() => undefined}
+        disabled
+      />
     );
   }
 
@@ -307,24 +389,13 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
   }
 
   return (
-    <button
-      type="button"
-      onClick={() => void load(kind === "binary")}
+    <CompactFileCard
+      mimetype={meta.mimetype}
+      filename={meta.filename}
+      size={meta.size}
+      action={state.kind === "error" ? "Retry" : kind === "binary" ? "Download" : "Preview"}
+      onClick={() => void load(kind === "binary", isTextDocument)}
       disabled={state.kind === "loading"}
-      className="flex w-full items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-left text-sm hover:ring-1 hover:ring-inset hover:ring-[var(--border-strong)] disabled:opacity-60"
-    >
-      <IconForMime mimetype={meta.mimetype} filename={meta.filename} />
-      <span className="min-w-0 flex-1 truncate">{meta.filename}</span>
-      <span className="text-xs">{formatBytes(meta.size)}</span>
-      <span className="text-xs underline">
-        {state.kind === "loading"
-          ? `${Math.round(state.progress * 100)}%`
-          : state.kind === "error"
-            ? "Retry"
-            : kind === "binary"
-              ? "Download"
-              : "Preview"}
-      </span>
-    </button>
+    />
   );
 }
