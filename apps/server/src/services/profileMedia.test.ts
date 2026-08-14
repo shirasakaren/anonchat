@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isCompleteProfileMediaOrder,
   parseProfileMediaRange,
   profileMediaKindForMime,
   readProfileMediaBuffer,
@@ -37,5 +38,12 @@ describe("profile media helpers", () => {
 
     await expect(readProfileMediaBuffer(chunks(), 8, "too large")).resolves.toEqual(Buffer.from("12345678"));
     await expect(readProfileMediaBuffer(chunks(), 7, "too large")).rejects.toMatchObject({ statusCode: 413 });
+  });
+
+  it("accepts only complete media orders without duplicates", () => {
+    expect(isCompleteProfileMediaOrder(["one", "two", "three"], ["three", "one", "two"])).toBe(true);
+    expect(isCompleteProfileMediaOrder(["one", "two", "three"], ["one", "two"])).toBe(false);
+    expect(isCompleteProfileMediaOrder(["one", "two", "three"], ["one", "two", "two"])).toBe(false);
+    expect(isCompleteProfileMediaOrder(["one", "two", "three"], ["one", "two", "other"])).toBe(false);
   });
 });

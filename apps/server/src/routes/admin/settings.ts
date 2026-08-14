@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import {
   GravatarImportRequestSchema,
+  ProfileMediaOrderRequestSchema,
   ProfileMediaParamsSchema,
   SiteSettingsRequestSchema,
   type SiteSettingsDto,
@@ -21,6 +22,7 @@ import {
   profileMediaKindForMime,
   readProfileMediaBuffer,
   removeProfileMedia,
+  reorderProfileMedia,
 } from "../../services/profileMedia.service.js";
 import { Errors } from "../../utils/errors.js";
 
@@ -252,5 +254,13 @@ export function registerAdminSettingsRoutes(app: FastifyInstance): void {
     if (storageCleanupFailed) request.log.warn({ profileMediaId: id }, "Profile media storage cleanup failed");
     await recordAudit(admin.id, "settings.profile_media_removed", { type: "ProfileMedia", id });
     reply.status(204).send();
+  });
+
+  app.put("/admin/profile-media/order", { preHandler: requireAdmin }, async (request, reply) => {
+    const { admin } = request.adminAuth!;
+    const { ids } = ProfileMediaOrderRequestSchema.parse(request.body);
+    await reorderProfileMedia(ids);
+    await recordAudit(admin.id, "settings.profile_media_reordered");
+    reply.send(await toSettingsDto());
   });
 }

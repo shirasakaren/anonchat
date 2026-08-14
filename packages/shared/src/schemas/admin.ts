@@ -97,6 +97,15 @@ export const ProfileMediaParamsSchema = z.object({
     .regex(/^[a-zA-Z0-9_-]+$/),
 });
 
+export const ProfileMediaOrderRequestSchema = z.object({
+  ids: z
+    .array(ProfileMediaParamsSchema.shape.id)
+    .min(1)
+    .max(8)
+    .refine((ids) => new Set(ids).size === ids.length, "Media IDs must be unique."),
+});
+export type ProfileMediaOrderRequestInput = z.infer<typeof ProfileMediaOrderRequestSchema>;
+
 /** No spaces - the title doubles as the "/name" typed in the composer to
  *  trigger this template (see cannedReplySlash.ts on the client), so it
  *  needs to behave like a single command token. */

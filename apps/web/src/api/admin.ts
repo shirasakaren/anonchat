@@ -111,6 +111,10 @@ export function deleteProfileMedia(id: string): Promise<void> {
   return api.delete<void>(`/admin/profile-media/${encodeURIComponent(id)}`);
 }
 
+export function reorderProfileMedia(ids: string[]): Promise<SiteSettingsDto> {
+  return api.put<SiteSettingsDto>("/admin/profile-media/order", { ids });
+}
+
 export function subscribeAdminPush(subscription: PushSubscriptionKeys): Promise<void> {
   return api.post<void>("/admin/push/subscribe", subscription);
 }

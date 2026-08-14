@@ -61,6 +61,28 @@ export async function listProfileMedia(): Promise<ProfileMediaDto[]> {
   return media.map(toProfileMediaDto);
 }
 
+export function isCompleteProfileMediaOrder(existingIds: string[], orderedIds: string[]): boolean {
+  if (existingIds.length !== orderedIds.length || new Set(orderedIds).size !== orderedIds.length) return false;
+  const existing = new Set(existingIds);
+  return orderedIds.every((id) => existing.has(id));
+}
+
+export async function reorderProfileMedia(orderedIds: string[]): Promise<void> {
+  const existing = await prisma.profileMedia.findMany({ select: { id: true } });
+  if (
+    !isCompleteProfileMediaOrder(
+      existing.map(({ id }) => id),
+      orderedIds,
+    )
+  ) {
+    throw Errors.badRequest("Media order must include every uploaded item exactly once.");
+  }
+
+  await prisma.$transaction(
+    orderedIds.map((id, position) => prisma.profileMedia.update({ where: { id }, data: { position } })),
+  );
+}
+
 export async function addProfileMedia(params: {
   kind: ProfileMediaKind;
   mimetype: string;
