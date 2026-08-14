@@ -26,8 +26,6 @@ import { findActiveSlashQuery, searchCannedReplies } from "./cannedReplySlash.js
 import { EmojiShortcutOverlay } from "./EmojiShortcutOverlay.js";
 import { CannedReplySlashOverlay } from "./CannedReplySlashOverlay.js";
 import { EmojiPicker } from "./emoji/EmojiPicker.js";
-import { justCompletedFreshCodeFence } from "./codeFenceDetection.js";
-import { CodeBlockModal } from "./CodeBlockModal.js";
 
 const SHORTCODE_SUGGESTION_LIMIT = 30;
 const OVERLAY_GAP_PX = 8;
@@ -99,7 +97,6 @@ export function Composer({
   const [slashQuery, setSlashQuery] = useState<{ query: string } | null>(null);
   const [selectedSuggestion, setSelectedSuggestion] = useState(0);
   const [overlayPos, setOverlayPos] = useState<{ top: number; left: number } | null>(null);
-  const [codeModal, setCodeModal] = useState<{ from: number; to: number } | null>(null);
   const pickerWrapperRef = useRef<HTMLDivElement>(null);
   const onDraftChangeRef = useRef(onDraftChange);
   const onTypingChangeRef = useRef(onTypingChange);
@@ -109,7 +106,6 @@ export function Composer({
   const draftTextRef = useRef(draftText ?? "");
   const filesRef = useRef(files);
   const cannedRepliesRef = useRef(cannedReplies);
-  const codeModalRef = useRef(codeModal);
 
   useEffect(() => {
     onDraftChangeRef.current = onDraftChange;
@@ -117,8 +113,7 @@ export function Composer({
     draftTextRef.current = draftText ?? "";
     initialTextRef.current = initialText;
     cannedRepliesRef.current = cannedReplies;
-    codeModalRef.current = codeModal;
-  }, [cannedReplies, codeModal, draftText, initialText, onDraftChange, onTypingChange]);
+  }, [cannedReplies, draftText, initialText, onDraftChange, onTypingChange]);
 
   useEffect(() => {
     filesRef.current = files;
@@ -144,7 +139,10 @@ export function Composer({
     {
       immediatelyRender: false,
       extensions: [
-        StarterKit.configure({ link: { openOnClick: false, autolink: true } }),
+        StarterKit.configure({
+          link: { openOnClick: false, autolink: true },
+          codeBlock: { enableTabIndentation: true, tabSize: 2 },
+        }),
         Markdown,
         Placeholder.configure({ placeholder: "Type a message…" }),
       ],
@@ -167,6 +165,23 @@ export function Composer({
 
         const { $from, from } = activeEditor.state.selection;
         const textBeforeCaret = $from.parent.textBetween(0, $from.parentOffset, undefined, "\ufffc");
+        if (
+          !transformingRef.current &&
+          $from.parent.type.name === "paragraph" &&
+          $from.parent.textContent === "```" &&
+          textBeforeCaret === "```"
+        ) {
+          transformingRef.current = true;
+          activeEditor
+            .chain()
+            .focus()
+            .deleteRange({ from: from - 3, to: from })
+            .setCodeBlock()
+            .run();
+          transformingRef.current = false;
+          syncQueries(activeEditor);
+          return;
+        }
         const completed = matchCompletedShortcode(textBeforeCaret);
         if (completed && !transformingRef.current) {
           transformingRef.current = true;
@@ -178,9 +193,6 @@ export function Composer({
           return;
         }
 
-        if (!codeModalRef.current && justCompletedFreshCodeFence(textBeforeCaret, textBeforeCaret.length)) {
-          setCodeModal({ from: from - 3, to: from });
-        }
         syncQueries(activeEditor);
       },
       onSelectionUpdate: ({ editor: activeEditor }) => syncQueries(activeEditor),
@@ -344,6 +356,13 @@ export function Composer({
       editor.chain().focus().enter().setParagraph().run();
       return;
     }
+    if (e.key === "Enter" && editor?.isActive("codeBlock")) {
+      if (e.metaKey || e.ctrlKey) {
+        e.preventDefault();
+        handleSend();
+      }
+      return;
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -369,14 +388,6 @@ export function Composer({
   function handleFilePick(e: ChangeEvent<HTMLInputElement>) {
     if (e.target.files) addFiles(Array.from(e.target.files));
     e.target.value = "";
-  }
-
-  function handleCodeInsert(code: string, language: string) {
-    if (!editor || !codeModal) return;
-    const fence = "```" + language + "\n" + code.replace(/\n+$/, "") + "\n```";
-    editor.commands.insertContentAt(codeModal, fence, { contentType: "markdown" });
-    setCodeModal(null);
-    editor.commands.focus("end");
   }
 
   const overLimit = markdown.length > maxLength;
@@ -514,8 +525,6 @@ export function Composer({
           Message is too long. Shorten it before sending.
         </p>
       )}
-
-      {codeModal && <CodeBlockModal onInsert={handleCodeInsert} onClose={() => setCodeModal(null)} />}
     </div>
   );
 }
