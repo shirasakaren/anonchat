@@ -10,7 +10,6 @@ import {
   RegisterRequestSchema,
 } from "@anonchat/shared";
 import type { ChallengeResponse, MeResponse, RegisterResponse } from "@anonchat/shared";
-import { loadEnv } from "../env.js";
 import { getAdminPublicKeys } from "../services/admin.service.js";
 import {
   beginAnonymousLogin,
@@ -31,12 +30,13 @@ import { prisma } from "../db.js";
 import { hardDeleteConversation } from "../services/conversation.service.js";
 import { isEmailConfigured } from "../email/index.js";
 import { isPushConfigured } from "../push/index.js";
+import { getSiteSettings } from "../services/siteSettings.service.js";
 
 export function registerAnonymousRoutes(app: FastifyInstance): void {
   app.post("/anonymous/register", async (request, reply) => {
-    const env = loadEnv();
+    const settings = await getSiteSettings();
     const ip = getClientIp(request);
-    if (!checkRateLimit(`register:${ip}`, env.RATE_LIMIT_REGISTRATIONS_PER_HOUR, 60 * 60_000)) {
+    if (!checkRateLimit(`register:${ip}`, settings.rateLimitRegistrationsPerHour, 60 * 60_000)) {
       throw Errors.rateLimited("Too many identities created from this network recently. Please try again later.");
     }
 
@@ -49,10 +49,10 @@ export function registerAnonymousRoutes(app: FastifyInstance): void {
       exchangePublicKeyB64: body.exchangePublicKey,
       proof: base64urlToBytes(body.proof),
       ip,
-      storeIp: env.STORE_IP_ADDRESSES,
+      storeIp: settings.storeIpAddresses,
     });
 
-    const token = await createAnonymousSession(user.id, env.STORE_IP_ADDRESSES ? ip : null);
+    const token = await createAnonymousSession(user.id, settings.storeIpAddresses ? ip : null);
     setAnonSessionCookie(reply, token);
 
     const adminPublicKeys = await getAdminPublicKeys();
@@ -66,9 +66,9 @@ export function registerAnonymousRoutes(app: FastifyInstance): void {
   });
 
   app.post("/anonymous/challenge", async (request) => {
-    const env = loadEnv();
+    const settings = await getSiteSettings();
     const ip = getClientIp(request);
-    if (!checkRateLimit(`challenge:${ip}`, env.RATE_LIMIT_REGISTRATIONS_PER_HOUR * 5, 60 * 60_000)) {
+    if (!checkRateLimit(`challenge:${ip}`, settings.rateLimitRegistrationsPerHour * 5, 60 * 60_000)) {
       throw Errors.rateLimited("Too many attempts from this network recently. Please try again later.");
     }
     const body = ChallengeRequestSchema.parse(request.body);
@@ -78,9 +78,9 @@ export function registerAnonymousRoutes(app: FastifyInstance): void {
   });
 
   app.post("/anonymous/recover", async (request, reply) => {
-    const env = loadEnv();
+    const settings = await getSiteSettings();
     const ip = getClientIp(request);
-    if (!checkRateLimit(`recover:${ip}`, env.RATE_LIMIT_REGISTRATIONS_PER_HOUR * 5, 60 * 60_000)) {
+    if (!checkRateLimit(`recover:${ip}`, settings.rateLimitRegistrationsPerHour * 5, 60 * 60_000)) {
       throw Errors.rateLimited("Too many attempts from this network recently. Please try again later.");
     }
     const body = RecoverRequestSchema.parse(request.body);
@@ -90,7 +90,7 @@ export function registerAnonymousRoutes(app: FastifyInstance): void {
       signature: base64urlToBytes(body.signature),
     });
 
-    const token = await createAnonymousSession(user.id, env.STORE_IP_ADDRESSES ? ip : null);
+    const token = await createAnonymousSession(user.id, settings.storeIpAddresses ? ip : null);
     setAnonSessionCookie(reply, token);
 
     const conversation = await prisma.conversation.findUniqueOrThrow({ where: { anonymousUserId: user.id } });

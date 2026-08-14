@@ -21,13 +21,13 @@ export async function maybeSendReplyNotification(conversationId: string): Promis
   const user = conversation?.anonymousUser;
   if (!user?.notificationEmail) return;
 
-  const env = loadEnv();
-  const minIntervalMs = env.REPLY_EMAIL_MIN_INTERVAL_MINUTES * 60_000;
+  const settings = await getSiteSettings();
+  const minIntervalMs = settings.replyEmailMinIntervalMinutes * 60_000;
   if (user.notificationEmailSentAt && Date.now() - user.notificationEmailSentAt.getTime() < minIntervalMs) {
     return; // A burst of consecutive admin replies collapses into one email.
   }
 
-  const settings = await getSiteSettings();
+  const env = loadEnv();
   const email = replyNotificationEmail({ adminName: settings.displayName, siteUrl: env.PUBLIC_URL });
   await sendEmail({ to: user.notificationEmail, ...email });
   await prisma.anonymousUser.update({ where: { id: user.id }, data: { notificationEmailSentAt: new Date() } });

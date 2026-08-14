@@ -35,7 +35,7 @@ async function runDigestSweep(): Promise<void> {
   }
 
   const env = loadEnv();
-  const intervalMinutes = Math.max(settings.adminEmailDigestIntervalMinutes, env.ADMIN_DIGEST_MIN_INTERVAL_MINUTES);
+  const intervalMinutes = Math.max(settings.adminEmailDigestIntervalMinutes, settings.adminDigestMinIntervalMinutes);
   if (!isDigestDue(since, intervalMinutes)) return;
 
   const messages = await prisma.message.findMany({

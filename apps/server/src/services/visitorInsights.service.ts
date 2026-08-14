@@ -3,7 +3,6 @@ import { z } from "zod";
 import { fetch } from "undici";
 import type { VisitorInsightConsentRequestInput, VisitorInsightDto } from "@anonchat/shared";
 import { prisma } from "../db.js";
-import { loadEnv } from "../env.js";
 import { createSsrfSafeDispatcher, isPrivateOrReservedIp } from "../security/ssrfGuard.js";
 import { getSiteSettings } from "./siteSettings.service.js";
 
@@ -44,9 +43,8 @@ type GeoFields = Pick<
   | "networkIsp"
 >;
 
-async function lookupCoarseGeolocation(ip: string): Promise<GeoFields> {
-  const env = loadEnv();
-  if (env.VISITOR_GEOLOCATION_PROVIDER !== "ipwhois" || isPrivateOrReservedIp(ip)) return {};
+async function lookupCoarseGeolocation(ip: string, enabled: boolean): Promise<GeoFields> {
+  if (!enabled || isPrivateOrReservedIp(ip)) return {};
   try {
     const response = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`, {
       dispatcher: geoDispatcher,
@@ -110,15 +108,14 @@ export async function saveVisitorInsights(
   // Do not even contact the optional geo provider until both halves of the
   // opt-in are true (admin setting above + visitor consent represented by
   // this endpoint call).
-  const geo = await lookupCoarseGeolocation(ip);
-  const env = loadEnv();
+  const geo = await lookupCoarseGeolocation(ip, settings.visitorGeolocationEnabled);
   const now = new Date();
   const referrerOrigin = input.referrerOrigin ? new URL(input.referrerOrigin).origin : null;
   const common = {
     consentVersion: VISITOR_INSIGHTS_CONSENT_VERSION,
     consentedAt: now,
     expiresAt: expiresAtFor(settings.visitorInsightsRetentionDays),
-    ipAddress: env.STORE_IP_ADDRESSES ? ip : null,
+    ipAddress: settings.storeIpAddresses ? ip : null,
     userAgent: input.userAgent,
     browserName: input.browserName,
     browserVersion: input.browserVersion,
