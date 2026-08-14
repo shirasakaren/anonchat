@@ -231,9 +231,10 @@ export function MessageBubble({
         <button
           type="button"
           onClick={onRetry}
-          className="px-1 text-[11px] text-[var(--danger-fg)] underline hover:opacity-80"
+          className="max-w-md px-1 text-left text-[11px] text-[var(--danger-fg)] hover:opacity-80"
         >
-          Failed · Retry
+          <span className="font-semibold underline">Retry</span>
+          <span> · {message.failureReason ?? "The message could not be sent."}</span>
         </button>
       )}
 
