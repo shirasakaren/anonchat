@@ -44,3 +44,8 @@ export interface MeResponse {
   conversationStatus: "ACTIVE" | "ARCHIVED" | "BLOCKED";
   adminPublicKeys: z.infer<typeof PublicKeysSchema>;
 }
+
+export interface NotificationPreferencesDto {
+  emailNotificationsAvailable: boolean;
+  notificationEmail: string | null;
+}

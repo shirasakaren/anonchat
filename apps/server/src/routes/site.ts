@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { PublicSiteInfoDto } from "@anonchat/shared";
 import { loadEnv } from "../env.js";
 import { isPushConfigured } from "../push/index.js";
+import { isEmailConfigured } from "../email/index.js";
 import { adminExists, getAdminPublicKeys } from "../services/admin.service.js";
 import { getSiteSettings } from "../services/siteSettings.service.js";
 
@@ -34,6 +35,7 @@ export function registerSiteRoutes(app: FastifyInstance): void {
       },
       turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null,
       vapidPublicKey: isPushConfigured() ? env.VAPID_PUBLIC_KEY! : null,
+      emailNotificationsAvailable: isEmailConfigured(),
       visitorInsights: {
         enabled: settings.visitorInsightsEnabled,
         retentionDays: settings.visitorInsightsRetentionDays,

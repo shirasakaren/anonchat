@@ -27,7 +27,7 @@ import { DeleteIdentityModal } from "../components/chat/DeleteIdentityModal.js";
 import { getLocallyDeletedMessageIds, hideMessageLocally } from "../components/chat/locallyDeletedMessages.js";
 import { MessageBubble } from "../components/chat/MessageBubble.js";
 import { NotificationEmailPrompt } from "../components/chat/NotificationEmailPrompt.js";
-import { PushBellButton } from "../components/chat/PushBellButton.js";
+import { NotificationPreferencesButton } from "../components/chat/NotificationPreferencesButton.js";
 import { VisitorInsightsControl } from "../components/chat/VisitorInsightsControl.js";
 import { ExpandableProse } from "../components/chat/ExpandableProse.js";
 import { renderMessageMarkdown } from "../components/chat/markdown.js";
@@ -39,7 +39,7 @@ import { TypingIndicator } from "../components/chat/TypingIndicator.js";
 import { DefaultAvatar } from "../components/common/DefaultAvatar.js";
 import { FullScreenLoader } from "../components/common/Loader.js";
 import {
-  decryptMessageText,
+  decryptMessageTextWithStatus,
   encryptAttachmentMeta,
   encryptMessageText,
   encryptReaction,
@@ -84,19 +84,23 @@ export default function Chat() {
   const draft = useEncryptedDraft("USER", session.conversationId, conversationKey);
 
   const decryptDto = useCallback(
-    (dto: MessageDto): DisplayMessage => ({
-      id: dto.id,
-      senderType: dto.senderType,
-      text: dto.content ? decryptMessageText(conversationKey, dto.content) : "",
-      replyToId: dto.replyToId,
-      attachments: dto.attachments,
-      reactions: dto.reactions,
-      edited: dto.edited,
-      deleted: dto.deleted,
-      createdAt: dto.createdAt,
-      readAt: dto.readAt,
-      status: "sent",
-    }),
+    (dto: MessageDto): DisplayMessage => {
+      const decrypted = dto.content ? decryptMessageTextWithStatus(conversationKey, dto.content) : null;
+      return {
+        id: dto.id,
+        senderType: dto.senderType,
+        text: decrypted?.text ?? "",
+        decryptionError: decrypted?.error ?? undefined,
+        replyToId: dto.replyToId,
+        attachments: dto.attachments,
+        reactions: dto.reactions,
+        edited: dto.edited,
+        deleted: dto.deleted,
+        createdAt: dto.createdAt,
+        readAt: dto.readAt,
+        status: "sent",
+      };
+    },
     [conversationKey],
   );
 
@@ -242,7 +246,11 @@ export default function Chat() {
         if (withoutOptimistic.some((m) => m.id === dto.id)) return withoutOptimistic;
         return [...withoutOptimistic, decryptDto(dto)].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
       });
-      if (isFirstUserMessage && !isNotificationEmailPromptDismissed(session.conversationId)) {
+      if (
+        isFirstUserMessage &&
+        site.emailNotificationsAvailable &&
+        !isNotificationEmailPromptDismissed(session.conversationId)
+      ) {
         setShowNotificationPrompt(true);
       }
       pendingFilesRef.current.delete(localId);
@@ -380,6 +388,11 @@ export default function Chat() {
           </div>
         </div>
         <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
+          <VisitorInsightsControl conversationId={session.conversationId} config={site.visitorInsights} />
+          <NotificationPreferencesButton
+            vapidPublicKey={site.vapidPublicKey}
+            emailAvailable={site.emailNotificationsAvailable}
+          />
           <button
             type="button"
             onClick={() => setNoteOpen(true)}
@@ -389,8 +402,6 @@ export default function Chat() {
           >
             <StickyNote size={18} aria-hidden />
           </button>
-          <VisitorInsightsControl conversationId={session.conversationId} config={site.visitorInsights} />
-          <PushBellButton vapidPublicKey={site.vapidPublicKey} />
           <span className="rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-xs font-mono">
             #{session.publicId}
           </span>

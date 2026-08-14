@@ -22,6 +22,8 @@ export const Errors = {
   rateLimited: (message = "You're sending messages too quickly. Please slow down and try again shortly.") =>
     new AppError(429, "RATE_LIMITED", message),
   tooLarge: (message = "That upload is too large.") => new AppError(413, "PAYLOAD_TOO_LARGE", message),
+  unavailable: (message = "That feature is not configured on this server.") =>
+    new AppError(503, "FEATURE_UNAVAILABLE", message),
 };
 
 interface ClientFastifyError {

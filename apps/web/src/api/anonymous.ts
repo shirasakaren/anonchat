@@ -6,6 +6,7 @@ import type {
   RegisterResponse,
   VisitorInsightConsentRequestInput,
   VisitorInsightsStatusDto,
+  NotificationPreferencesDto,
 } from "@anonchat/shared";
 import { api } from "./client.js";
 import type { PushSubscriptionKeys } from "../push/webPush.js";
@@ -49,6 +50,10 @@ export function deleteAnonymousIdentity(): Promise<void> {
 /** Opts this identity into (or, with "", out of) an email when the admin replies. */
 export function setNotificationEmail(email: string): Promise<void> {
   return api.post<void>("/anonymous/notification-email", { email });
+}
+
+export function getNotificationPreferences(): Promise<NotificationPreferencesDto> {
+  return api.get<NotificationPreferencesDto>("/anonymous/notification-preferences");
 }
 
 export function subscribeUserPush(subscription: PushSubscriptionKeys): Promise<void> {

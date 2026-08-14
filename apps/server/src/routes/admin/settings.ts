@@ -50,6 +50,16 @@ export function registerAdminSettingsRoutes(app: FastifyInstance): void {
   app.patch("/admin/settings", { preHandler: requireAdmin }, async (request, reply) => {
     const { admin } = request.adminAuth!;
     const body = SiteSettingsRequestSchema.parse(request.body);
+    if (
+      !isEmailConfigured() &&
+      (body.adminEmailDigestEnabled === true ||
+        (body.adminNotificationEmail !== undefined && body.adminNotificationEmail !== ""))
+    ) {
+      throw Errors.unavailable("Configure SMTP or Resend before enabling admin email notifications.");
+    }
+    if (!isPushConfigured() && body.adminPushEnabled === true) {
+      throw Errors.unavailable("Configure VAPID keys before enabling admin push notifications.");
+    }
     const settings = await getSiteSettings();
     await prisma.siteSettings.update({
       where: { id: settings.id },

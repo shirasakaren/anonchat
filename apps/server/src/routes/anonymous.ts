@@ -29,6 +29,8 @@ import { checkRateLimit } from "../utils/rateLimiter.js";
 import { Errors } from "../utils/errors.js";
 import { prisma } from "../db.js";
 import { hardDeleteConversation } from "../services/conversation.service.js";
+import { isEmailConfigured } from "../email/index.js";
+import { isPushConfigured } from "../push/index.js";
 
 export function registerAnonymousRoutes(app: FastifyInstance): void {
   app.post("/anonymous/register", async (request, reply) => {
@@ -124,6 +126,9 @@ export function registerAnonymousRoutes(app: FastifyInstance): void {
   // Never required, never shown to the admin as a contact method, never
   // used for anything but this one notification.
   app.post("/anonymous/notification-email", { preHandler: requireAnon }, async (request, reply) => {
+    if (!isEmailConfigured()) {
+      throw Errors.unavailable("Email notifications are not configured on this server.");
+    }
     const user = request.anonUser!;
     const { email } = NotificationEmailRequestSchema.parse(request.body);
     await prisma.anonymousUser.update({
@@ -133,9 +138,15 @@ export function registerAnonymousRoutes(app: FastifyInstance): void {
     reply.status(204).send();
   });
 
+  app.get("/anonymous/notification-preferences", { preHandler: requireAnonIdentity }, (request) => ({
+    emailNotificationsAvailable: isEmailConfigured(),
+    notificationEmail: request.anonUser!.notificationEmail,
+  }));
+
   // Web Push registration for this identity's own device - entirely the
   // visitor's own opt-in, no admin-side toggle (see pushNotification.service.ts).
   app.post("/anonymous/push/subscribe", { preHandler: requireAnon }, async (request, reply) => {
+    if (!isPushConfigured()) throw Errors.unavailable("Push notifications are not configured on this server.");
     const user = request.anonUser!;
     const body = PushSubscriptionRequestSchema.parse(request.body);
     await prisma.pushSubscription.upsert({
