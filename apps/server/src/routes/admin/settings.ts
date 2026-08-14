@@ -232,6 +232,9 @@ export function registerAdminSettingsRoutes(app: FastifyInstance): void {
       categoryLimitMb * BYTES_PER_MB,
       `Profile ${kind === "VIDEO" ? "videos" : "images"} must be ${categoryLimitMb} MB or smaller.`,
     );
+    if (file.file.truncated) {
+      throw Errors.tooLarge(`Profile media must be ${limits.globalMb} MB or smaller.`);
+    }
     const created = await addProfileMedia({ kind, mimetype: file.mimetype, filename: file.filename, buffer });
     await recordAudit(
       admin.id,
