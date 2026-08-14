@@ -7,13 +7,69 @@ this file is what's meant to survive across sessions.)
 
 ## Where things stand
 
-Every planned feature is built, the full stack has been exercised in a real
-headless browser (Playwright) against a real Postgres instance in Docker,
-a dedicated security review pass was done and fixed (see "Security review"
-below), and a full UI/UX + WCAG 2.2 AA pass has since been done and fixed
-too (see "UI/UX and accessibility audit" below). There is no "immediate
-next step" - the project is feature-complete, tested, and reviewed.
-Anything further is a deliberately deferred follow-up (see "Known gaps").
+The requested feature set is built, the full stack has been exercised in a
+real browser against PostgreSQL, and dedicated security, privacy, UI/UX,
+performance, and WCAG passes have been completed. The codebase is tested and
+reviewed. Remaining items are either an optional product roadmap or operator-
+specific privacy/deployment obligations; see "Known gaps" and
+`docs/PRIVACY-TECHNICAL-ASSESSMENT.md`.
+
+## Product expansion and final audit (2026-08-14)
+
+The following work is implemented on `main` after the original chat-
+interaction follow-up:
+
+- Admin profiles always have a generated default avatar, support cropped
+  image uploads without deformation, and can import only the Gravatar image.
+- Settings and all other dashboard pages scroll through content below the
+  viewport; all 25 themes remain selectable.
+- Admin sessions are deduplicated by IP plus normalized browser/OS, show a
+  device-class preview, enforce their 30-day expiry, and preserve revoked
+  rows only as hidden audit history.
+- Admin canned replies use no-space command names and markdown bodies; typing
+  `/` in the composer opens inline, keyboard-operable template suggestions.
+- A configurable markdown welcome message appears before the first visitor
+  message without pretending that the server owns the admin's E2EE key.
+- Email notifications support SMTP and Resend. Visitor reply email is a
+  separate optional email-only opt-in, admin email uses a configurable digest,
+  and neither path includes message plaintext.
+- Web Push is available to both roles, requests permission only after a user
+  action, uses generic ciphertext-safe payloads, and coalesces repeated alerts.
+- Visitor insights are off by default, require per-visitor consent, exclude
+  invasive fingerprinting/exact GPS, support bounded device/network/coarse-IP
+  context, expire automatically, and can be revoked immediately. The admin
+  views them in an accessible right drawer with a coarse map.
+- Each conversation has one shared TipTap note. Its JSON and image/video/
+  audio/file media are end-to-end encrypted, autosaved, synchronized over a
+  ciphertext-only event, playable, and scoped to that conversation.
+- Recovery setup now offers copy/download/print, hides the displayed key, and
+  requires re-entry from the saved copy before continuing for both roles.
+- Unsent text drafts persist per conversation and role on the current device,
+  encrypted under the conversation key. A successful send only clears the
+  exact matching draft.
+- Visitors can permanently erase their own identity, even when blocked, after
+  a typed destructive-action confirmation. Erasure covers server content and
+  metadata plus the browser recovery secret/draft. Admin permanent delete now
+  has the same identity-level semantics.
+- Operators can publish a privacy-policy URL, reachable before identity
+  creation and from chat. IP retention is disclosed before chat creation when
+  enabled. The GDPR-oriented engineering assessment and deployment checklist
+  live in `docs/PRIVACY-TECHNICAL-ASSESSMENT.md`.
+- Exact configured attachment-size uploads no longer fail because of the
+  encryption nonce/tag overhead, visitor-insights dialogs trap/restore focus,
+  and expired admin cookies cannot be replayed.
+- Setup, public chat, and admin pages are route-level lazy chunks. The
+  production entry chunk fell from about 906 KB to 227 KB minified and the
+  build no longer reports any oversized chunk.
+- The repository lints with zero warnings/errors; API error payloads are
+  narrowed from `unknown`, and background requests explicitly handle failure.
+
+Final verification used all 11 migrations on a fresh PostgreSQL 17 database:
+246/246 tests passed (21 crypto, 21 shared, 103 server, 101 web), every
+workspace typechecked, lint and Prettier checks were clean, and the production
+build passed without a chunk-size warning. Browser verification covered
+recovery download/re-entry, encrypted-draft reload, visitor self-erasure,
+lazy-route reloads, and axe WCAG 2 A/AA scans with zero violations.
 
 ## Chat interaction follow-up (2026-08-14)
 
@@ -159,36 +215,30 @@ that reads live `getComputedStyle` values per theme rather than
 hand-parsing `themes.css` (needed to correctly resolve `color-mix()` and
 named-color serialization like `#c0c0c0` → `"silver"`).
 
-### Researched but not yet implemented (deferred, roughly ranked)
+### Researched but not yet implemented (optional roadmap, roughly ranked)
 
 Full research notes (Zendesk/Chatwoot/Intercom/Front/Crisp inbox
 conventions, Signal/WhatsApp/MetaMask/1Password trust-UX patterns) lived
 in-session only; the ranked list below is what survived:
 
-1. Date separators + consecutive-message grouping in the message thread
-   (UI-only, operates on already-decrypted messages).
-2. A client-side decrypted-message cache - fixes `ConversationList`'s
+1. A client-side decrypted-message cache - fixes `ConversationList`'s
    current N+1 (it re-fetches a full message page per conversation just
    to render the last-message preview) and is the only honest E2EE analog
    to server-side search (search over messages the browser has already
    decrypted, never sent to the server).
-3. Retype/reselect confirmation on the recovery-phrase screen instead of
-   a bare "I've saved it" checkbox, which proves nothing.
-4. A downloadable/printable recovery-phrase artifact alongside the
-   existing copy button.
-5. `/`-triggered inline canned-reply autocomplete (fill-not-send, still
-   editable before sending) instead of the separate toggle-and-chip-list
-   picker.
-6. A conversation snooze ("remind me at X") - the E2EE-compatible
+2. A conversation snooze ("remind me at X") - the E2EE-compatible
    reimagining of ticket status/SLA for a solo admin.
-7. A small command palette (`⌘K`) + `?` shortcut cheatsheet, scoped to
+3. A small command palette (`⌘K`) + `?` shortcut cheatsheet, scoped to
    this app's actual 1:1 action set (no assign/team actions apply).
-8. Draft persistence per conversation, scoped to this device
-   (`localStorage`/IndexedDB) - not cross-device sync, which would need
-   storing draft plaintext server-side.
-9. An "encryption verified" indicator (Signal Automatic Key Verification
+4. An "encryption verified" indicator (Signal Automatic Key Verification
    analog) - easier here than for Signal, since the admin has exactly one
    long-lived key; only needs to alert loudly if that key ever changes.
+5. A one-click client-side access/portability export containing the decrypted
+   transcript, note, attachments, and server-held metadata.
+6. Operator-selected automatic retention for inactive identities, revoked
+   sessions, audit logs, object storage, and backups.
+7. Consent-version comparison and re-consent after a material diagnostics
+   purpose/category change.
 
 ### Done and verified
 
