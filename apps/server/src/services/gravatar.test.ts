@@ -58,6 +58,14 @@ describe("fetchGravatarAvatarDataUrl", () => {
     expect(result).toBe(`data:image/png;base64,${Buffer.from(bytes).toString("base64")}`);
   });
 
+  it("rejects a response whose bytes don't match its claimed content-type (header is just a claim)", async () => {
+    // Content-Type says PNG, but the bytes are plain text - a mislabeled or
+    // spoofed response shouldn't get stored as this site's avatarUrl.
+    const bytes = new TextEncoder().encode("not actually an image");
+    fetchMock.mockResolvedValue(mockResponse({ ok: true, contentType: "image/png", body: bytes }));
+    expect(await fetchGravatarAvatarDataUrl("someone@example.com")).toBeNull();
+  });
+
   it("returns null when fetch itself throws (network error, timeout)", async () => {
     fetchMock.mockRejectedValue(new Error("boom"));
     expect(await fetchGravatarAvatarDataUrl("someone@example.com")).toBeNull();

@@ -17,6 +17,37 @@ function gravatarHash(email: string): string {
   return bytesToHex(sha256(new TextEncoder().encode(normalized)));
 }
 
+/** A response's Content-Type header is just a claim - sniff the actual
+ *  magic bytes so this stored `avatarUrl` (echoed to every visitor via
+ *  GET /api/site) can't end up holding something a mislabeled or
+ *  compromised response claimed was an image but isn't. Returns the
+ *  sniffed mime type, or null if it doesn't match a supported format. */
+function sniffImageMimeType(bytes: Uint8Array): string | null {
+  if (bytes.length >= 4 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
+    return "image/png";
+  }
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (bytes.length >= 4 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
+    return "image/gif";
+  }
+  if (
+    bytes.length >= 12 &&
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return "image/webp";
+  }
+  return null;
+}
+
 /**
  * Fetches only the profile *picture* for a Gravatar email, server-side -
  * never hot-linked from the client, since an <img src> pointed straight at
@@ -56,6 +87,11 @@ export async function fetchGravatarAvatarDataUrl(email: string): Promise<string 
 
   const bytes = await readCapped(response.body?.getReader(), MAX_AVATAR_BYTES, "discard");
   if (!bytes) return null;
+
+  // The header is just a claim from the response - only trust bytes that
+  // actually start with a matching image signature.
+  const sniffed = sniffImageMimeType(bytes);
+  if (!sniffed || sniffed !== contentType) return null;
 
   return `data:${contentType};base64,${Buffer.from(bytes).toString("base64")}`;
 }
