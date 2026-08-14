@@ -26,6 +26,39 @@ import { ThemePicker } from "../../components/common/ThemePicker.js";
 import { AvatarCropper } from "../../components/common/AvatarCropper.js";
 import { DefaultAvatar } from "../../components/common/DefaultAvatar.js";
 
+function NumberControl({
+  label,
+  value,
+  min,
+  max,
+  suffix,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  suffix?: string;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="block text-sm font-medium">
+      {label}
+      <span className="mt-1 flex items-center gap-2">
+        <input
+          type="number"
+          min={min}
+          max={max}
+          value={value}
+          onChange={(event) => onChange(Number(event.target.value))}
+          className="min-w-0 flex-1 rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+        />
+        {suffix && <span className="shrink-0 text-xs font-normal text-[var(--text-muted)]">{suffix}</span>}
+      </span>
+    </label>
+  );
+}
+
 export default function SettingsPage({ view = "system" }: { view?: "profile" | "system" }) {
   const { admin, refreshAdmin } = useAdminSession();
   const { isSoundEnabled, setSoundEnabled, requestPermission } = useAdminNotifications();
@@ -69,8 +102,29 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
   const [pushError, setPushError] = useState<string | null>(null);
   const [insightsEnabled, setInsightsEnabled] = useState(false);
   const [insightsRetentionDays, setInsightsRetentionDays] = useState(30);
+  const [storeIpAddresses, setStoreIpAddresses] = useState(false);
+  const [visitorGeolocationEnabled, setVisitorGeolocationEnabled] = useState(false);
   const [insightsSaving, setInsightsSaving] = useState(false);
   const [insightsSaved, setInsightsSaved] = useState(false);
+  const [runtime, setRuntime] = useState({
+    maxMessageLength: 100_000,
+    maxAttachmentsPerMessage: 5,
+    messageEditWindowMinutes: 15,
+    maxAttachmentSizeMb: 100,
+    maxImageAttachmentSizeMb: 20,
+    maxVideoAttachmentSizeMb: 100,
+    maxAudioAttachmentSizeMb: 30,
+    maxDocumentAttachmentSizeMb: 50,
+    maxOtherAttachmentSizeMb: 25,
+    rateLimitMessagesPerMinute: 20,
+    rateLimitRegistrationsPerHour: 10,
+    rateLimitLinkPreviewsPerMinute: 20,
+    linkPreviewsEnabled: true,
+    adminDigestMinIntervalMinutes: 5,
+    replyEmailMinIntervalMinutes: 2,
+  });
+  const [runtimeSaving, setRuntimeSaving] = useState(false);
+  const [runtimeSaved, setRuntimeSaved] = useState(false);
 
   useEffect(() => {
     void getSettings().then((s) => {
@@ -90,6 +144,25 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
       setPushEnabled(s.adminPushEnabled);
       setInsightsEnabled(s.visitorInsightsEnabled);
       setInsightsRetentionDays(s.visitorInsightsRetentionDays);
+      setStoreIpAddresses(s.storeIpAddresses);
+      setVisitorGeolocationEnabled(s.visitorGeolocationEnabled);
+      setRuntime({
+        maxMessageLength: s.limits.maxMessageLength,
+        maxAttachmentsPerMessage: s.limits.maxAttachmentsPerMessage,
+        messageEditWindowMinutes: s.limits.messageEditWindowMinutes,
+        maxAttachmentSizeMb: s.limits.attachmentSize.globalMb,
+        maxImageAttachmentSizeMb: s.limits.attachmentSize.imageMb,
+        maxVideoAttachmentSizeMb: s.limits.attachmentSize.videoMb,
+        maxAudioAttachmentSizeMb: s.limits.attachmentSize.audioMb,
+        maxDocumentAttachmentSizeMb: s.limits.attachmentSize.documentMb,
+        maxOtherAttachmentSizeMb: s.limits.attachmentSize.otherMb,
+        rateLimitMessagesPerMinute: s.rateLimitMessagesPerMinute,
+        rateLimitRegistrationsPerHour: s.rateLimitRegistrationsPerHour,
+        rateLimitLinkPreviewsPerMinute: s.rateLimitLinkPreviewsPerMinute,
+        linkPreviewsEnabled: s.linkPreviewsEnabled,
+        adminDigestMinIntervalMinutes: s.adminDigestMinIntervalMinutes,
+        replyEmailMinIntervalMinutes: s.replyEmailMinIntervalMinutes,
+      });
     });
     setSoundOn(isSoundEnabled());
     if ("Notification" in window) setNotifPermission(Notification.permission);
@@ -243,12 +316,28 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
       const updated = await updateSettings({
         visitorInsightsEnabled: insightsEnabled,
         visitorInsightsRetentionDays: insightsRetentionDays,
+        storeIpAddresses,
+        visitorGeolocationEnabled,
       });
       setSettings(updated);
       setInsightsSaved(true);
       setTimeout(() => setInsightsSaved(false), 2000);
     } finally {
       setInsightsSaving(false);
+    }
+  }
+
+  async function handleSaveRuntime() {
+    setRuntimeSaving(true);
+    setRuntimeSaved(false);
+    try {
+      const updated = await updateSettings(runtime);
+      setSettings(updated);
+      await refreshSite();
+      setRuntimeSaved(true);
+      setTimeout(() => setRuntimeSaved(false), 2000);
+    } finally {
+      setRuntimeSaving(false);
     }
   }
 
@@ -643,6 +732,158 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
             </section>
 
             <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
+              <h2 className="mb-1 text-sm font-semibold">Messaging and upload limits</h2>
+              <p className="mb-4 text-xs text-[var(--text-muted)]">
+                These settings apply immediately without a server restart. The global upload size is the final ceiling
+                for every file category.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <NumberControl
+                  label="Message length"
+                  value={runtime.maxMessageLength}
+                  min={1_000}
+                  max={100_000}
+                  suffix="characters"
+                  onChange={(value) => setRuntime((current) => ({ ...current, maxMessageLength: value }))}
+                />
+                <NumberControl
+                  label="Files per message"
+                  value={runtime.maxAttachmentsPerMessage}
+                  min={1}
+                  max={20}
+                  suffix="files"
+                  onChange={(value) => setRuntime((current) => ({ ...current, maxAttachmentsPerMessage: value }))}
+                />
+                <NumberControl
+                  label="Message edit window"
+                  value={runtime.messageEditWindowMinutes}
+                  min={1}
+                  max={10_080}
+                  suffix="minutes"
+                  onChange={(value) => setRuntime((current) => ({ ...current, messageEditWindowMinutes: value }))}
+                />
+                <NumberControl
+                  label="Global file limit"
+                  value={runtime.maxAttachmentSizeMb}
+                  min={1}
+                  max={250}
+                  suffix="MB"
+                  onChange={(value) => setRuntime((current) => ({ ...current, maxAttachmentSizeMb: value }))}
+                />
+                <NumberControl
+                  label="Images"
+                  value={runtime.maxImageAttachmentSizeMb}
+                  min={1}
+                  max={250}
+                  suffix="MB"
+                  onChange={(value) => setRuntime((current) => ({ ...current, maxImageAttachmentSizeMb: value }))}
+                />
+                <NumberControl
+                  label="Videos"
+                  value={runtime.maxVideoAttachmentSizeMb}
+                  min={1}
+                  max={250}
+                  suffix="MB"
+                  onChange={(value) => setRuntime((current) => ({ ...current, maxVideoAttachmentSizeMb: value }))}
+                />
+                <NumberControl
+                  label="Audio"
+                  value={runtime.maxAudioAttachmentSizeMb}
+                  min={1}
+                  max={250}
+                  suffix="MB"
+                  onChange={(value) => setRuntime((current) => ({ ...current, maxAudioAttachmentSizeMb: value }))}
+                />
+                <NumberControl
+                  label="Documents and code"
+                  value={runtime.maxDocumentAttachmentSizeMb}
+                  min={1}
+                  max={250}
+                  suffix="MB"
+                  onChange={(value) => setRuntime((current) => ({ ...current, maxDocumentAttachmentSizeMb: value }))}
+                />
+                <NumberControl
+                  label="Other files"
+                  value={runtime.maxOtherAttachmentSizeMb}
+                  min={1}
+                  max={250}
+                  suffix="MB"
+                  onChange={(value) => setRuntime((current) => ({ ...current, maxOtherAttachmentSizeMb: value }))}
+                />
+              </div>
+
+              <h3 className="mb-3 mt-6 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                Traffic controls
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <NumberControl
+                  label="Messages"
+                  value={runtime.rateLimitMessagesPerMinute}
+                  min={1}
+                  max={1_000}
+                  suffix="per minute"
+                  onChange={(value) => setRuntime((current) => ({ ...current, rateLimitMessagesPerMinute: value }))}
+                />
+                <NumberControl
+                  label="New identities"
+                  value={runtime.rateLimitRegistrationsPerHour}
+                  min={1}
+                  max={10_000}
+                  suffix="per hour"
+                  onChange={(value) => setRuntime((current) => ({ ...current, rateLimitRegistrationsPerHour: value }))}
+                />
+                <NumberControl
+                  label="Link previews"
+                  value={runtime.rateLimitLinkPreviewsPerMinute}
+                  min={1}
+                  max={1_000}
+                  suffix="per minute"
+                  onChange={(value) => setRuntime((current) => ({ ...current, rateLimitLinkPreviewsPerMinute: value }))}
+                />
+                <NumberControl
+                  label="Admin digest minimum"
+                  value={runtime.adminDigestMinIntervalMinutes}
+                  min={1}
+                  max={1_440}
+                  suffix="minutes"
+                  onChange={(value) => setRuntime((current) => ({ ...current, adminDigestMinIntervalMinutes: value }))}
+                />
+                <NumberControl
+                  label="Visitor reply email minimum"
+                  value={runtime.replyEmailMinIntervalMinutes}
+                  min={1}
+                  max={1_440}
+                  suffix="minutes"
+                  onChange={(value) => setRuntime((current) => ({ ...current, replyEmailMinIntervalMinutes: value }))}
+                />
+              </div>
+              <label className="my-4 flex items-start gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={runtime.linkPreviewsEnabled}
+                  onChange={(event) =>
+                    setRuntime((current) => ({ ...current, linkPreviewsEnabled: event.target.checked }))
+                  }
+                  className="mt-0.5 accent-[var(--color-accent-500)]"
+                />
+                <span>
+                  Generate rich link previews
+                  <span className="mt-0.5 block text-xs font-normal text-[var(--text-muted)]">
+                    The server fetches shared URLs through its protected preview service when this is enabled.
+                  </span>
+                </span>
+              </label>
+              <button
+                type="button"
+                onClick={() => void handleSaveRuntime()}
+                disabled={runtimeSaving}
+                className="rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
+              >
+                {runtimeSaving ? "Saving..." : runtimeSaved ? "Saved!" : "Save limits"}
+              </button>
+            </section>
+
+            <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
               <h2 className="mb-3 text-sm font-semibold">Theme</h2>
               <p className="mb-3 text-xs text-[var(--text-muted)]">
                 Changes apply instantly for both you and your visitors.
@@ -812,19 +1053,38 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
                   days
                 </span>
               </label>
-              <div className="mb-3 rounded-lg bg-[var(--surface-muted)] p-3 text-xs text-[var(--text-muted)]">
-                <p>
-                  IP storage:{" "}
-                  {settings.storeIpAddresses
-                    ? "available when a visitor consents"
-                    : "disabled by the server operator"}
-                </p>
-                <p className="mt-1">
-                  Coarse IP geolocation:{" "}
-                  {settings.visitorGeolocationEnabled
-                    ? "available when a visitor consents"
-                    : "disabled by the server operator"}
-                </p>
+              <div className="mb-4 space-y-3 rounded-lg bg-[var(--surface-muted)] p-3">
+                <label className="flex items-start gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={storeIpAddresses}
+                    onChange={(event) => setStoreIpAddresses(event.target.checked)}
+                    className="mt-0.5 accent-[var(--color-accent-500)]"
+                  />
+                  <span>
+                    Store visitor IP addresses
+                    <span className="mt-0.5 block text-xs font-normal text-[var(--text-muted)]">
+                      Applies to future identities, sessions, and consented diagnostics. Keep this off unless you need
+                      it for abuse handling and disclose it in your privacy policy.
+                    </span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={visitorGeolocationEnabled}
+                    disabled={!insightsEnabled}
+                    onChange={(event) => setVisitorGeolocationEnabled(event.target.checked)}
+                    className="mt-0.5 accent-[var(--color-accent-500)] disabled:opacity-50"
+                  />
+                  <span>
+                    Add coarse IP geolocation
+                    <span className="mt-0.5 block text-xs font-normal text-[var(--text-muted)]">
+                      After visitor consent, the server sends the IP to ipwho.is for approximate city and network
+                      details. Exact GPS is never requested.
+                    </span>
+                  </span>
+                </label>
               </div>
               <button
                 type="button"
