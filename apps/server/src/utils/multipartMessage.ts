@@ -1,4 +1,5 @@
 import type { FastifyRequest } from "fastify";
+import { ENCRYPTED_BLOB_OVERHEAD_BYTES } from "@anonchat/crypto";
 import { EncryptedPayloadSchema, SendMessageRequestSchema, type EncryptedPayloadInput } from "@anonchat/shared";
 import type { PendingAttachment } from "../services/message.service.js";
 import { Errors } from "./errors.js";
@@ -12,6 +13,7 @@ import { Errors } from "./errors.js";
 export async function parseSendMessageBody(
   request: FastifyRequest,
   maxAttachments: number,
+  maxAttachmentSizeMb: number,
 ): Promise<{ content: EncryptedPayloadInput; replyToId: string | null; attachments: PendingAttachment[] }> {
   if (!request.isMultipart()) {
     const body = SendMessageRequestSchema.parse(request.body);
@@ -24,7 +26,14 @@ export async function parseSendMessageBody(
   const attachments: PendingAttachment[] = [];
 
   try {
-    for await (const part of request.parts()) {
+    for await (const part of request.parts({
+      limits: {
+        fileSize: maxAttachmentSizeMb * 1024 * 1024 + ENCRYPTED_BLOB_OVERHEAD_BYTES,
+        files: maxAttachments,
+        fields: maxAttachments + 2,
+        parts: maxAttachments * 2 + 4,
+      },
+    })) {
       if (part.type === "file") {
         if (part.fieldname !== "attachment" || !pendingMeta) {
           throw Errors.badRequest("Malformed attachment upload.");
@@ -45,7 +54,7 @@ export async function parseSendMessageBody(
     }
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "FST_REQ_FILE_TOO_LARGE") {
-      throw Errors.tooLarge();
+      throw Errors.tooLarge(`Attachments must be ${maxAttachmentSizeMb} MB or smaller.`);
     }
     throw error;
   }

@@ -12,7 +12,6 @@ import {
 } from "@anonchat/shared";
 import { requireAdmin } from "../../auth/plugin.js";
 import { prisma } from "../../db.js";
-import { loadEnv } from "../../env.js";
 import {
   getConversationForAdmin,
   getMessagesPage,
@@ -30,6 +29,7 @@ import { recordAudit } from "../../services/auditLog.service.js";
 import { getStorageAdapter } from "../../storage/index.js";
 import { Errors } from "../../utils/errors.js";
 import { parseSendMessageBody } from "../../utils/multipartMessage.js";
+import { getSiteSettings } from "../../services/siteSettings.service.js";
 import { checkRateLimit } from "../../utils/rateLimiter.js";
 
 const ConversationIdParam = IdParamSchema;
@@ -53,13 +53,17 @@ export function registerAdminConversationRoutes(app: FastifyInstance): void {
   });
 
   app.post("/admin/conversations/:id/messages", { preHandler: requireAdmin }, async (request, reply) => {
-    const env = loadEnv();
+    const settings = await getSiteSettings();
     const { admin } = request.adminAuth!;
     const params = ConversationIdParam.parse(request.params);
-    if (!checkRateLimit(`message:ADMIN:${admin.id}`, env.RATE_LIMIT_MESSAGES_PER_MINUTE, 60_000)) {
+    if (!checkRateLimit(`message:ADMIN:${admin.id}`, settings.rateLimitMessagesPerMinute, 60_000)) {
       throw Errors.rateLimited();
     }
-    const { content, replyToId, attachments } = await parseSendMessageBody(request, env.MAX_ATTACHMENTS_PER_MESSAGE);
+    const { content, replyToId, attachments } = await parseSendMessageBody(
+      request,
+      settings.maxAttachmentsPerMessage,
+      settings.maxAttachmentSizeMb,
+    );
     const dto = await createMessage({
       conversationId: params.id,
       senderType: "ADMIN",
@@ -71,9 +75,9 @@ export function registerAdminConversationRoutes(app: FastifyInstance): void {
   });
 
   app.patch("/admin/conversations/:id/messages/:messageId", { preHandler: requireAdmin }, async (request, reply) => {
-    const env = loadEnv();
+    const settings = await getSiteSettings();
     const { admin } = request.adminAuth!;
-    if (!checkRateLimit(`message:ADMIN:${admin.id}`, env.RATE_LIMIT_MESSAGES_PER_MINUTE, 60_000)) {
+    if (!checkRateLimit(`message:ADMIN:${admin.id}`, settings.rateLimitMessagesPerMinute, 60_000)) {
       throw Errors.rateLimited();
     }
     const params = ConversationMessageParamsSchema.parse(request.params);
@@ -83,16 +87,16 @@ export function registerAdminConversationRoutes(app: FastifyInstance): void {
       messageId: params.messageId,
       senderType: "ADMIN",
       content: body.content,
-      editWindowMinutes: env.MESSAGE_EDIT_WINDOW_MINUTES,
+      editWindowMinutes: settings.messageEditWindowMinutes,
     });
     await recordAudit(admin.id, "message.edited", { type: "Message", id: params.messageId });
     reply.send(dto);
   });
 
   app.delete("/admin/conversations/:id/messages/:messageId", { preHandler: requireAdmin }, async (request, reply) => {
-    const env = loadEnv();
+    const settings = await getSiteSettings();
     const { admin } = request.adminAuth!;
-    if (!checkRateLimit(`message:ADMIN:${admin.id}`, env.RATE_LIMIT_MESSAGES_PER_MINUTE, 60_000)) {
+    if (!checkRateLimit(`message:ADMIN:${admin.id}`, settings.rateLimitMessagesPerMinute, 60_000)) {
       throw Errors.rateLimited();
     }
     const params = ConversationMessageParamsSchema.parse(request.params);
@@ -105,9 +109,9 @@ export function registerAdminConversationRoutes(app: FastifyInstance): void {
     "/admin/conversations/:id/messages/:messageId/reactions",
     { preHandler: requireAdmin },
     async (request, reply) => {
-      const env = loadEnv();
+      const settings = await getSiteSettings();
       const { admin } = request.adminAuth!;
-      if (!checkRateLimit(`message:ADMIN:${admin.id}`, env.RATE_LIMIT_MESSAGES_PER_MINUTE, 60_000)) {
+      if (!checkRateLimit(`message:ADMIN:${admin.id}`, settings.rateLimitMessagesPerMinute, 60_000)) {
         throw Errors.rateLimited();
       }
       const params = ConversationMessageParamsSchema.parse(request.params);
@@ -127,9 +131,9 @@ export function registerAdminConversationRoutes(app: FastifyInstance): void {
     "/admin/conversations/:id/messages/:messageId/reactions",
     { preHandler: requireAdmin },
     async (request, reply) => {
-      const env = loadEnv();
+      const settings = await getSiteSettings();
       const { admin } = request.adminAuth!;
-      if (!checkRateLimit(`message:ADMIN:${admin.id}`, env.RATE_LIMIT_MESSAGES_PER_MINUTE, 60_000)) {
+      if (!checkRateLimit(`message:ADMIN:${admin.id}`, settings.rateLimitMessagesPerMinute, 60_000)) {
         throw Errors.rateLimited();
       }
       const params = ConversationMessageParamsSchema.parse(request.params);

@@ -1,7 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { IdParamSchema, SaveConversationNoteRequestSchema } from "@anonchat/shared";
 import { requireAdmin, requireAnon } from "../auth/plugin.js";
-import { loadEnv } from "../env.js";
 import { getConversationForAdmin } from "../services/conversation.service.js";
 import {
   createNoteAsset,
@@ -13,6 +12,7 @@ import {
 import { parseNoteAssetUpload } from "../utils/multipartNoteAsset.js";
 import { checkRateLimit } from "../utils/rateLimiter.js";
 import { Errors } from "../utils/errors.js";
+import { getSiteSettings } from "../services/siteSettings.service.js";
 
 export function registerNoteRoutes(app: FastifyInstance): void {
   app.get("/conversation/note", { preHandler: requireAnon }, async (request) => ({
@@ -20,8 +20,8 @@ export function registerNoteRoutes(app: FastifyInstance): void {
   }));
 
   app.put("/conversation/note", { preHandler: requireAnon }, async (request) => {
-    const env = loadEnv();
-    if (!checkRateLimit(`note:USER:${request.anonUser!.id}`, env.RATE_LIMIT_MESSAGES_PER_MINUTE * 3, 60_000)) {
+    const settings = await getSiteSettings();
+    if (!checkRateLimit(`note:USER:${request.anonUser!.id}`, settings.rateLimitMessagesPerMinute * 3, 60_000)) {
       throw Errors.rateLimited("You're saving this note too quickly. Please wait a moment.");
     }
     const body = SaveConversationNoteRequestSchema.parse(request.body);
@@ -30,7 +30,8 @@ export function registerNoteRoutes(app: FastifyInstance): void {
 
   app.post("/conversation/note/assets", { preHandler: requireAnon }, async (request, reply) => {
     if (!checkRateLimit(`note-asset:USER:${request.anonUser!.id}`, 10, 60_000)) throw Errors.rateLimited();
-    const upload = await parseNoteAssetUpload(request);
+    const settings = await getSiteSettings();
+    const upload = await parseNoteAssetUpload(request, settings.maxAttachmentSizeMb);
     const asset = await createNoteAsset({
       conversationId: request.anonUser!.conversation!.id,
       senderType: "USER",
@@ -62,8 +63,8 @@ export function registerNoteRoutes(app: FastifyInstance): void {
     const { id } = IdParamSchema.parse(request.params);
     await getConversationForAdmin(id);
     const { admin } = request.adminAuth!;
-    const env = loadEnv();
-    if (!checkRateLimit(`note:ADMIN:${admin.id}`, env.RATE_LIMIT_MESSAGES_PER_MINUTE * 3, 60_000)) {
+    const settings = await getSiteSettings();
+    if (!checkRateLimit(`note:ADMIN:${admin.id}`, settings.rateLimitMessagesPerMinute * 3, 60_000)) {
       throw Errors.rateLimited("You're saving this note too quickly. Please wait a moment.");
     }
     const body = SaveConversationNoteRequestSchema.parse(request.body);
@@ -75,7 +76,8 @@ export function registerNoteRoutes(app: FastifyInstance): void {
     await getConversationForAdmin(id);
     const { admin } = request.adminAuth!;
     if (!checkRateLimit(`note-asset:ADMIN:${admin.id}`, 10, 60_000)) throw Errors.rateLimited();
-    const upload = await parseNoteAssetUpload(request);
+    const settings = await getSiteSettings();
+    const upload = await parseNoteAssetUpload(request, settings.maxAttachmentSizeMb);
     const asset = await createNoteAsset({ conversationId: id, senderType: "ADMIN", ...upload });
     reply.status(201).send(asset);
   });

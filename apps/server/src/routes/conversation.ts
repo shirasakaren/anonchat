@@ -8,10 +8,10 @@ import {
 } from "@anonchat/shared";
 import { requireAnon } from "../auth/plugin.js";
 import { prisma } from "../db.js";
-import { loadEnv } from "../env.js";
 import { createMessage, deleteMessage, editMessage, setReaction } from "../services/message.service.js";
 import { countUnread, getMessagesPage, markRead, toConversationDto } from "../services/conversation.service.js";
 import { getStorageAdapter } from "../storage/index.js";
+import { getSiteSettings } from "../services/siteSettings.service.js";
 import { Errors } from "../utils/errors.js";
 import { parseSendMessageBody } from "../utils/multipartMessage.js";
 import { checkRateLimit } from "../utils/rateLimiter.js";
@@ -30,12 +30,16 @@ export function registerConversationRoutes(app: FastifyInstance): void {
   });
 
   app.post("/conversation/messages", { preHandler: requireAnon }, async (request, reply) => {
-    const env = loadEnv();
+    const settings = await getSiteSettings();
     const conversation = request.anonUser!.conversation!;
-    if (!checkRateLimit(`message:USER:${request.anonUser!.id}`, env.RATE_LIMIT_MESSAGES_PER_MINUTE, 60_000)) {
+    if (!checkRateLimit(`message:USER:${request.anonUser!.id}`, settings.rateLimitMessagesPerMinute, 60_000)) {
       throw Errors.rateLimited();
     }
-    const { content, replyToId, attachments } = await parseSendMessageBody(request, env.MAX_ATTACHMENTS_PER_MESSAGE);
+    const { content, replyToId, attachments } = await parseSendMessageBody(
+      request,
+      settings.maxAttachmentsPerMessage,
+      settings.maxAttachmentSizeMb,
+    );
     const dto = await createMessage({
       conversationId: conversation.id,
       senderType: "USER",
@@ -47,9 +51,9 @@ export function registerConversationRoutes(app: FastifyInstance): void {
   });
 
   app.patch("/conversation/messages/:id", { preHandler: requireAnon }, async (request, reply) => {
-    const env = loadEnv();
+    const settings = await getSiteSettings();
     const conversation = request.anonUser!.conversation!;
-    if (!checkRateLimit(`message:USER:${request.anonUser!.id}`, env.RATE_LIMIT_MESSAGES_PER_MINUTE, 60_000)) {
+    if (!checkRateLimit(`message:USER:${request.anonUser!.id}`, settings.rateLimitMessagesPerMinute, 60_000)) {
       throw Errors.rateLimited();
     }
     const params = IdParamSchema.parse(request.params);
@@ -59,15 +63,15 @@ export function registerConversationRoutes(app: FastifyInstance): void {
       messageId: params.id,
       senderType: "USER",
       content: body.content,
-      editWindowMinutes: env.MESSAGE_EDIT_WINDOW_MINUTES,
+      editWindowMinutes: settings.messageEditWindowMinutes,
     });
     reply.send(dto);
   });
 
   app.delete("/conversation/messages/:id", { preHandler: requireAnon }, async (request, reply) => {
-    const env = loadEnv();
+    const settings = await getSiteSettings();
     const conversation = request.anonUser!.conversation!;
-    if (!checkRateLimit(`message:USER:${request.anonUser!.id}`, env.RATE_LIMIT_MESSAGES_PER_MINUTE, 60_000)) {
+    if (!checkRateLimit(`message:USER:${request.anonUser!.id}`, settings.rateLimitMessagesPerMinute, 60_000)) {
       throw Errors.rateLimited();
     }
     const params = IdParamSchema.parse(request.params);
@@ -76,9 +80,9 @@ export function registerConversationRoutes(app: FastifyInstance): void {
   });
 
   app.post("/conversation/messages/:id/reactions", { preHandler: requireAnon }, async (request, reply) => {
-    const env = loadEnv();
+    const settings = await getSiteSettings();
     const conversation = request.anonUser!.conversation!;
-    if (!checkRateLimit(`message:USER:${request.anonUser!.id}`, env.RATE_LIMIT_MESSAGES_PER_MINUTE, 60_000)) {
+    if (!checkRateLimit(`message:USER:${request.anonUser!.id}`, settings.rateLimitMessagesPerMinute, 60_000)) {
       throw Errors.rateLimited();
     }
     const params = IdParamSchema.parse(request.params);
@@ -88,9 +92,9 @@ export function registerConversationRoutes(app: FastifyInstance): void {
   });
 
   app.delete("/conversation/messages/:id/reactions", { preHandler: requireAnon }, async (request, reply) => {
-    const env = loadEnv();
+    const settings = await getSiteSettings();
     const conversation = request.anonUser!.conversation!;
-    if (!checkRateLimit(`message:USER:${request.anonUser!.id}`, env.RATE_LIMIT_MESSAGES_PER_MINUTE, 60_000)) {
+    if (!checkRateLimit(`message:USER:${request.anonUser!.id}`, settings.rateLimitMessagesPerMinute, 60_000)) {
       throw Errors.rateLimited();
     }
     const params = IdParamSchema.parse(request.params);

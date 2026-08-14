@@ -8,7 +8,11 @@ import multipart from "@fastify/multipart";
 import staticPlugin from "@fastify/static";
 import websocketPlugin from "@fastify/websocket";
 import { ENCRYPTED_BLOB_OVERHEAD_BYTES } from "@anonchat/crypto";
-import { MAX_CIPHERTEXT_ENVELOPE_BYTES } from "@anonchat/shared";
+import {
+  ABSOLUTE_MAX_ATTACHMENT_SIZE_MB,
+  ABSOLUTE_MAX_ATTACHMENTS_PER_MESSAGE,
+  MAX_CIPHERTEXT_ENVELOPE_BYTES,
+} from "@anonchat/shared";
 import authPlugin from "./auth/plugin.js";
 import { corsOrigins, loadEnv } from "./env.js";
 import { buildLoggerOptions } from "./logger.js";
@@ -83,8 +87,8 @@ export async function buildApp(): Promise<FastifyInstance> {
       // Browser-side E2EE prefixes a nonce and appends an authentication
       // tag, so accepting exactly the plaintext limit requires allowing
       // that fixed authenticated-encryption overhead on the wire.
-      fileSize: env.MAX_ATTACHMENT_SIZE_MB * 1024 * 1024 + ENCRYPTED_BLOB_OVERHEAD_BYTES,
-      files: env.MAX_ATTACHMENTS_PER_MESSAGE,
+      fileSize: ABSOLUTE_MAX_ATTACHMENT_SIZE_MB * 1024 * 1024 + ENCRYPTED_BLOB_OVERHEAD_BYTES,
+      files: ABSOLUTE_MAX_ATTACHMENTS_PER_MESSAGE,
       // Non-file fields on a send-message request: content, replyToId, and
       // one attachmentMeta per attachment - bound these explicitly too, or
       // busboy's unbounded defaults let a client pad a request with huge
@@ -93,9 +97,9 @@ export async function buildApp(): Promise<FastifyInstance> {
       // it caps the same "content" field's raw string length, and a message
       // sent with an attachment goes through this multipart path rather
       // than the plain-JSON bodyLimit above.
-      fields: env.MAX_ATTACHMENTS_PER_MESSAGE + 2,
+      fields: ABSOLUTE_MAX_ATTACHMENTS_PER_MESSAGE + 2,
       fieldSize: MAX_CIPHERTEXT_ENVELOPE_BYTES + 4_096,
-      parts: env.MAX_ATTACHMENTS_PER_MESSAGE * 2 + 4,
+      parts: ABSOLUTE_MAX_ATTACHMENTS_PER_MESSAGE * 2 + 4,
     },
   });
   await app.register(websocketPlugin);
