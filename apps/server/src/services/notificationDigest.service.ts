@@ -42,7 +42,8 @@ async function runDigestSweep(): Promise<void> {
     where: {
       senderType: "USER",
       createdAt: { gt: since },
-      conversation: { mutedAt: null, deletedAt: null },
+      readAt: null,
+      conversation: { mutedAt: null, deletedAt: null, status: { not: "BLOCKED" } },
     },
     select: { conversationId: true },
   });
