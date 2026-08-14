@@ -8,7 +8,7 @@ import { getStorageAdapter } from "../storage/index.js";
 import { Errors } from "../utils/errors.js";
 import { MESSAGE_INCLUDE, toMessageDto } from "../utils/dto.js";
 
-const ANONYMOUS_USER_SELECT = { publicId: true, exchangePublicKey: true } as const;
+const ANONYMOUS_USER_SELECT = { publicId: true, displayName: true, exchangePublicKey: true } as const;
 
 function otherSender(viewer: SenderType): SenderType {
   return viewer === "ADMIN" ? "USER" : "ADMIN";
@@ -22,12 +22,13 @@ export async function countUnread(conversationId: string, forViewer: SenderType)
 
 export function toConversationDto(
   conversation: Conversation,
-  anonymousUser: { publicId: string; exchangePublicKey: Uint8Array },
+  anonymousUser: { publicId: string; displayName: string | null; exchangePublicKey: Uint8Array },
   unreadCount: number,
 ): ConversationDto {
   return {
     id: conversation.id,
     publicId: anonymousUser.publicId,
+    anonymousDisplayName: anonymousUser.displayName,
     status: conversation.status,
     createdAt: conversation.createdAt.toISOString(),
     updatedAt: conversation.updatedAt.toISOString(),
@@ -43,7 +44,7 @@ export function toConversationDto(
  *  anonymous user's client. */
 export function toAdminConversationDto(
   conversation: Conversation,
-  anonymousUser: { publicId: string; exchangePublicKey: Uint8Array },
+  anonymousUser: { publicId: string; displayName: string | null; exchangePublicKey: Uint8Array },
   unreadCount: number,
 ): AdminConversationDto {
   return {
@@ -137,6 +138,7 @@ export async function listConversationsForAdmin(query: {
     // alias - the alias exists so the admin can find contacts by name.
     where.OR = [
       { anonymousUser: { publicId: { contains: query.q, mode: "insensitive" } } },
+      { anonymousUser: { displayName: { contains: query.q, mode: "insensitive" } } },
       { adminAlias: { contains: query.q, mode: "insensitive" } },
     ];
   }
@@ -160,6 +162,7 @@ export async function listConversationsForAdmin(query: {
     conversations: page.map((c, i) => ({
       id: c.id,
       publicId: c.anonymousUser.publicId,
+      anonymousDisplayName: c.anonymousUser.displayName,
       adminAlias: c.adminAlias,
       mutedAt: c.mutedAt ? c.mutedAt.toISOString() : null,
       status: c.status,

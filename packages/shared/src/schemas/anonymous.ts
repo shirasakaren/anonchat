@@ -2,6 +2,7 @@ import { z } from "zod";
 import { Base64UrlSchema, PublicIdSchema, PublicKeysSchema } from "./common.js";
 
 export const RegisterRequestSchema = z.object({
+  displayName: z.string().trim().min(1).max(80).optional(),
   signingPublicKey: Base64UrlSchema.max(64),
   exchangePublicKey: Base64UrlSchema.max(64),
   proof: Base64UrlSchema.max(256),
@@ -28,6 +29,7 @@ export type NotificationEmailRequestInput = z.infer<typeof NotificationEmailRequ
 
 export interface RegisterResponse {
   publicId: string;
+  displayName: string | null;
   conversationId: string;
   adminPublicKeys: z.infer<typeof PublicKeysSchema>;
 }
@@ -40,6 +42,7 @@ export interface ChallengeResponse {
 
 export interface MeResponse {
   publicId: string;
+  displayName: string | null;
   conversationId: string;
   conversationStatus: "ACTIVE" | "ARCHIVED" | "BLOCKED";
   adminPublicKeys: z.infer<typeof PublicKeysSchema>;

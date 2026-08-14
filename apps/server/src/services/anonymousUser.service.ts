@@ -6,6 +6,7 @@ import { consumeChallenge, issueChallenge } from "../security/challengeStore.js"
 import { Errors } from "../utils/errors.js";
 
 export async function registerAnonymousUser(params: {
+  displayName?: string;
   signingPublicKey: Uint8Array;
   exchangePublicKey: Uint8Array;
   signingPublicKeyB64: string;
@@ -25,6 +26,7 @@ export async function registerAnonymousUser(params: {
     return await prisma.anonymousUser.create({
       data: {
         publicId,
+        displayName: params.displayName?.trim() || null,
         signingPublicKey: Buffer.from(params.signingPublicKey),
         exchangePublicKey: Buffer.from(params.exchangePublicKey),
         registrationIp: params.storeIp ? params.ip : null,

@@ -87,7 +87,8 @@ export function ConversationView({ conversationId, onChanged }: Props) {
 
   const decryptDto = useCallback(
     (dto: MessageDto): DisplayMessage => {
-      const decrypted = dto.content && conversationKey ? decryptMessageTextWithStatus(conversationKey, dto.content) : null;
+      const decrypted =
+        dto.content && conversationKey ? decryptMessageTextWithStatus(conversationKey, dto.content) : null;
       return {
         id: dto.id,
         senderType: dto.senderType,
@@ -488,7 +489,9 @@ export function ConversationView({ conversationId, onChanged }: Props) {
                 className="group flex max-w-full min-w-0 items-center gap-1.5 rounded-md px-1 py-0.5 hover:bg-[var(--surface-muted)]"
               >
                 <h2 className="min-w-0 truncate text-sm font-semibold">
-                  {conversation.adminAlias || `Anonymous #${conversation.publicId}`}
+                  {conversation.adminAlias ||
+                    conversation.anonymousDisplayName ||
+                    `Anonymous #${conversation.publicId}`}
                 </h2>
                 <Pencil
                   size={12}
@@ -498,7 +501,9 @@ export function ConversationView({ conversationId, onChanged }: Props) {
               </button>
             )}
             <p className="mt-0.5 flex items-center gap-1.5 truncate px-1 text-[11px] text-[var(--text-muted)]">
-              {userOnline ? (
+              {conversation.adminAlias && conversation.anonymousDisplayName ? (
+                `Visitor name: ${conversation.anonymousDisplayName}`
+              ) : userOnline ? (
                 <>
                   <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" aria-hidden />
                   Online

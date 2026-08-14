@@ -57,6 +57,8 @@ export interface MessageDto {
 export interface ConversationDto {
   id: string;
   publicId: string;
+  /** Optional name chosen by the visitor. This is distinct from the admin's private alias. */
+  anonymousDisplayName: string | null;
   status: "ACTIVE" | "ARCHIVED" | "BLOCKED";
   createdAt: string;
   updatedAt: string;

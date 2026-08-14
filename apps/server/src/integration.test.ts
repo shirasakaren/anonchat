@@ -125,12 +125,19 @@ describe("anonchat integration", () => {
     const user = makeIdentity();
 
     const registerRes = await call(app, userJar, "POST", "/anonymous/register", {
+      displayName: "Quiet Fox",
       signingPublicKey: bytesToBase64url(user.identity.signingPublicKey),
       exchangePublicKey: bytesToBase64url(user.identity.exchangePublicKey),
       proof: bytesToBase64url(user.proof),
     });
     expect(registerRes.status).toBe(201);
+    expect(registerRes.body.displayName).toBe("Quiet Fox");
     const { conversationId, adminPublicKeys } = registerRes.body;
+
+    const adminConversationRes = await call(app, adminJar, "GET", `/admin/conversations/${conversationId}`);
+    expect(adminConversationRes.status).toBe(200);
+    expect(adminConversationRes.body.anonymousDisplayName).toBe("Quiet Fox");
+    expect(adminConversationRes.body.adminAlias).toBeNull();
 
     const userKey = deriveConversationKey(
       user.identity.exchangeSecretKey,

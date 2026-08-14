@@ -23,6 +23,7 @@ import { deleteEncryptedDraft } from "../crypto/encryptedDrafts.js";
 interface SessionState {
   identity: Identity;
   publicId: string;
+  displayName: string | null;
   conversationId: string;
   conversationStatus: "ACTIVE" | "ARCHIVED" | "BLOCKED";
   adminPublicKeys: PublicKeysInput;
@@ -32,7 +33,7 @@ interface AnonymousSessionContextValue {
   status: "loading" | "needs-identity" | "ready" | "error";
   session: SessionState | null;
   error: string | null;
-  createNewIdentity: () => Promise<{ recoveryPhrase: string; publicId: string }>;
+  createNewIdentity: (displayName?: string) => Promise<{ recoveryPhrase: string; publicId: string }>;
   continueWithStoredIdentity: (publicId: string) => Promise<void>;
   importFromRecoveryPhrase: (phrase: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -59,6 +60,7 @@ export function AnonymousSessionProvider({ children }: { children: ReactNode }) 
       setSession({
         identity,
         publicId: me.publicId,
+        displayName: me.displayName,
         conversationId: me.conversationId,
         conversationStatus: me.conversationStatus,
         adminPublicKeys: me.adminPublicKeys,
@@ -72,6 +74,7 @@ export function AnonymousSessionProvider({ children }: { children: ReactNode }) 
     setSession({
       identity,
       publicId: recovered.publicId,
+      displayName: recovered.displayName,
       conversationId: recovered.conversationId,
       conversationStatus: "ACTIVE",
       adminPublicKeys: recovered.adminPublicKeys,
@@ -107,12 +110,14 @@ export function AnonymousSessionProvider({ children }: { children: ReactNode }) 
     };
   }, [establish]);
 
-  const createNewIdentity = useCallback(async () => {
-    const { identity, recoveryPhrase } = await createIdentityInStore();
-    const registered = await registerAnonymousIdentity(identity);
+  const createNewIdentity = useCallback(async (displayName?: string) => {
+    const chosenName = displayName?.trim() || undefined;
+    const { identity, recoveryPhrase } = await createIdentityInStore(chosenName);
+    const registered = await registerAnonymousIdentity(identity, chosenName);
     setSession({
       identity,
       publicId: registered.publicId,
+      displayName: registered.displayName,
       conversationId: registered.conversationId,
       conversationStatus: "ACTIVE",
       adminPublicKeys: registered.adminPublicKeys,

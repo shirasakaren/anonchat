@@ -6,7 +6,7 @@ import { listIdentities, type IdentitySummary } from "../crypto/identityStore.js
 import { ApiError } from "../api/client.js";
 import { DefaultAvatar } from "../components/common/DefaultAvatar.js";
 
-type View = "landing" | "import";
+type View = "landing" | "name" | "import";
 
 export default function PublicHome({ onCreated }: { onCreated: (phrase: string, publicId: string) => void }) {
   const { site } = useSite();
@@ -14,6 +14,7 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
   const [identities, setIdentities] = useState<IdentitySummary[]>([]);
   const [view, setView] = useState<View>("landing");
   const [importText, setImportText] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,11 +24,11 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
       .catch(() => setIdentities([]));
   }, []);
 
-  async function handleCreate() {
+  async function handleCreate(name?: string) {
     setBusy(true);
     setError(null);
     try {
-      const { recoveryPhrase, publicId } = await createNewIdentity();
+      const { recoveryPhrase, publicId } = await createNewIdentity(name);
       onCreated(recoveryPhrase, publicId);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not create your identity. Please try again.");
@@ -97,7 +98,7 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
                     onClick={() => handleContinue(identity.publicId)}
                     className="flex w-full items-center justify-between rounded-lg border border-[var(--border)] px-3 py-2 text-sm hover:bg-[var(--surface-muted)] disabled:opacity-50"
                   >
-                    <span>Anonymous #{identity.publicId}</span>
+                    <span>{identity.label === "Anonymous" ? `Anonymous #${identity.publicId}` : identity.label}</span>
                     <ArrowRight size={16} aria-hidden />
                   </button>
                 ))}
@@ -106,7 +107,7 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
             <button
               type="button"
               disabled={busy}
-              onClick={handleCreate}
+              onClick={() => setView("name")}
               className="w-full rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
             >
               {identities.length > 0 ? "Create a new anonymous identity" : "Start anonymous chat"}
@@ -120,6 +121,60 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
             </button>
             {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
           </div>
+        )}
+
+        {view === "name" && (
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleCreate(displayName);
+            }}
+          >
+            <div>
+              <label className="block text-sm font-medium" htmlFor="identity-name">
+                Name this identity
+              </label>
+              <input
+                id="identity-name"
+                autoFocus
+                maxLength={80}
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                placeholder="Optional name"
+                className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+              />
+              <p className="mt-1.5 text-xs text-[var(--text-muted)]">
+                Optional. The admin will see this name, and you can skip it to stay Anonymous #XXXX-XXXX-XXXX.
+              </p>
+            </div>
+            {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void handleCreate()}
+                className="flex-1 rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium hover:bg-[var(--surface-muted)] disabled:opacity-50"
+              >
+                Skip
+              </button>
+              <button
+                type="submit"
+                disabled={busy}
+                className="flex-1 rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
+              >
+                Continue
+              </button>
+            </div>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setView("landing")}
+              className="w-full text-center text-xs text-[var(--text-muted)] underline underline-offset-2"
+            >
+              Back
+            </button>
+          </form>
         )}
 
         {view === "import" && (

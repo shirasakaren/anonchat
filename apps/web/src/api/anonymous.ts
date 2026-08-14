@@ -11,7 +11,7 @@ import type {
 import { api } from "./client.js";
 import type { PushSubscriptionKeys } from "../push/webPush.js";
 
-export function registerAnonymousIdentity(identity: Identity): Promise<RegisterResponse> {
+export function registerAnonymousIdentity(identity: Identity, displayName?: string): Promise<RegisterResponse> {
   const signingPublicKey = bytesToBase64url(identity.signingPublicKey);
   const exchangePublicKey = bytesToBase64url(identity.exchangePublicKey);
   const proof = signChallenge(
@@ -19,6 +19,7 @@ export function registerAnonymousIdentity(identity: Identity): Promise<RegisterR
     buildRegistrationProofMessage(signingPublicKey, exchangePublicKey),
   );
   return api.post<RegisterResponse>("/anonymous/register", {
+    ...(displayName?.trim() ? { displayName: displayName.trim() } : {}),
     signingPublicKey,
     exchangePublicKey,
     proof: bytesToBase64url(proof),

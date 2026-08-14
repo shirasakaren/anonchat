@@ -402,8 +402,9 @@ export default function Chat() {
           >
             <StickyNote size={18} aria-hidden />
           </button>
-          <span className="rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-xs font-mono">
-            #{session.publicId}
+          <span className="max-w-48 truncate rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-xs">
+            {session.displayName ? `${session.displayName} · ` : ""}
+            <span className="font-mono">#{session.publicId}</span>
           </span>
           <button type="button" onClick={() => logout()} className="text-xs text-[var(--text-muted)] underline">
             Switch identity

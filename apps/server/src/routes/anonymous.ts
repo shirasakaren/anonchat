@@ -42,6 +42,7 @@ export function registerAnonymousRoutes(app: FastifyInstance): void {
 
     const body = RegisterRequestSchema.parse(request.body);
     const user = await registerAnonymousUser({
+      displayName: body.displayName,
       signingPublicKey: base64urlToBytes(body.signingPublicKey),
       exchangePublicKey: base64urlToBytes(body.exchangePublicKey),
       signingPublicKeyB64: body.signingPublicKey,
@@ -57,6 +58,7 @@ export function registerAnonymousRoutes(app: FastifyInstance): void {
     const adminPublicKeys = await getAdminPublicKeys();
     const response: RegisterResponse = {
       publicId: user.publicId,
+      displayName: user.displayName,
       conversationId: user.conversation!.id,
       adminPublicKeys: adminPublicKeys ?? { signingPublicKey: "", exchangePublicKey: "" },
     };
@@ -95,6 +97,7 @@ export function registerAnonymousRoutes(app: FastifyInstance): void {
     const adminPublicKeys = await getAdminPublicKeys();
     const response: RegisterResponse = {
       publicId: user.publicId,
+      displayName: user.displayName,
       conversationId: conversation.id,
       adminPublicKeys: adminPublicKeys ?? { signingPublicKey: "", exchangePublicKey: "" },
     };
@@ -106,6 +109,7 @@ export function registerAnonymousRoutes(app: FastifyInstance): void {
     const adminPublicKeys = await getAdminPublicKeys();
     const response: MeResponse = {
       publicId: user.publicId,
+      displayName: user.displayName,
       conversationId: user.conversation!.id,
       conversationStatus: user.conversation!.status,
       adminPublicKeys: adminPublicKeys ?? { signingPublicKey: "", exchangePublicKey: "" },

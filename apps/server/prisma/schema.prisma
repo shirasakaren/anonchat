@@ -20,6 +20,9 @@ enum AnonymousUserStatus {
 model AnonymousUser {
   id                String              @id @default(cuid())
   publicId          String              @unique
+  /// Optional name chosen by the visitor. Unlike Conversation.adminAlias,
+  /// this belongs to the anonymous identity and is visible to both sides.
+  displayName       String?
   signingPublicKey  Bytes
   exchangePublicKey Bytes
   status            AnonymousUserStatus @default(ACTIVE)

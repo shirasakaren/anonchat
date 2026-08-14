@@ -257,7 +257,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by ID or nickname…"
+          placeholder="Search by ID, visitor name, or nickname…"
           className="w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-1.5 text-sm"
         />
         <div className="mt-2 flex flex-wrap gap-1">
@@ -316,7 +316,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                         unread ? "font-semibold" : "font-normal",
                       )}
                     >
-                      {conv.adminAlias || `Anonymous #${conv.publicId}`}
+                      {conv.adminAlias || conv.anonymousDisplayName || `Anonymous #${conv.publicId}`}
                     </span>
                     {conv.lastMessageAt && (
                       <span className="shrink-0 text-[11px] text-[var(--text-muted)]">
