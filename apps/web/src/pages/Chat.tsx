@@ -394,6 +394,16 @@ export default function Chat() {
           <button type="button" onClick={() => logout()} className="text-xs text-[var(--text-muted)] underline">
             Switch identity
           </button>
+          {site.privacyPolicyUrl && (
+            <a
+              href={site.privacyPolicyUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-[var(--text-muted)] underline underline-offset-2 hover:text-[var(--text)]"
+            >
+              Privacy
+            </a>
+          )}
           <button
             type="button"
             onClick={() => setDeleteIdentityOpen(true)}

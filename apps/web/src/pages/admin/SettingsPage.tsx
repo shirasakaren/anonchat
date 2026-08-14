@@ -37,6 +37,7 @@ export default function SettingsPage() {
   const [welcomeMessage, setWelcomeMessage] = useState("");
   const [contactLinks, setContactLinks] = useState<{ label: string; url: string }[]>([]);
   const [pgpPublicKey, setPgpPublicKey] = useState("");
+  const [privacyPolicyUrl, setPrivacyPolicyUrl] = useState("");
   const [presenceEnabled, setPresenceEnabled] = useState(true);
   const [theme, setThemeState] = useState(currentTheme);
   const [themeSaving, setThemeSaving] = useState(false);
@@ -74,6 +75,7 @@ export default function SettingsPage() {
       setWelcomeMessage(s.welcomeMessage);
       setContactLinks(s.contactLinks);
       setPgpPublicKey(s.pgpPublicKey ?? "");
+      setPrivacyPolicyUrl(s.privacyPolicyUrl ?? "");
       setPresenceEnabled(s.presenceEnabled);
       setThemeState(s.theme);
       setDigestEmail(s.adminNotificationEmail ?? "");
@@ -132,6 +134,7 @@ export default function SettingsPage() {
         welcomeMessage,
         contactLinks,
         pgpPublicKey,
+        privacyPolicyUrl,
         presenceEnabled,
       });
       setSettings(updated);
@@ -380,6 +383,20 @@ export default function SettingsPage() {
             />
             <span className="mt-1 block text-xs font-normal text-[var(--text-muted)]">
               Shown before a visitor sends their first message. Markdown is supported.
+            </span>
+          </label>
+          <label className="mb-3 block text-sm font-medium">
+            Privacy policy URL
+            <input
+              type="url"
+              value={privacyPolicyUrl}
+              onChange={(e) => setPrivacyPolicyUrl(e.target.value)}
+              placeholder="https://example.com/privacy"
+              className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+            />
+            <span className="mt-1 block text-xs font-normal text-[var(--text-muted)]">
+              Link to an operator-authored notice covering data use, retention, service providers, rights, and contact
+              details. It appears on the public landing page and in chat.
             </span>
           </label>
           <label className="mb-3 block text-sm font-medium">

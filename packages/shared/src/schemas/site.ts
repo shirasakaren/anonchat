@@ -8,6 +8,7 @@ export interface PublicSiteInfoDto {
   avatarUrl: string | null;
   contactLinks: { label: string; url: string }[];
   pgpPublicKey: string | null;
+  privacyPolicyUrl: string | null;
   adminPublicKeys: PublicKeysInput | null;
   presenceEnabled: boolean;
   theme: string;

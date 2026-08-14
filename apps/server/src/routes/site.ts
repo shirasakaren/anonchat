@@ -22,6 +22,7 @@ export function registerSiteRoutes(app: FastifyInstance): void {
       avatarUrl: settings.avatarUrl,
       contactLinks: (settings.contactLinksJson as { label: string; url: string }[]) ?? [],
       pgpPublicKey: settings.pgpPublicKey,
+      privacyPolicyUrl: settings.privacyPolicyUrl,
       adminPublicKeys,
       presenceEnabled: settings.presenceEnabled,
       theme: settings.theme,

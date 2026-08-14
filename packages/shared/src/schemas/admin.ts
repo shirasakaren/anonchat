@@ -50,6 +50,8 @@ export const SiteSettingsRequestSchema = z.object({
     .max(10)
     .optional(),
   pgpPublicKey: z.string().max(20_000).optional(),
+  /// Empty string clears the public policy link.
+  privacyPolicyUrl: z.union([z.literal(""), z.string().url().max(500)]).optional(),
   presenceEnabled: z.boolean().optional(),
   theme: z.string().min(1).max(64).optional(),
   /// "" clears it.
@@ -152,6 +154,7 @@ export interface SiteSettingsDto {
   avatarUrl: string | null;
   contactLinks: { label: string; url: string }[];
   pgpPublicKey: string | null;
+  privacyPolicyUrl: string | null;
   presenceEnabled: boolean;
   theme: string;
   adminPublicKeys: z.infer<typeof PublicKeysSchema> | null;

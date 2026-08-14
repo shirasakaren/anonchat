@@ -253,6 +253,9 @@ model SiteSettings {
   avatarUrl        String?
   contactLinksJson Json    @default("[]")
   pgpPublicKey     String?
+  /// Public operator-authored notice covering controller identity, purposes,
+  /// recipients, retention, rights, and contact details.
+  privacyPolicyUrl String?
   presenceEnabled  Boolean @default(true)
   /// Theme identifier, e.g. "monochrome-dark", "paper", "forest-dark".
   theme            String  @default("monochrome-dark")

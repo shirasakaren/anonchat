@@ -147,6 +147,17 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
           </form>
         )}
       </div>
+
+      {site?.privacyPolicyUrl && (
+        <a
+          href={site.privacyPolicyUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-5 text-center text-xs text-[var(--text-muted)] underline underline-offset-2 hover:text-[var(--text)]"
+        >
+          Privacy policy
+        </a>
+      )}
     </main>
   );
 }
