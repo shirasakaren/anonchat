@@ -421,6 +421,16 @@ describe("anonchat integration", () => {
         auth: "test-auth",
       },
     });
+    const admin = await prisma.admin.findFirstOrThrow();
+    const sharedPush = await prisma.pushSubscription.create({
+      data: {
+        anonymousUserId: storedUser.id,
+        adminId: admin.id,
+        endpoint: `https://push.example/${randomUUID()}`,
+        p256dh: "shared-test-key",
+        auth: "shared-test-auth",
+      },
+    });
     await prisma.visitorInsight.create({
       data: {
         anonymousUserId: storedUser.id,
@@ -435,6 +445,10 @@ describe("anonchat integration", () => {
     expect(await prisma.conversation.findUnique({ where: { id: conversationId } })).toBeNull();
     expect(await prisma.anonymousSession.count({ where: { anonymousUserId: storedUser.id } })).toBe(0);
     expect(await prisma.pushSubscription.count({ where: { anonymousUserId: storedUser.id } })).toBe(0);
+    expect(await prisma.pushSubscription.findUnique({ where: { id: sharedPush.id } })).toMatchObject({
+      adminId: admin.id,
+      anonymousUserId: null,
+    });
     expect(await prisma.visitorInsight.count({ where: { anonymousUserId: storedUser.id } })).toBe(0);
 
     const formerSessionRes = await call(app, userJar, "GET", "/conversation");

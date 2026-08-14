@@ -266,5 +266,17 @@ export async function hardDeleteConversation(conversationId: string): Promise<vo
   // Keeping the AnonymousUser row here previously retained exactly the
   // personal metadata an operator would reasonably believe this action
   // had removed.
-  await prisma.anonymousUser.delete({ where: { id: conversation.anonymousUserId } });
+  await prisma.$transaction(async (tx) => {
+    // One browser can share a PushManager endpoint between its admin and
+    // visitor roles. Preserve the admin half instead of letting the user
+    // relation's cascade delete an otherwise-live admin subscription.
+    await tx.pushSubscription.deleteMany({
+      where: { anonymousUserId: conversation.anonymousUserId, adminId: null },
+    });
+    await tx.pushSubscription.updateMany({
+      where: { anonymousUserId: conversation.anonymousUserId, adminId: { not: null } },
+      data: { anonymousUserId: null },
+    });
+    await tx.anonymousUser.delete({ where: { id: conversation.anonymousUserId } });
+  });
 }
