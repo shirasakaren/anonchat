@@ -1,12 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
 import { format } from "date-fns";
-import { ChevronDown, Paperclip } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import type { AdminConversationSummaryDto, ServerWsEvent } from "@anonchat/shared";
-
-/** Sentinel stored in `previews` for an attachment-only last message, so the
- *  render can show a real Paperclip icon instead of baking one into the string. */
-const ATTACHMENT_PREVIEW = "__ATTACHMENT_PREVIEW__";
 import {
   archiveConversation,
   blockConversation,
@@ -17,11 +13,35 @@ import {
   unblockConversation,
   unmuteConversation,
 } from "../../api/admin.js";
-import { decryptMessageText, getConversationKey } from "../../crypto/conversationCrypto.js";
+import { decryptAttachmentMeta, decryptMessageText, getConversationKey } from "../../crypto/conversationCrypto.js";
 import { getAdminMessages } from "../../api/admin.js";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
 import { useRealtimeSocket } from "../../hooks/useRealtimeSocket.js";
 import { setConversationMutedLocally, syncMutedConversationIds } from "./mutedConversations.js";
+import { IconForMime } from "../../components/chat/AttachmentPreview.js";
+
+/** A caption-less attachment (the common case - "send a photo" rarely comes
+ *  with typed text) still has non-null ciphertext content: the composer
+ *  always encrypts `text`, even when it's "". Decrypting that gives back an
+ *  empty string, which used to render as a blank preview line - indistin-
+ *  guishable from "no preview yet" and never showing what was actually
+ *  sent. `kind` distinguishes that case so the row can show a real
+ *  type-specific icon + label instead. */
+type PreviewState =
+  | { kind: "text"; text: string }
+  | { kind: "deleted" }
+  | { kind: "attachment"; mimetype: string; filename: string };
+
+/** Coarse category label to sit next to the icon - GIF called out
+ *  specifically (not lumped into "Photo") since it's visually distinct and
+ *  the most common non-still-image attachment. */
+function attachmentLabel(mimetype: string): string {
+  if (mimetype === "image/gif") return "GIF";
+  if (mimetype.startsWith("image/")) return "Photo";
+  if (mimetype.startsWith("video/")) return "Video";
+  if (mimetype.startsWith("audio/")) return "Audio";
+  return "File";
+}
 
 type StatusFilter = "ALL" | "UNREAD" | "READ" | "ARCHIVED" | "BLOCKED";
 
@@ -50,7 +70,7 @@ function formatMessageTime(iso: string | null): string {
 export function ConversationList({ selectedId, onSelect, refreshToken }: Props) {
   const { identity } = useAdminSession();
   const [conversations, setConversations] = useState<AdminConversationSummaryDto[]>([]);
-  const [previews, setPreviews] = useState<Record<string, string>>({});
+  const [previews, setPreviews] = useState<Record<string, PreviewState>>({});
   const [filter, setFilter] = useState<StatusFilter>("ALL");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -136,18 +156,37 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
     if (!identity) return;
     let cancelled = false;
     (async () => {
-      const updates: Record<string, string> = {};
+      const updates: Record<string, PreviewState> = {};
       for (const conv of conversations) {
         if (previews[conv.id]) continue;
         try {
           const key = getConversationKey(identity, conv.anonymousExchangePublicKey, conv.id);
           const page = await getAdminMessages(conv.id);
           const last = page.messages[page.messages.length - 1];
-          if (last?.content) updates[conv.id] = decryptMessageText(key, last.content);
-          else if (last?.deleted) updates[conv.id] = "Message deleted";
-          else if (last) updates[conv.id] = ATTACHMENT_PREVIEW;
+          if (!last) continue;
+          if (last.deleted) {
+            updates[conv.id] = { kind: "deleted" };
+            continue;
+          }
+          // content is non-null (and decrypts to "") for an attachment-only
+          // message too - the composer always encrypts `text`, even empty -
+          // so an empty decrypt only means "no caption", not "no preview".
+          const text = last.content ? decryptMessageText(key, last.content) : "";
+          const firstAttachment = last.attachments[0];
+          if (text.trim()) {
+            updates[conv.id] = { kind: "text", text };
+          } else if (firstAttachment) {
+            const meta = decryptAttachmentMeta(key, firstAttachment.meta);
+            updates[conv.id] = {
+              kind: "attachment",
+              mimetype: meta?.mimetype ?? "application/octet-stream",
+              filename: meta?.filename ?? "",
+            };
+          } else {
+            updates[conv.id] = { kind: "text", text: "" };
+          }
         } catch {
-          updates[conv.id] = "";
+          updates[conv.id] = { kind: "text", text: "" };
         }
       }
       if (!cancelled && Object.keys(updates).length > 0) {
@@ -279,14 +318,20 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                         let a long preview run its full text under the
                         always-absolutely-positioned chevron button. */}
                     <span className="min-w-0 flex-1 truncate">
-                      {previews[conv.id] === ATTACHMENT_PREVIEW ? (
-                        <span className="inline-flex items-center gap-1 align-middle">
-                          <Paperclip size={11} className="shrink-0" aria-hidden />
-                          Attachment
-                        </span>
-                      ) : (
-                        (previews[conv.id] ?? "…")
-                      )}
+                      {(() => {
+                        const preview = previews[conv.id];
+                        if (!preview) return "…";
+                        if (preview.kind === "deleted") return "Message deleted";
+                        if (preview.kind === "attachment") {
+                          return (
+                            <span className="inline-flex items-center gap-1 align-middle">
+                              <IconForMime mimetype={preview.mimetype} filename={preview.filename} size={11} />
+                              {attachmentLabel(preview.mimetype)}
+                            </span>
+                          );
+                        }
+                        return preview.text || "…";
+                      })()}
                     </span>
                     {/* Right side, below the time: badge and chevron are now
                         ordinary in-flow flex siblings (not absolutely
