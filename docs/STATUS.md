@@ -35,6 +35,19 @@ specific privacy/deployment obligations; see "Known gaps" and
   line, reduce type size for longer labels, and show accent and message colors
   before the light or dark surface swatch.
 
+The production-style localhost preview migrated all four existing profile
+images. Browser verification added a 320 by 240 animated GIF and a 640 by 360
+H.264 MP4, confirmed the large image viewer, confirmed that the GIF loaded as
+an automatically animated image, and confirmed that the video remained paused
+until selected before advancing playback. The media endpoint returned a valid
+206 byte range for video seeking. Both temporary media records, their storage
+objects, the temporary identity, admin session, and fixtures were removed.
+
+All 16 migrations applied to a fresh PostgreSQL 17 database. The full 251-test
+suite passed (21 crypto, 21 shared, 107 server, 102 web), every workspace
+typechecked, lint and Prettier checks passed, and the production build
+completed successfully.
+
 ## Attachment limits and dashboard controls follow-up (2026-08-14)
 
 - Runtime limits moved from environment variables into persisted System
