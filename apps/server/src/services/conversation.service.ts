@@ -260,8 +260,11 @@ export async function hardDeleteConversation(conversationId: string): Promise<vo
     ),
   );
 
-  await prisma.$transaction([
-    prisma.conversation.delete({ where: { id: conversationId } }),
-    prisma.anonymousUser.update({ where: { id: conversation.anonymousUserId }, data: { status: "DELETED" } }),
-  ]);
+  // "Permanent" must erase the identity row, not merely mark it deleted.
+  // Deleting the parent cascades through its conversation, messages, note,
+  // sessions, notification email, push subscriptions, and visitor insight.
+  // Keeping the AnonymousUser row here previously retained exactly the
+  // personal metadata an operator would reasonably believe this action
+  // had removed.
+  await prisma.anonymousUser.delete({ where: { id: conversation.anonymousUserId } });
 }

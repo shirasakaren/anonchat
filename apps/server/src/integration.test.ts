@@ -399,6 +399,48 @@ describe("anonchat integration", () => {
     expect(messagesForB.body.messages).toHaveLength(0);
   });
 
+  it("permanently deletes the anonymous identity and all related personal metadata", async () => {
+    const userJar = newJar();
+    await primeCsrf(app, userJar);
+    const user = makeIdentity();
+    const registerRes = await call(app, userJar, "POST", "/anonymous/register", {
+      signingPublicKey: bytesToBase64url(user.identity.signingPublicKey),
+      exchangePublicKey: bytesToBase64url(user.identity.exchangePublicKey),
+      proof: bytesToBase64url(user.proof),
+    });
+    const conversationId = registerRes.body.conversationId as string;
+    const storedUser = await prisma.anonymousUser.update({
+      where: { publicId: user.identity.publicId },
+      data: { notificationEmail: "erase-me@example.com" },
+    });
+    await prisma.pushSubscription.create({
+      data: {
+        anonymousUserId: storedUser.id,
+        endpoint: `https://push.example/${randomUUID()}`,
+        p256dh: "test-key",
+        auth: "test-auth",
+      },
+    });
+    await prisma.visitorInsight.create({
+      data: {
+        anonymousUserId: storedUser.id,
+        expiresAt: new Date(Date.now() + 86_400_000),
+        userAgent: "integration-test",
+      },
+    });
+
+    const deleteRes = await call(app, adminJar, "DELETE", `/admin/conversations/${conversationId}/permanent`);
+    expect(deleteRes.status).toBe(204);
+    expect(await prisma.anonymousUser.findUnique({ where: { id: storedUser.id } })).toBeNull();
+    expect(await prisma.conversation.findUnique({ where: { id: conversationId } })).toBeNull();
+    expect(await prisma.anonymousSession.count({ where: { anonymousUserId: storedUser.id } })).toBe(0);
+    expect(await prisma.pushSubscription.count({ where: { anonymousUserId: storedUser.id } })).toBe(0);
+    expect(await prisma.visitorInsight.count({ where: { anonymousUserId: storedUser.id } })).toBe(0);
+
+    const formerSessionRes = await call(app, userJar, "GET", "/conversation");
+    expect(formerSessionRes.status).toBe(401);
+  });
+
   it("requires a matching CSRF header on state-changing requests", async () => {
     const jar = newJar();
     await primeCsrf(app, jar);
