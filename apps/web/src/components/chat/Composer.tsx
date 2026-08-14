@@ -8,7 +8,6 @@ import {
   type KeyboardEvent,
 } from "react";
 import clsx from "clsx";
-import EmojiPicker, { EmojiStyle, Theme } from "emoji-picker-react";
 import { X, Paperclip, Smile, File as FileIcon } from "lucide-react";
 import {
   expandEmojiShortcuts,
@@ -19,11 +18,11 @@ import {
 } from "./emojiShortcuts.js";
 import { getCaretCoordinates } from "./caretCoordinates.js";
 import { EmojiShortcutOverlay } from "./EmojiShortcutOverlay.js";
+import { EmojiPicker } from "./emoji/EmojiPicker.js";
 import { justCompletedFreshCodeFence } from "./codeFenceDetection.js";
 import { CodeBlockModal } from "./CodeBlockModal.js";
 import { ExpandableProse } from "./ExpandableProse.js";
 import { renderMessageMarkdown } from "./markdown.js";
-import { useTheme } from "../../context/ThemeContext.js";
 
 /** How many shortcode matches to offer - the overlay scrolls horizontally
  *  (see EmojiShortcutOverlay), so there's no reason to cap this as
@@ -86,7 +85,6 @@ export function Composer({
   const [codeModal, setCodeModal] = useState<{ fenceStart: number; fenceEnd: number } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const pickerWrapperRef = useRef<HTMLDivElement>(null);
-  const { meta } = useTheme();
 
   const suggestions = shortcodeQuery ? searchShortcodes(shortcodeQuery.query, SHORTCODE_SUGGESTION_LIMIT) : [];
 
@@ -128,6 +126,26 @@ export function Composer({
   function updateText(value: string) {
     setText(value);
     onTypingChange?.(value.length > 0);
+  }
+
+  /** Inserts at the cursor (falling back to the end when the textarea
+   *  isn't mounted/focused, e.g. Preview mode) rather than always
+   *  appending - used by the emoji picker button, matching how the
+   *  :shortcode: overlay already inserts via applySuggestion below. */
+  function insertAtCursor(insert: string) {
+    const el = textareaRef.current;
+    if (!el) {
+      updateText(text + insert);
+      return;
+    }
+    const cursor = el.selectionStart ?? text.length;
+    const newValue = text.slice(0, cursor) + insert + text.slice(el.selectionEnd ?? cursor);
+    const newCursor = cursor + insert.length;
+    updateText(newValue);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(newCursor, newCursor);
+    });
   }
 
   /** Re-derives the in-progress ":partial" shortcode (if any) from the
@@ -410,19 +428,10 @@ export function Composer({
           </button>
           {showEmoji && (
             <div className="absolute bottom-full left-0 mb-2 z-10">
-              {/* EmojiStyle.NATIVE renders system emoji glyphs instead of the
-                  library's default CDN-hosted Apple sprite images - those
-                  requests get blocked by this app's img-src 'self' CSP,
-                  which left the picker an empty grid of broken images. */}
               <EmojiPicker
-                emojiStyle={EmojiStyle.NATIVE}
-                theme={meta.variant === "dark" ? Theme.DARK : Theme.LIGHT}
-                width={300}
-                height={380}
-                searchPlaceholder="Search emoji"
-                previewConfig={{ showPreview: true }}
-                onEmojiClick={(emojiData) => {
-                  setText((prev) => prev + emojiData.emoji);
+                onClose={() => setShowEmoji(false)}
+                onSelect={(emoji) => {
+                  insertAtCursor(emoji);
                   setShowEmoji(false);
                   // Switch back to Write so the inserted emoji is actually
                   // visible - clicking this while in Preview would otherwise
