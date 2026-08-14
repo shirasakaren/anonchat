@@ -14,6 +14,41 @@ reviewed. Remaining items are either an optional product roadmap or operator-
 specific privacy/deployment obligations; see "Known gaps" and
 `docs/PRIVACY-TECHNICAL-ASSESSMENT.md`.
 
+## Attachment and document preview follow-up (2026-08-14)
+
+- Selecting, pasting, or dropping attachments returns focus to the existing
+  Tiptap cursor so typing can continue immediately.
+- File selection remains attached to the native input until encryption has
+  started. This fixes Chromium revoking file access before asynchronous reads,
+  which previously made some ZIP and other attachment sends fail before any
+  request reached the server.
+- Browser MIME gaps are filled from encrypted filename extensions for common
+  image, SVG, video, audio, document, archive, and source-code formats. Unknown
+  and binary formats remain sendable and download-only.
+- Images, animated SVG, video, audio, text, code, CSV, Markdown, and DOCX files
+  decrypt and preview automatically. PDF opens in a full local browser viewer.
+- PDF uses the browser's page/search/print/zoom tools. DOCX, Markdown, CSV,
+  HTML, JSX, and other source/text formats use a large themed viewer with local
+  scrolling, zoom, reset-to-top, download, backdrop close, and Escape close.
+- Large text attachments keep their full content in a bounded local scroller.
+  Syntax highlighting falls back to one plain text node above 200,000
+  characters to avoid creating an unbounded highlighted DOM.
+- Code blocks and text/document surfaces now explicitly use theme surface/text
+  tokens instead of inheriting a possibly incompatible message-bubble color.
+- Audio uses a custom themed player with play/pause, seek, time, mute, and
+  volume controls. Video remains directly playable in the message.
+- Multipart sends use XMLHttpRequest for real upload progress because Fetch
+  does not expose upload progress. Local image/video previews are blurred while
+  uploading. Attachment downloads stream into the E2EE decrypt step with their
+  own receiver-side progress state.
+
+Browser verification covered attachment-only sends, ZIP fallback download,
+animated SVG, Markdown, DOCX, PDF, MP3, and MP4 on the production-style
+localhost:3000 preview. The PDF blob frame loaded without CSP errors, the
+custom audio player advanced playback, and all 25 theme text/surface pairs
+used by document previews remained above WCAG AA contrast. The temporary test
+identity and its encrypted files were permanently erased afterward.
+
 ## Product expansion and final audit (2026-08-14)
 
 The following work is implemented on `main` after the original chat-
