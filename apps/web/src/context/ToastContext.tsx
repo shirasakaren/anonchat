@@ -60,7 +60,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 toast.tone === "error"
                   ? "border-[var(--danger-fg)]"
                   : toast.tone === "success"
-                    ? "border-[var(--success-fg)]"
+                    ? "border-[var(--link-fg)]"
                     : "border-[var(--border-strong)]",
               )}
             >
@@ -71,7 +71,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   toast.tone === "error"
                     ? "text-[var(--danger-fg)]"
                     : toast.tone === "success"
-                      ? "text-[var(--success-fg)]"
+                      ? "text-[var(--link-fg)]"
                       : "text-[var(--text-muted)]",
                 )}
                 aria-hidden
