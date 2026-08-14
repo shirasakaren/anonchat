@@ -16,9 +16,22 @@
 export const MAX_CIPHERTEXT_ENVELOPE_BYTES = 600_000;
 
 export const DEFAULT_MAX_MESSAGE_LENGTH = 100_000;
-export const DEFAULT_MAX_ATTACHMENT_SIZE_MB = 25;
+/** Recommended for a self-hosted single-instance deployment. Video gets the
+ * full allowance while smaller media categories use tighter defaults below. */
+export const DEFAULT_MAX_ATTACHMENT_SIZE_MB = 100;
+export const DEFAULT_MAX_IMAGE_ATTACHMENT_SIZE_MB = 20;
+export const DEFAULT_MAX_VIDEO_ATTACHMENT_SIZE_MB = 100;
+export const DEFAULT_MAX_AUDIO_ATTACHMENT_SIZE_MB = 30;
+export const DEFAULT_MAX_DOCUMENT_ATTACHMENT_SIZE_MB = 50;
+export const DEFAULT_MAX_OTHER_ATTACHMENT_SIZE_MB = 25;
 export const DEFAULT_MAX_ATTACHMENTS_PER_MESSAGE = 5;
 export const DEFAULT_MESSAGE_EDIT_WINDOW_MINUTES = 15;
+
+/** Fixed transport safety ceilings. Operators choose lower working limits in
+ * the dashboard; these prevent an invalid database value from creating an
+ * unbounded in-memory multipart upload. */
+export const ABSOLUTE_MAX_ATTACHMENT_SIZE_MB = 250;
+export const ABSOLUTE_MAX_ATTACHMENTS_PER_MESSAGE = 20;
 
 export const DEFAULT_RATE_LIMIT_MESSAGES_PER_MINUTE = 20;
 export const DEFAULT_RATE_LIMIT_REGISTRATIONS_PER_HOUR = 10;

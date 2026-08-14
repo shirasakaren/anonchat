@@ -288,6 +288,28 @@ model SiteSettings {
   visitorInsightsEnabled       Boolean @default(false)
   visitorInsightsRetentionDays Int     @default(30)
 
+  /// Runtime product controls. These belong to the operator dashboard, not
+  /// deployment environment variables. Per-type attachment limits are
+  /// enforced before encryption by the client; the global limit is also
+  /// enforced by the server's multipart parser.
+  maxMessageLength                  Int     @default(100000)
+  maxAttachmentSizeMb               Int     @default(100)
+  maxImageAttachmentSizeMb          Int     @default(20)
+  maxVideoAttachmentSizeMb          Int     @default(100)
+  maxAudioAttachmentSizeMb          Int     @default(30)
+  maxDocumentAttachmentSizeMb       Int     @default(50)
+  maxOtherAttachmentSizeMb          Int     @default(25)
+  maxAttachmentsPerMessage          Int     @default(5)
+  messageEditWindowMinutes          Int     @default(15)
+  rateLimitMessagesPerMinute        Int     @default(20)
+  rateLimitRegistrationsPerHour     Int     @default(10)
+  rateLimitLinkPreviewsPerMinute    Int     @default(20)
+  linkPreviewsEnabled               Boolean @default(true)
+  storeIpAddresses                  Boolean @default(false)
+  visitorGeolocationEnabled         Boolean @default(false)
+  adminDigestMinIntervalMinutes     Int     @default(5)
+  replyEmailMinIntervalMinutes      Int     @default(2)
+
   updatedAt DateTime @updatedAt
 
   @@map("site_settings")

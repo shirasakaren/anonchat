@@ -1,5 +1,23 @@
 import type { PublicKeysInput } from "./common.js";
 
+export type AttachmentLimitCategory = "image" | "video" | "audio" | "document" | "other";
+
+export interface AttachmentSizeLimitsDto {
+  globalMb: number;
+  imageMb: number;
+  videoMb: number;
+  audioMb: number;
+  documentMb: number;
+  otherMb: number;
+}
+
+export interface MessagingLimitsDto {
+  maxMessageLength: number;
+  maxAttachmentsPerMessage: number;
+  messageEditWindowMinutes: number;
+  attachmentSize: AttachmentSizeLimitsDto;
+}
+
 export interface PublicSiteInfoDto {
   onboardingComplete: boolean;
   siteTitle: string;
@@ -14,12 +32,7 @@ export interface PublicSiteInfoDto {
   adminPublicKeys: PublicKeysInput | null;
   presenceEnabled: boolean;
   theme: string;
-  limits: {
-    maxMessageLength: number;
-    maxAttachmentSizeMb: number;
-    maxAttachmentsPerMessage: number;
-    messageEditWindowMinutes: number;
-  };
+  limits: MessagingLimitsDto;
   turnstileSiteKey: string | null;
   /** Null when this server has no VAPID_* configured - Web Push is entirely
    *  unavailable in that case (see docs/ARCHITECTURE.md). */

@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { Base64UrlSchema, PaginationQuerySchema, PublicKeysSchema } from "./common.js";
 import type { ConversationStatus } from "../enums.js";
+import type { MessagingLimitsDto } from "./site.js";
+import { ABSOLUTE_MAX_ATTACHMENT_SIZE_MB, ABSOLUTE_MAX_ATTACHMENTS_PER_MESSAGE } from "../constants.js";
 
 export const UsernameSchema = z
   .string()
@@ -62,6 +64,23 @@ export const SiteSettingsRequestSchema = z.object({
   adminPushEnabled: z.boolean().optional(),
   visitorInsightsEnabled: z.boolean().optional(),
   visitorInsightsRetentionDays: z.coerce.number().int().min(1).max(365).optional(),
+  maxMessageLength: z.coerce.number().int().min(1_000).max(100_000).optional(),
+  maxAttachmentSizeMb: z.coerce.number().int().min(1).max(ABSOLUTE_MAX_ATTACHMENT_SIZE_MB).optional(),
+  maxImageAttachmentSizeMb: z.coerce.number().int().min(1).max(ABSOLUTE_MAX_ATTACHMENT_SIZE_MB).optional(),
+  maxVideoAttachmentSizeMb: z.coerce.number().int().min(1).max(ABSOLUTE_MAX_ATTACHMENT_SIZE_MB).optional(),
+  maxAudioAttachmentSizeMb: z.coerce.number().int().min(1).max(ABSOLUTE_MAX_ATTACHMENT_SIZE_MB).optional(),
+  maxDocumentAttachmentSizeMb: z.coerce.number().int().min(1).max(ABSOLUTE_MAX_ATTACHMENT_SIZE_MB).optional(),
+  maxOtherAttachmentSizeMb: z.coerce.number().int().min(1).max(ABSOLUTE_MAX_ATTACHMENT_SIZE_MB).optional(),
+  maxAttachmentsPerMessage: z.coerce.number().int().min(1).max(ABSOLUTE_MAX_ATTACHMENTS_PER_MESSAGE).optional(),
+  messageEditWindowMinutes: z.coerce.number().int().min(1).max(10_080).optional(),
+  rateLimitMessagesPerMinute: z.coerce.number().int().min(1).max(1_000).optional(),
+  rateLimitRegistrationsPerHour: z.coerce.number().int().min(1).max(10_000).optional(),
+  rateLimitLinkPreviewsPerMinute: z.coerce.number().int().min(1).max(1_000).optional(),
+  linkPreviewsEnabled: z.boolean().optional(),
+  storeIpAddresses: z.boolean().optional(),
+  visitorGeolocationEnabled: z.boolean().optional(),
+  adminDigestMinIntervalMinutes: z.coerce.number().int().min(1).max(1_440).optional(),
+  replyEmailMinIntervalMinutes: z.coerce.number().int().min(1).max(1_440).optional(),
 });
 export type SiteSettingsRequestInput = z.infer<typeof SiteSettingsRequestSchema>;
 
@@ -179,6 +198,13 @@ export interface SiteSettingsDto {
   adminPushEnabled: boolean;
   visitorInsightsEnabled: boolean;
   visitorInsightsRetentionDays: number;
-  visitorIpStorageAvailable: boolean;
-  visitorGeolocationAvailable: boolean;
+  limits: MessagingLimitsDto;
+  rateLimitMessagesPerMinute: number;
+  rateLimitRegistrationsPerHour: number;
+  rateLimitLinkPreviewsPerMinute: number;
+  linkPreviewsEnabled: boolean;
+  storeIpAddresses: boolean;
+  visitorGeolocationEnabled: boolean;
+  adminDigestMinIntervalMinutes: number;
+  replyEmailMinIntervalMinutes: number;
 }
