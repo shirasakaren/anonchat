@@ -1,6 +1,6 @@
 # Project status / handoff
 
-Last updated: 2026-08-13. Read this first if you're picking up this project
+Last updated: 2026-08-14. Read this first if you're picking up this project
 in a new session - it's the durable source of truth for what's done, what's
 verified, and what's next. (Don't rely solely on an in-session task list -
 this file is what's meant to survive across sessions.)
@@ -14,6 +14,38 @@ below), and a full UI/UX + WCAG 2.2 AA pass has since been done and fixed
 too (see "UI/UX and accessibility audit" below). There is no "immediate
 next step" - the project is feature-complete, tested, and reviewed.
 Anything further is a deliberately deferred follow-up (see "Known gaps").
+
+## Chat interaction follow-up (2026-08-14)
+
+The chat experience was re-audited against common Slack, Discord, WhatsApp,
+Zendesk, and Chatwoot interaction patterns. The following follow-up work is
+implemented on `main`:
+
+- Message deletion uses an in-app Delete for me / Delete for everyone /
+  Cancel dialog, with the everyone action styled as destructive.
+- Reactions open in a floating quick-react overlay and expand into the full
+  themed emoji picker.
+- `:shortcode` suggestions follow the textarea caret, show emoji-only results
+  in a horizontally scrollable strip, support Left/Right keyboard selection,
+  and cover the complete bundled emoji dataset (more than 1,900 entries).
+- The custom emoji picker inherits the active Anonchat theme.
+- Long unbroken message content wraps inside its bubble, long inbox previews
+  truncate before the unread/action area, and alias editing uses Cancel for
+  its non-saving action.
+- Markdown preview remains visible beside the editable composer and updates
+  while the user types.
+- Direct GIF URLs and Tenor/GIPHY share links render inline when the preview
+  endpoint resolves an animated GIF.
+- Opening or actively viewing a conversation marks inbound messages read and
+  clears list/navigation unread indicators through the realtime read event.
+- Attachment-only inbox rows show a media-specific icon and label instead of
+  a blank preview.
+- The image viewer closes from the surrounding backdrop and supports
+  click-to-toggle zoom with matching zoom cursors.
+
+Post-follow-up verification: production build and workspace typecheck pass;
+the full test suite passes against a disposable PostgreSQL database (219/219
+tests: 21 crypto, 17 shared, 89 server, 92 web).
 
 ## UI/UX and accessibility audit (2026-08-13)
 
