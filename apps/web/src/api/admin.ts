@@ -15,7 +15,7 @@ import type {
   SiteSettingsDto,
   VisitorInsightDto,
 } from "@anonchat/shared";
-import { api, apiFetch } from "./client.js";
+import { api, apiFetch, apiUpload } from "./client.js";
 import type { OutgoingAttachment } from "./conversation.js";
 import type { PushSubscriptionKeys } from "../push/webPush.js";
 
@@ -153,7 +153,12 @@ export function getAdminMessages(conversationId: string, cursor?: string): Promi
 
 export async function sendAdminMessage(
   conversationId: string,
-  params: { content: EncryptedPayload; replyToId?: string | null; attachments?: OutgoingAttachment[] },
+  params: {
+    content: EncryptedPayload;
+    replyToId?: string | null;
+    attachments?: OutgoingAttachment[];
+    onUploadProgress?: (progress: number) => void;
+  },
 ): Promise<MessageDto> {
   if (!params.attachments || params.attachments.length === 0) {
     return api.post<MessageDto>(`/admin/conversations/${conversationId}/messages`, {
@@ -168,7 +173,7 @@ export async function sendAdminMessage(
     form.append("attachmentMeta", JSON.stringify(attachment.meta));
     form.append("attachment", attachment.blob);
   }
-  return apiFetch<MessageDto>(`/admin/conversations/${conversationId}/messages`, { method: "POST", body: form });
+  return apiUpload<MessageDto>(`/admin/conversations/${conversationId}/messages`, form, params.onUploadProgress);
 }
 
 export function editAdminMessage(

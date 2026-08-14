@@ -104,6 +104,45 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   return json as T;
 }
 
+/** XMLHttpRequest is used only for multipart attachment sends because the
+ *  Fetch API still does not expose upload progress. It follows the same
+ *  cookie, CSRF, error, and revoked-admin-session behavior as apiFetch. */
+export function apiUpload<T>(path: string, body: FormData, onProgress?: (progress: number) => void): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `/api${path}`);
+    xhr.withCredentials = true;
+    const csrf = readCookie(CSRF_COOKIE);
+    if (csrf) xhr.setRequestHeader(CSRF_HEADER, csrf);
+
+    xhr.upload.addEventListener("progress", (event) => {
+      if (event.lengthComputable) onProgress?.(Math.min(1, event.loaded / event.total));
+    });
+    xhr.addEventListener("error", () => reject(new ApiError(0, "NETWORK_ERROR", "Upload failed.")));
+    xhr.addEventListener("abort", () => reject(new ApiError(0, "UPLOAD_ABORTED", "Upload was canceled.")));
+    xhr.addEventListener("load", () => {
+      let json: unknown;
+      try {
+        json = xhr.responseText ? (JSON.parse(xhr.responseText) as unknown) : null;
+      } catch {
+        reject(new ApiError(xhr.status, "INVALID_RESPONSE", "The server returned an invalid response."));
+        return;
+      }
+
+      if (xhr.status < 200 || xhr.status >= 300) {
+        const errorBody = parseErrorPayload(json);
+        if (xhr.status === 401 && path.startsWith("/admin")) onAdminUnauthorized?.();
+        reject(new ApiError(xhr.status, errorBody.code, errorBody.message, errorBody.fields));
+        return;
+      }
+
+      onProgress?.(1);
+      resolve(json as T);
+    });
+    xhr.send(body);
+  });
+}
+
 export const api = {
   get: <T>(path: string) => apiFetch<T>(path),
   post: <T>(path: string, body?: unknown) => apiFetch<T>(path, { method: "POST", body }),

@@ -1,6 +1,6 @@
 import type { EncryptedPayload } from "@anonchat/crypto";
 import type { ConversationDto, ConversationNoteDto, MessageDto, MessagePage, NoteAssetDto } from "@anonchat/shared";
-import { api, apiFetch } from "./client.js";
+import { api, apiFetch, apiUpload } from "./client.js";
 
 export function getConversation(): Promise<ConversationDto> {
   return api.get<ConversationDto>("/conversation");
@@ -19,6 +19,7 @@ export async function sendMessage(params: {
   content: EncryptedPayload;
   replyToId?: string | null;
   attachments?: OutgoingAttachment[];
+  onUploadProgress?: (progress: number) => void;
 }): Promise<MessageDto> {
   if (!params.attachments || params.attachments.length === 0) {
     return api.post<MessageDto>("/conversation/messages", {
@@ -33,7 +34,7 @@ export async function sendMessage(params: {
     form.append("attachmentMeta", JSON.stringify(attachment.meta));
     form.append("attachment", attachment.blob);
   }
-  return apiFetch<MessageDto>("/conversation/messages", { method: "POST", body: form });
+  return apiUpload<MessageDto>("/conversation/messages", form, params.onUploadProgress);
 }
 
 export function editMessage(id: string, content: EncryptedPayload): Promise<MessageDto> {
