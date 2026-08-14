@@ -20,6 +20,8 @@ import { Composer } from "../components/chat/Composer.js";
 import { ConnectionBanner } from "../components/chat/ConnectionBanner.js";
 import { DateSeparator } from "../components/chat/DateSeparator.js";
 import { withDateSeparators } from "../components/chat/dateSeparators.js";
+import { DeleteMessageModal } from "../components/chat/DeleteMessageModal.js";
+import { getLocallyDeletedMessageIds, hideMessageLocally } from "../components/chat/locallyDeletedMessages.js";
 import { MessageBubble } from "../components/chat/MessageBubble.js";
 import { TypingIndicator } from "../components/chat/TypingIndicator.js";
 import { FullScreenLoader } from "../components/common/Loader.js";
@@ -47,6 +49,10 @@ export default function Chat() {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [replyTo, setReplyTo] = useState<DisplayMessage | null>(null);
   const [editing, setEditing] = useState<DisplayMessage | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DisplayMessage | null>(null);
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() =>
+    getLocallyDeletedMessageIds(session.conversationId),
+  );
   const [adminOnline, setAdminOnline] = useState<boolean | null>(null);
   const [adminTyping, setAdminTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -267,8 +273,14 @@ export default function Chat() {
     );
   }
 
-  async function handleDelete(message: DisplayMessage) {
-    if (!confirm("Delete this message? This can't be undone.")) return;
+  function handleDeleteForMe(message: DisplayMessage) {
+    hideMessageLocally(session.conversationId, message.id);
+    setHiddenIds((prev) => new Set(prev).add(message.id));
+    setDeleteTarget(null);
+  }
+
+  async function handleDeleteForEveryone(message: DisplayMessage) {
+    setDeleteTarget(null);
     try {
       await deleteMessage(message.id);
       setMessages((prev) => prev.map((m) => (m.id === message.id ? { ...m, deleted: true, text: "" } : m)));
@@ -286,7 +298,17 @@ export default function Chat() {
     }
   }
 
-  const threadItems = useMemo(() => withDateSeparators(messages), [messages]);
+  // Hiding is filtered in at render time, never by dropping rows from
+  // `messages` itself - that array is the source of truth reply previews
+  // look up against (messages.find(m => m.id === replyToId)), and gets
+  // rebuilt wholesale on every reconnect/refetch, so a locally-hidden
+  // message would just silently reappear next reload if it were removed
+  // from there instead.
+  const visibleMessages = useMemo(
+    () => messages.filter((m) => !hiddenIds.has(m.id)),
+    [messages, hiddenIds],
+  );
+  const threadItems = useMemo(() => withDateSeparators(visibleMessages), [visibleMessages]);
 
   // Only the single most-recently-read own message should show "Read" -
   // find its id once per messages change rather than inside MessageBubble
@@ -357,7 +379,7 @@ export default function Chat() {
                   }
                   onReply={() => setReplyTo(item.message)}
                   onEdit={() => setEditing(item.message)}
-                  onDelete={() => handleDelete(item.message)}
+                  onDelete={() => setDeleteTarget(item.message)}
                   onReact={(emoji) => handleReact(item.message, emoji)}
                   onRetry={() => handleRetry(item.message)}
                 />
@@ -382,6 +404,14 @@ export default function Chat() {
         onSend={handleSend}
         onTypingChange={handleTypingChange}
       />
+
+      {deleteTarget && (
+        <DeleteMessageModal
+          onDeleteForMe={() => handleDeleteForMe(deleteTarget)}
+          onDeleteForEveryone={() => void handleDeleteForEveryone(deleteTarget)}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
     </main>
   );
 }

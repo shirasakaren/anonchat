@@ -28,6 +28,8 @@ import { Composer } from "../../components/chat/Composer.js";
 import { ConnectionBanner } from "../../components/chat/ConnectionBanner.js";
 import { DateSeparator } from "../../components/chat/DateSeparator.js";
 import { withDateSeparators } from "../../components/chat/dateSeparators.js";
+import { DeleteMessageModal } from "../../components/chat/DeleteMessageModal.js";
+import { getLocallyDeletedMessageIds, hideMessageLocally } from "../../components/chat/locallyDeletedMessages.js";
 import { MessageBubble } from "../../components/chat/MessageBubble.js";
 import { TypingIndicator } from "../../components/chat/TypingIndicator.js";
 import { FullScreenLoader } from "../../components/common/Loader.js";
@@ -55,6 +57,8 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   const [loading, setLoading] = useState(true);
   const [replyTo, setReplyTo] = useState<DisplayMessage | null>(null);
   const [editing, setEditing] = useState<DisplayMessage | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DisplayMessage | null>(null);
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => getLocallyDeletedMessageIds(conversationId));
   const [userTyping, setUserTyping] = useState(false);
   const [editingAlias, setEditingAlias] = useState(false);
   const [aliasDraft, setAliasDraft] = useState("");
@@ -136,6 +140,14 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   useEffect(() => {
     load();
   }, [load]);
+
+  // ConversationView is reused (not remounted) across conversations - Inbox
+  // renders it without a `key`, so switching chats only changes this prop.
+  // Re-read the per-conversation local-delete registry whenever it does,
+  // the same way `load()` above re-fetches everything else for the new id.
+  useEffect(() => {
+    setHiddenIds(getLocallyDeletedMessageIds(conversationId));
+  }, [conversationId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -222,7 +234,13 @@ export function ConversationView({ conversationId, onChanged }: Props) {
 
   const { status: wsStatus, send: wsSend } = useRealtimeSocket(handleWsEvent, true, reloadSilently);
 
-  const threadItems = useMemo(() => withDateSeparators(messages), [messages]);
+  // Hiding is filtered in at render time, never by dropping rows from
+  // `messages` itself - that array is the source of truth reply previews
+  // look up against, and fetchConversation() rebuilds it wholesale on every
+  // load/reconnect, so a locally-hidden message would just reappear next
+  // reload if it were removed from there instead.
+  const visibleMessages = useMemo(() => messages.filter((m) => !hiddenIds.has(m.id)), [messages, hiddenIds]);
+  const threadItems = useMemo(() => withDateSeparators(visibleMessages), [visibleMessages]);
 
   // Only the single most-recently-read own (ADMIN) message should show
   // "Read" - computed once per messages change, not per-bubble.
@@ -327,8 +345,14 @@ export function ConversationView({ conversationId, onChanged }: Props) {
     );
   }
 
-  async function handleDelete(message: DisplayMessage) {
-    if (!confirm("Delete this message?")) return;
+  function handleDeleteForMe(message: DisplayMessage) {
+    hideMessageLocally(conversationId, message.id);
+    setHiddenIds((prev) => new Set(prev).add(message.id));
+    setDeleteTarget(null);
+  }
+
+  async function handleDeleteForEveryone(message: DisplayMessage) {
+    setDeleteTarget(null);
     await deleteAdminMessage(conversationId, message.id).catch(() => {});
     setMessages((prev) => prev.map((m) => (m.id === message.id ? { ...m, deleted: true, text: "" } : m)));
   }
@@ -488,7 +512,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
                   }
                   onReply={() => setReplyTo(item.message)}
                   onEdit={() => setEditing(item.message)}
-                  onDelete={() => handleDelete(item.message)}
+                  onDelete={() => setDeleteTarget(item.message)}
                   onReact={(emoji) => handleReact(item.message, emoji)}
                   onRetry={() => handleRetry(item.message)}
                 />
@@ -514,6 +538,14 @@ export function ConversationView({ conversationId, onChanged }: Props) {
         onSend={handleSend}
         onTypingChange={(isTyping) => wsSend({ type: isTyping ? "typing.start" : "typing.stop", conversationId })}
       />
+
+      {deleteTarget && (
+        <DeleteMessageModal
+          onDeleteForMe={() => handleDeleteForMe(deleteTarget)}
+          onDeleteForEveryone={() => void handleDeleteForEveryone(deleteTarget)}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
     </div>
   );
 }
