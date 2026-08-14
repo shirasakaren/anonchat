@@ -28,3 +28,16 @@ export function parseUserAgent(ua: string | null): string {
   }
   return `${browser} on ${os}`;
 }
+
+export type DeviceType = "mobile" | "tablet" | "desktop";
+
+/** Coarse device class for the Sessions page icon - lets an admin tell
+ *  "phone" from "laptop" at a glance instead of reading the full label. */
+export function getDeviceType(ua: string | null): DeviceType {
+  if (!ua) return "desktop";
+  if (/iPad|Tablet(?!.*Mobile)/.test(ua)) return "tablet";
+  // Android tablets drop "Mobile" from the UA string; phones keep it.
+  if (/Android/.test(ua) && !/Mobile/.test(ua)) return "tablet";
+  if (/iPhone|iPod|Android|Mobile/.test(ua)) return "mobile";
+  return "desktop";
+}

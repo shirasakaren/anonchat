@@ -6,6 +6,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { ANON_SESSION_COOKIE, ADMIN_SESSION_COOKIE } from "@anonchat/shared";
 import { prisma } from "../db.js";
 import { loadEnv } from "../env.js";
+import { deviceFingerprint } from "../utils/deviceFingerprint.js";
 
 const ADMIN_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -74,7 +75,32 @@ export async function resolveAnonymousUserFromRequest(request: FastifyRequest) {
   return session.anonymousUser;
 }
 
+/**
+ * Creates a new admin session, first revoking any existing non-revoked
+ * session(s) that fingerprint as the same device (see deviceFingerprint.ts)
+ * - the product requirement is one listed session per device, not a new
+ * row every time the same browser logs in again. Sessions that can't be
+ * confidently matched to a device (missing IP or an unparseable
+ * User-Agent) are left alone rather than merged.
+ */
 export async function createAdminSession(adminId: string, ipAddress: string | null, userAgent: string | null) {
+  const fingerprint = deviceFingerprint(ipAddress, userAgent);
+  if (fingerprint) {
+    const existing = await prisma.adminSession.findMany({
+      where: { adminId, revokedAt: null },
+      select: { id: true, ipAddress: true, userAgent: true },
+    });
+    const staleIds = existing
+      .filter((s) => deviceFingerprint(s.ipAddress, s.userAgent) === fingerprint)
+      .map((s) => s.id);
+    if (staleIds.length > 0) {
+      await prisma.adminSession.updateMany({
+        where: { id: { in: staleIds } },
+        data: { revokedAt: new Date() },
+      });
+    }
+  }
+
   const token = generateSessionToken();
   const session = await prisma.adminSession.create({
     data: {
