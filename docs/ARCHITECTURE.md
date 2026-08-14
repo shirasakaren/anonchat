@@ -84,6 +84,8 @@ Visitor diagnostics are disabled by default and require two independent decision
 
 `STORE_IP_ADDRESSES=true` permits the consented IP to be retained. `VISITOR_GEOLOCATION_PROVIDER=ipwhois` additionally permits a coarse IP lookup through ipwho.is; the default `none` makes no lookup. Each row receives an expiry, an hourly cleanup removes expired rows, visitors can revoke their row immediately, and switching the feature off deletes all rows.
 
+The admin can configure a public privacy-policy URL in Settings. It is linked before identity creation and from the active chat. An operator-authored notice is still required because the application cannot infer the deployer's controller identity, lawful bases, chosen processors, transfer safeguards, or retention decisions. See `docs/PRIVACY-TECHNICAL-ASSESSMENT.md`.
+
 ## Storage abstraction
 
 `StorageAdapter` (`put`/`get`/`delete`) has two implementations: local disk (default, zero config) and an S3-compatible client (works unmodified against AWS S3, Cloudflare R2, Backblaze B2, or self-hosted MinIO by pointing `S3_ENDPOINT` at it). Attachment bytes stored through either adapter are already ciphertext by the time the server sees them.

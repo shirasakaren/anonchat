@@ -106,6 +106,8 @@ pnpm run typecheck
 
 ## Backups
 
+Before production, review the [privacy technical assessment](docs/PRIVACY-TECHNICAL-ASSESSMENT.md) and complete its operator checklist. It separates safeguards implemented in code from controller-specific legal and operational decisions.
+
 Conversations persist indefinitely by design - back up the Postgres volume
 regularly:
 
