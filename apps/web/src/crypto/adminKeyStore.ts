@@ -1,4 +1,5 @@
 import {
+  bytesToBase64url,
   deriveIdentity,
   formatRecoverySecret,
   generateRecoverySecret,
@@ -7,6 +8,7 @@ import {
   wrapSecretWithPassword,
   type Identity,
 } from "@anonchat/crypto";
+import type { PublicKeysInput } from "@anonchat/shared";
 import { getDb } from "./db.js";
 
 /**
@@ -16,6 +18,22 @@ import { getDb } from "./db.js";
  * unwrapped, it lives only in this module's memory for the tab's lifetime.
  */
 let unlockedIdentity: Identity | null = null;
+
+export class AdminKeyMismatchError extends Error {
+  constructor() {
+    super(
+      "This encryption recovery key belongs to a different Anonchat setup. Use the recovery key created for this admin account.",
+    );
+    this.name = "AdminKeyMismatchError";
+  }
+}
+
+export function adminIdentityMatches(identity: Identity, expected: PublicKeysInput): boolean {
+  return (
+    bytesToBase64url(identity.signingPublicKey) === expected.signingPublicKey &&
+    bytesToBase64url(identity.exchangePublicKey) === expected.exchangePublicKey
+  );
+}
 
 export function getUnlockedAdminIdentity(): Identity | null {
   return unlockedIdentity;
@@ -48,7 +66,7 @@ async function cacheAdminSecret(secret: Uint8Array, password: string): Promise<v
 }
 
 /** Unlocks the cached key on this browser using the admin's login password. Throws if the password is wrong. */
-export async function unlockAdminIdentity(password: string): Promise<Identity> {
+export async function unlockAdminIdentity(password: string, expected: PublicKeysInput): Promise<Identity> {
   const db = await getDb();
   const record = await db.get("adminKey", "admin");
   if (!record) throw new Error("No encryption key is cached on this device yet.");
@@ -57,15 +75,30 @@ export async function unlockAdminIdentity(password: string): Promise<Identity> {
     password,
   );
   const identity = deriveIdentity(secret);
+  if (!adminIdentityMatches(identity, expected)) {
+    secret.fill(0);
+    unlockedIdentity = null;
+    throw new AdminKeyMismatchError();
+  }
+  secret.fill(0);
   unlockedIdentity = identity;
   return identity;
 }
 
 /** New-device flow: re-derive from the recovery phrase, then cache it behind this browser's login password. */
-export async function importAdminIdentityFromRecoveryPhrase(phrase: string, password: string): Promise<Identity> {
+export async function importAdminIdentityFromRecoveryPhrase(
+  phrase: string,
+  password: string,
+  expected: PublicKeysInput,
+): Promise<Identity> {
   const secret = parseRecoverySecret(phrase);
   const identity = deriveIdentity(secret);
+  if (!adminIdentityMatches(identity, expected)) {
+    secret.fill(0);
+    throw new AdminKeyMismatchError();
+  }
   await cacheAdminSecret(secret, password);
+  secret.fill(0);
   unlockedIdentity = identity;
   return identity;
 }

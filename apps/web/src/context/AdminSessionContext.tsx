@@ -5,6 +5,7 @@ import { getAdminMe, loginAdmin, logoutAdmin } from "../api/admin.js";
 import { ApiError, setAdminUnauthorizedHandler } from "../api/client.js";
 import {
   getUnlockedAdminIdentity,
+  adminIdentityMatches,
   hasCachedAdminKey,
   importAdminIdentityFromRecoveryPhrase,
   lockAdminIdentity,
@@ -20,6 +21,7 @@ interface AdminSessionContextValue {
    *  a genuinely new device, so UnlockKey should default straight to the
    *  recovery-phrase import flow instead of a password prompt that can only fail. */
   hasCachedKey: boolean;
+  keyIssue: string | null;
   login: (username: string, password: string, totpCode?: string) => Promise<void>;
   unlockKey: (password: string) => Promise<void>;
   importKey: (phrase: string, password: string) => Promise<void>;
@@ -35,6 +37,7 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
   const [identity, setIdentity] = useState<Identity | null>(getUnlockedAdminIdentity());
   const [needsKeyUnlock, setNeedsKeyUnlock] = useState(false);
   const [hasCachedKey, setHasCachedKey] = useState(false);
+  const [keyIssue, setKeyIssue] = useState<string | null>(null);
 
   const refreshAdmin = useCallback(async () => {
     try {
@@ -42,10 +45,18 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
       setAdmin(me);
       setStatus("signed-in");
       const cached = getUnlockedAdminIdentity();
-      if (cached) {
+      if (cached && adminIdentityMatches(cached, me.publicKeys)) {
         setIdentity(cached);
         setNeedsKeyUnlock(false);
+        setKeyIssue(null);
       } else {
+        if (cached) {
+          lockAdminIdentity();
+          setIdentity(null);
+          setKeyIssue(
+            "The encryption key unlocked in this browser belongs to a different Anonchat setup. Import this admin account's recovery key to read messages.",
+          );
+        }
         // Needs unlocking either way: a cached wrapped key just needs this
         // browser's login password re-entered, and NO cached key at all
         // (a genuinely new device) needs the recovery-phrase import flow -
@@ -57,6 +68,7 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
       }
     } catch {
       setAdmin(null);
+      setKeyIssue(null);
       setStatus("signed-out");
     }
   }, []);
@@ -72,10 +84,13 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
       const cached = getUnlockedAdminIdentity();
       if (!cached && (await hasCachedAdminKey())) {
         try {
-          const unlocked = await unlockAdminIdentity(password);
+          const me = await getAdminMe();
+          const unlocked = await unlockAdminIdentity(password, me.publicKeys);
           setIdentity(unlocked);
           setNeedsKeyUnlock(false);
-        } catch {
+          setKeyIssue(null);
+        } catch (error) {
+          setKeyIssue(error instanceof Error ? error.message : "The cached encryption key could not be unlocked.");
           setNeedsKeyUnlock(true);
         }
       }
@@ -84,16 +99,20 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
   );
 
   const unlockKey = useCallback(async (password: string) => {
-    const unlocked = await unlockAdminIdentity(password);
+    if (!admin) throw new Error("The admin session is not ready.");
+    const unlocked = await unlockAdminIdentity(password, admin.publicKeys);
     setIdentity(unlocked);
     setNeedsKeyUnlock(false);
-  }, []);
+    setKeyIssue(null);
+  }, [admin]);
 
   const importKey = useCallback(async (phrase: string, password: string) => {
-    const unlocked = await importAdminIdentityFromRecoveryPhrase(phrase, password);
+    if (!admin) throw new Error("The admin session is not ready.");
+    const unlocked = await importAdminIdentityFromRecoveryPhrase(phrase, password, admin.publicKeys);
     setIdentity(unlocked);
     setNeedsKeyUnlock(false);
-  }, []);
+    setKeyIssue(null);
+  }, [admin]);
 
   // Drop straight to the sign-in screen the moment any /admin/* request
   // comes back 401 - e.g. another device revoked this session from the
@@ -106,6 +125,7 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
       setIdentity(null);
       setAdmin(null);
       setStatus("signed-out");
+      setKeyIssue(null);
     });
     return () => setAdminUnauthorizedHandler(null);
   }, []);
@@ -118,6 +138,7 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
     setIdentity(null);
     setAdmin(null);
     setStatus("signed-out");
+    setKeyIssue(null);
   }, []);
 
   return (
@@ -128,6 +149,7 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
         identity,
         needsKeyUnlock,
         hasCachedKey,
+        keyIssue,
         login,
         unlockKey,
         importKey,

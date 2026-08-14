@@ -13,4 +13,5 @@ export interface DisplayMessage {
   readAt: string | null;
   status: "sent" | "sending" | "failed";
   failureReason?: string;
+  decryptionError?: string;
 }

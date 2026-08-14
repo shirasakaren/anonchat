@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
 
 export default function UnlockKey() {
-  const { unlockKey, importKey, hasCachedKey } = useAdminSession();
+  const { unlockKey, importKey, hasCachedKey, keyIssue } = useAdminSession();
   // A genuinely new device has nothing cached to unlock with a password -
   // default straight to the recovery-phrase import flow instead of a
   // password prompt that can only ever fail here.
@@ -18,8 +18,8 @@ export default function UnlockKey() {
     setError(null);
     try {
       await unlockKey(password);
-    } catch {
-      setError("That password didn't unlock the cached key on this device.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "That password didn't unlock the cached key on this device.");
     } finally {
       setBusy(false);
     }
@@ -31,8 +31,8 @@ export default function UnlockKey() {
     setError(null);
     try {
       await importKey(phrase.trim(), password);
-    } catch {
-      setError("That recovery key doesn't look right.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "That recovery key doesn't look right.");
     } finally {
       setBusy(false);
     }
@@ -44,6 +44,13 @@ export default function UnlockKey() {
       <p className="mb-6 text-center text-sm text-[var(--text-muted)]">
         You're signed in, but this browser needs to unlock your encryption key before it can decrypt conversations.
       </p>
+
+      {keyIssue && (
+        <div className="mb-4 rounded-xl border border-[var(--warning-fg)] bg-[var(--warning-bg)] p-3 text-sm">
+          <p className="font-semibold">This browser has the wrong encryption key</p>
+          <p className="mt-1 text-[var(--text-muted)]">{keyIssue}</p>
+        </div>
+      )}
 
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-raised)] p-6 shadow-sm">
         {mode === "unlock" ? (

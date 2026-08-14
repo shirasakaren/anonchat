@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   decryptAttachmentMeta,
   decryptMessageText,
+  decryptMessageTextWithStatus,
   decryptNoteDocument,
   decryptReaction,
   encryptAttachmentMeta,
@@ -39,11 +40,13 @@ describe("conversationCrypto", () => {
     expect(decryptMessageText(bobKey, payload)).toBe("Hello, this is a test message!");
   });
 
-  it("returns a friendly placeholder instead of throwing on undecryptable content", () => {
+  it("returns an actionable error instead of presenting undecryptable ciphertext as message text", () => {
     const { aliceKey } = makeConversationKeyPair("conv-3");
     const wrongKey = deriveIdentity(generateRecoverySecret()).exchangeSecretKey;
     const payload = encryptMessageText(aliceKey, "secret");
-    expect(decryptMessageText(wrongKey, payload)).toBe("⚠️ Unable to decrypt this message.");
+    const result = decryptMessageTextWithStatus(wrongKey, payload);
+    expect(result.text).toBe("");
+    expect(result.error).toContain("Restore the recovery key");
   });
 
   it("round-trips attachment metadata", () => {

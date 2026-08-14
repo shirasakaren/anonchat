@@ -25,6 +25,14 @@ export interface NoteEnvelope {
   document: unknown;
 }
 
+export interface MessageDecryptionResult {
+  text: string;
+  error: string | null;
+}
+
+export const MESSAGE_DECRYPTION_HELP =
+  "The encrypted data does not match this conversation key. Restore the recovery key that created this identity. If the correct key is already active, the ciphertext is damaged and the sender must resend the message.";
+
 export function getConversationKey(
   myIdentity: Identity,
   theirExchangePublicKeyB64: string,
@@ -42,10 +50,16 @@ export function encryptMessageText(key: Uint8Array, text: string): EncryptedPayl
 }
 
 export function decryptMessageText(key: Uint8Array, payload: EncryptedPayload): string {
+  return decryptMessageTextWithStatus(key, payload).text;
+}
+
+export function decryptMessageTextWithStatus(key: Uint8Array, payload: EncryptedPayload): MessageDecryptionResult {
   try {
-    return decryptJSON<MessageEnvelope>(key, payload).text;
+    const envelope = decryptJSON<MessageEnvelope>(key, payload);
+    if (typeof envelope.text !== "string") throw new Error("Invalid message envelope");
+    return { text: envelope.text, error: null };
   } catch {
-    return "⚠️ Unable to decrypt this message.";
+    return { text: "", error: MESSAGE_DECRYPTION_HELP };
   }
 }
 

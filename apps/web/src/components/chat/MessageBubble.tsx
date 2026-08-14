@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { format } from "date-fns";
-import { SmilePlus, Reply, Pencil, Trash2 } from "lucide-react";
+import { AlertTriangle, SmilePlus, Reply, Pencil, Trash2 } from "lucide-react";
 import { decryptReaction } from "../../crypto/conversationCrypto.js";
 import { renderMessageMarkdown } from "./markdown.js";
 import { AttachmentPreview } from "./AttachmentPreview.js";
@@ -93,11 +93,11 @@ export function MessageBubble({
     setReactionAnchor(null);
   }
 
-  const html = message.deleted ? null : renderMessageMarkdown(message.text);
+  const html = message.deleted || message.decryptionError ? null : renderMessageMarkdown(message.text);
 
   const embedUrls = useMemo(
-    () => (message.deleted ? [] : extractUrls(message.text, MAX_EMBEDS_PER_MESSAGE)),
-    [message.deleted, message.text],
+    () => (message.deleted || message.decryptionError ? [] : extractUrls(message.text, MAX_EMBEDS_PER_MESSAGE)),
+    [message.deleted, message.decryptionError, message.text],
   );
 
   return (
@@ -143,6 +143,14 @@ export function MessageBubble({
         >
           {message.deleted ? (
             <p className="italic opacity-70">Message deleted</p>
+          ) : message.decryptionError ? (
+            <div className="max-w-md" role="alert">
+              <p className="flex items-center gap-1.5 font-semibold">
+                <AlertTriangle size={15} aria-hidden />
+                This message could not be decrypted
+              </p>
+              <p className="mt-1 text-xs leading-relaxed opacity-80">{message.decryptionError}</p>
+            </div>
           ) : (
             <>
               {message.attachments.length > 0 && (
