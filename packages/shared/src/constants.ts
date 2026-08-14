@@ -40,6 +40,14 @@ export const MAX_LINK_PREVIEW_RESPONSE_BYTES = 512_000;
 // it (never truncated - see fetchLinkPreview.ts's readCapped "discard"
 // mode, which refuses to serve a corrupted partial image).
 export const MAX_LINK_PREVIEW_IMAGE_BYTES = 800_000;
+// A separate, larger cap specifically for image/gif responses (both a
+// direct .gif link and a Tenor/Giphy page's og:image, which for both
+// providers is the animated gif itself, not a static thumbnail) - real
+// short animated GIFs routinely exceed MAX_LINK_PREVIEW_IMAGE_BYTES, and
+// that cap is deliberately sized against ordinary OG thumbnails and left
+// alone rather than raised for every image just to accommodate this one
+// content type.
+export const MAX_LINK_PREVIEW_GIF_BYTES = 4_000_000;
 
 export const DEFAULT_PAGE_SIZE = 50;
 export const MAX_PAGE_SIZE = 200;

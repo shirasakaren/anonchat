@@ -9,6 +9,8 @@ import { ExpandableProse } from "./ExpandableProse.js";
 import { extractUrls } from "./embeds/urlExtraction.js";
 import { detectVideoEmbed } from "./embeds/videoEmbedDetection.js";
 import { VideoEmbed } from "./embeds/VideoEmbed.js";
+import { isGifUrl } from "./embeds/gifEmbedDetection.js";
+import { GifEmbed } from "./embeds/GifEmbed.js";
 import { LinkPreviewCard } from "./embeds/LinkPreviewCard.js";
 import type { DisplayMessage } from "./types.js";
 
@@ -136,6 +138,7 @@ export function MessageBubble({
               {embedUrls.length > 0 && (
                 <div className="mt-2 space-y-2">
                   {embedUrls.map((url) => {
+                    if (isGifUrl(url)) return <GifEmbed key={url} url={url} />;
                     const video = detectVideoEmbed(url);
                     return video ? <VideoEmbed key={url} embed={video} /> : <LinkPreviewCard key={url} url={url} />;
                   })}
