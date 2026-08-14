@@ -1,6 +1,7 @@
 {
   "name": "anonchat",
   "private": true,
+  "type": "module",
   "version": "0.0.1",
   "description": "Self-hosted anonymous persistent messaging inbox",
   "license": "MIT",
