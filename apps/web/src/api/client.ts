@@ -38,6 +38,36 @@ export interface RequestOptions {
   isFormData?: boolean;
 }
 
+interface ErrorPayload {
+  code: string;
+  message: string;
+  fields?: { path: string; message: string }[];
+}
+
+function parseErrorPayload(value: unknown): ErrorPayload {
+  const fallback = { code: "UNKNOWN", message: "Something went wrong." };
+  if (typeof value !== "object" || value === null || !("error" in value)) return fallback;
+  const error = value.error;
+  if (typeof error !== "object" || error === null) return fallback;
+  const code = "code" in error && typeof error.code === "string" ? error.code : fallback.code;
+  const message = "message" in error && typeof error.message === "string" ? error.message : fallback.message;
+  const fields =
+    "fields" in error &&
+    Array.isArray(error.fields) &&
+    error.fields.every(
+      (field: unknown) =>
+        typeof field === "object" &&
+        field !== null &&
+        "path" in field &&
+        typeof field.path === "string" &&
+        "message" in field &&
+        typeof field.message === "string",
+    )
+      ? (error.fields as { path: string; message: string }[])
+      : undefined;
+  return { code, message, fields };
+}
+
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const method = options.method ?? "GET";
   const headers: Record<string, string> = {};
@@ -61,10 +91,10 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   }
 
   const text = await res.text();
-  const json = text ? JSON.parse(text) : null;
+  const json: unknown = text ? (JSON.parse(text) as unknown) : null;
 
   if (!res.ok) {
-    const errorBody = json?.error ?? { code: "UNKNOWN", message: "Something went wrong." };
+    const errorBody = parseErrorPayload(json);
     if (res.status === 401 && path.startsWith("/admin") && path !== "/admin/login") {
       onAdminUnauthorized?.();
     }

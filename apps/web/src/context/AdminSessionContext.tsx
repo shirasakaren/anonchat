@@ -62,7 +62,7 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    refreshAdmin();
+    void refreshAdmin();
   }, [refreshAdmin]);
 
   const login = useCallback(

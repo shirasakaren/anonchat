@@ -22,10 +22,14 @@ export function LinkPreviewCard({ url }: { url: string }) {
   useEffect(() => {
     let cancelled = false;
     setState({ kind: "loading" });
-    getLinkPreview(url).then((preview) => {
-      if (cancelled) return;
-      setState(preview ? { kind: "ready", preview } : { kind: "none" });
-    });
+    void getLinkPreview(url)
+      .then((preview) => {
+        if (cancelled) return;
+        setState(preview ? { kind: "ready", preview } : { kind: "none" });
+      })
+      .catch(() => {
+        if (!cancelled) setState({ kind: "none" });
+      });
     return () => {
       cancelled = true;
     };

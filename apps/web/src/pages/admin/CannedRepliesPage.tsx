@@ -20,7 +20,9 @@ export default function CannedRepliesPage() {
   const [error, setError] = useState<string | null>(null);
 
   function load() {
-    listCannedReplies().then(setReplies);
+    void listCannedReplies()
+      .then(setReplies)
+      .catch(() => setReplies([]));
   }
 
   useEffect(() => {

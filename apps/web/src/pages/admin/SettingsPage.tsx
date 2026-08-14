@@ -68,7 +68,7 @@ export default function SettingsPage() {
   const [insightsSaved, setInsightsSaved] = useState(false);
 
   useEffect(() => {
-    getSettings().then((s) => {
+    void getSettings().then((s) => {
       setSettings(s);
       setDisplayName(s.displayName);
       setBio(s.bio);
@@ -88,7 +88,7 @@ export default function SettingsPage() {
     setSoundOn(isSoundEnabled());
     if ("Notification" in window) setNotifPermission(Notification.permission);
     else setNotifPermission("unsupported");
-    getExistingPushSubscription().then((sub) => setPushSubscribed(sub !== null));
+    void getExistingPushSubscription().then((sub) => setPushSubscribed(sub !== null));
   }, [isSoundEnabled]);
 
   if (!settings) return <FullScreenLoader />;

@@ -83,7 +83,7 @@ const SANITIZE_CONFIG = {
 
 /** Discord-like markdown subset, sanitized. Treats all content as untrusted, regardless of E2EE. */
 export function renderMessageMarkdown(raw: string): string {
-  const html = marked.parse(linkify(raw), { async: false }) as string;
+  const html = marked.parse(linkify(raw), { async: false });
   return DOMPurify.sanitize(html, SANITIZE_CONFIG);
 }
 

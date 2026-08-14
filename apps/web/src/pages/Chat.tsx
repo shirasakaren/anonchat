@@ -114,13 +114,14 @@ export default function Chat() {
   useEffect(() => {
     let cancelled = false;
     setLoadingHistory(true);
-    loadAllMessages()
+    void loadAllMessages()
       .then((all) => {
         if (cancelled) return;
         setMessages(all.map(decryptDto));
         const lastAdmin = [...all].reverse().find((m) => m.senderType === "ADMIN");
         if (lastAdmin && !lastAdmin.readAt) markRead(lastAdmin.id).catch(() => {});
       })
+      .catch(() => {})
       .finally(() => {
         if (!cancelled) setLoadingHistory(false);
       });
@@ -198,7 +199,9 @@ export default function Chat() {
   );
 
   const handleReconnected = useCallback(() => {
-    loadAllMessages().then((all) => setMessages(all.map(decryptDto)));
+    void loadAllMessages()
+      .then((all) => setMessages(all.map(decryptDto)))
+      .catch(() => {});
   }, [loadAllMessages, decryptDto]);
 
   const { status: wsStatus, send: wsSend } = useRealtimeSocket(handleWsEvent, true, handleReconnected);

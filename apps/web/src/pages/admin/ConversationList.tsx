@@ -96,10 +96,13 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    listConversations({ status: filter, q: search || undefined })
+    void listConversations({ status: filter, q: search || undefined })
       .then((res) => {
         if (cancelled) return;
         setConversations(res.conversations);
+      })
+      .catch(() => {
+        if (!cancelled) setConversations([]);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -117,9 +120,11 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
   useEffect(() => {
     if (refreshToken === 0 && liveToken === 0) return;
     let cancelled = false;
-    listConversations({ status: filter, q: search || undefined }).then((res) => {
-      if (!cancelled) setConversations(res.conversations);
-    });
+    void listConversations({ status: filter, q: search || undefined })
+      .then((res) => {
+        if (!cancelled) setConversations(res.conversations);
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -153,7 +158,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
   useEffect(() => {
     if (!identity) return;
     let cancelled = false;
-    (async () => {
+    void (async () => {
       const updates: Record<string, PreviewState> = {};
       for (const conv of conversations) {
         if (previews[conv.id]) continue;

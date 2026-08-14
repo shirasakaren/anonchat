@@ -18,7 +18,9 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    listIdentities().then(setIdentities);
+    void listIdentities()
+      .then(setIdentities)
+      .catch(() => setIdentities([]));
   }, []);
 
   async function handleCreate() {

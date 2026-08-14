@@ -55,10 +55,10 @@ export default function Setup() {
       return;
     }
     let cancelled = false;
-    getSiteInfo()
+    void getSiteInfo()
       .then((info) => {
         if (cancelled) return;
-        if (info.onboardingComplete) navigate("/", { replace: true });
+        if (info.onboardingComplete) void navigate("/", { replace: true });
         else setCheckingExisting(false);
       })
       .catch(() => {

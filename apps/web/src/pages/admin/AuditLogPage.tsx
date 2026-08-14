@@ -10,10 +10,12 @@ export default function AuditLogPage() {
   const [cursor, setCursor] = useState<string | null>(null);
 
   useEffect(() => {
-    listAuditLog().then((res) => {
-      setEntries(res.entries);
-      setCursor(res.nextCursor);
-    });
+    void listAuditLog()
+      .then((res) => {
+        setEntries(res.entries);
+        setCursor(res.nextCursor);
+      })
+      .catch(() => setEntries([]));
   }, []);
 
   if (!entries) return <FullScreenLoader />;

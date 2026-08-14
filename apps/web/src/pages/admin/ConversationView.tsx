@@ -150,13 +150,15 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   }, [fetchConversation]);
 
   useEffect(() => {
-    load();
+    void load().catch(() => {});
   }, [load]);
 
   // Fetched once, not per-conversation - canned replies aren't scoped to a
   // single conversation, unlike everything else `load()` re-fetches above.
   useEffect(() => {
-    listCannedReplies().then(setCannedReplies);
+    void listCannedReplies()
+      .then(setCannedReplies)
+      .catch(() => setCannedReplies([]));
   }, []);
 
   // ConversationView is reused (not remounted) across conversations - Inbox

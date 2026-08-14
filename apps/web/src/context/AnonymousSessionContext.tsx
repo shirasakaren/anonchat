@@ -81,7 +81,7 @@ export function AnonymousSessionProvider({ children }: { children: ReactNode }) 
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    void (async () => {
       const activeId = getActiveIdentityId();
       if (!activeId) {
         if (!cancelled) setStatus("needs-identity");

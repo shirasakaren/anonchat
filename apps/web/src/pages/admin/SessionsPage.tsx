@@ -12,7 +12,9 @@ export default function SessionsPage() {
   const [sessions, setSessions] = useState<AdminSessionDto[] | null>(null);
 
   function load() {
-    listAdminSessions().then(setSessions);
+    void listAdminSessions()
+      .then(setSessions)
+      .catch(() => setSessions([]));
   }
 
   useEffect(() => {
