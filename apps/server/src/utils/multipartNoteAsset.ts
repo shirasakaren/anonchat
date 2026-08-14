@@ -12,7 +12,12 @@ export async function parseNoteAssetUpload(
   let buffer: Buffer | null = null;
   try {
     for await (const part of request.parts({
-      limits: { fileSize: maxAttachmentSizeMb * 1024 * 1024 + ENCRYPTED_BLOB_OVERHEAD_BYTES, files: 1, fields: 1, parts: 2 },
+      limits: {
+        fileSize: maxAttachmentSizeMb * 1024 * 1024 + ENCRYPTED_BLOB_OVERHEAD_BYTES,
+        files: 1,
+        fields: 1,
+        parts: 2,
+      },
     })) {
       if (part.type === "file") {
         if (part.fieldname !== "asset" || buffer) throw Errors.badRequest("Malformed note asset upload.");
