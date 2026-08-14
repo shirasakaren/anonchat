@@ -1,5 +1,12 @@
 import type { AttachmentDto, ReactionDto, SenderType } from "@anonchat/shared";
 
+export interface PendingAttachmentPreview {
+  filename: string;
+  mimetype: string;
+  size: number;
+  previewUrl: string | null;
+}
+
 export interface DisplayMessage {
   id: string;
   senderType: SenderType;
@@ -12,6 +19,8 @@ export interface DisplayMessage {
   createdAt: string;
   readAt: string | null;
   status: "sent" | "sending" | "failed";
+  pendingAttachments?: PendingAttachmentPreview[];
+  transferProgress?: number;
   failureReason?: string;
   decryptionError?: string;
 }

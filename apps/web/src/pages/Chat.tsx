@@ -49,6 +49,10 @@ import {
 } from "../crypto/conversationCrypto.js";
 import type { DisplayMessage } from "../components/chat/types.js";
 import { resolveFileMimetype } from "../components/chat/preview/textFileTypes.js";
+import {
+  createPendingAttachmentPreviews,
+  revokePendingAttachmentPreviews,
+} from "../components/chat/PendingAttachmentTransfer.js";
 
 const SharedNoteDrawer = lazy(() => import("../components/note/SharedNoteDrawer.js"));
 
@@ -79,7 +83,26 @@ export default function Chat() {
   );
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const pendingFilesRef = useRef<Map<string, { text: string; files: File[]; replyToId: string | null }>>(new Map());
+  const pendingFilesRef = useRef<
+    Map<
+      string,
+      {
+        text: string;
+        files: File[];
+        replyToId: string | null;
+        previews: NonNullable<DisplayMessage["pendingAttachments"]>;
+      }
+    >
+  >(new Map());
+
+  useEffect(
+    () => () => {
+      for (const pending of pendingFilesRef.current.values()) {
+        revokePendingAttachmentPreviews(pending.previews);
+      }
+    },
+    [],
+  );
 
   const conversationKey = useMemo(
     () => getConversationKey(session.identity, session.adminPublicKeys.exchangePublicKey, session.conversationId),
@@ -242,7 +265,16 @@ export default function Chat() {
       const isFirstUserMessage = !messages.some((m) => m.senderType === "USER");
 
       const payload = encryptMessageText(conversationKey, text);
-      const dto = await sendMessage({ content: payload, replyToId, attachments });
+      const dto = await sendMessage({
+        content: payload,
+        replyToId,
+        attachments,
+        onUploadProgress: (progress) => {
+          setMessages((prev) =>
+            prev.map((message) => (message.id === localId ? { ...message, transferProgress: progress } : message)),
+          );
+        },
+      });
       setMessages((prev) => {
         const withoutOptimistic = prev.filter((m) => m.id !== localId);
         // The WebSocket push for this same message can arrive before this
@@ -258,6 +290,8 @@ export default function Chat() {
       ) {
         setShowNotificationPrompt(true);
       }
+      const pending = pendingFilesRef.current.get(localId);
+      if (pending) revokePendingAttachmentPreviews(pending.previews);
       pendingFilesRef.current.delete(localId);
       draft.clearIfMatches(text);
     } catch (err) {
@@ -294,6 +328,7 @@ export default function Chat() {
 
     const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const replyToId = replyTo?.id ?? null;
+    const pendingAttachments = createPendingAttachmentPreviews(files);
     const optimistic: DisplayMessage = {
       id: localId,
       senderType: "USER",
@@ -306,9 +341,11 @@ export default function Chat() {
       createdAt: new Date().toISOString(),
       readAt: null,
       status: "sending",
+      pendingAttachments,
+      transferProgress: files.length > 0 ? 0 : undefined,
     };
     setMessages((prev) => [...prev, optimistic]);
-    pendingFilesRef.current.set(localId, { text, files, replyToId });
+    pendingFilesRef.current.set(localId, { text, files, replyToId, previews: pendingAttachments });
     setReplyTo(null);
     void performSend(localId, text, files, replyToId);
   }

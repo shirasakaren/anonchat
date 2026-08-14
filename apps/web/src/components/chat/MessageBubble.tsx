@@ -14,6 +14,7 @@ import { GifEmbed } from "./embeds/GifEmbed.js";
 import { LinkPreviewCard } from "./embeds/LinkPreviewCard.js";
 import { ReactionOverlay } from "./ReactionOverlay.js";
 import type { DisplayMessage } from "./types.js";
+import { PendingAttachmentTransfer } from "./PendingAttachmentTransfer.js";
 
 /** Slack/Discord-style: a message can carry a few link embeds/previews,
  *  not an unbounded wall of them if someone pastes a long list of URLs. */
@@ -153,6 +154,12 @@ export function MessageBubble({
             </div>
           ) : (
             <>
+              {message.pendingAttachments && message.pendingAttachments.length > 0 && (
+                <PendingAttachmentTransfer
+                  attachments={message.pendingAttachments}
+                  progress={message.transferProgress}
+                />
+              )}
               {message.attachments.length > 0 && (
                 <div className="mb-2 space-y-2">
                   {message.attachments.map((a) => (

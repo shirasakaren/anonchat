@@ -48,6 +48,10 @@ import {
 } from "../../crypto/conversationCrypto.js";
 import type { DisplayMessage } from "../../components/chat/types.js";
 import { resolveFileMimetype } from "../../components/chat/preview/textFileTypes.js";
+import {
+  createPendingAttachmentPreviews,
+  revokePendingAttachmentPreviews,
+} from "../../components/chat/PendingAttachmentTransfer.js";
 
 const SharedNoteDrawer = lazy(() => import("../../components/note/SharedNoteDrawer.js"));
 
@@ -77,7 +81,24 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   const [incomingNote, setIncomingNote] = useState<ConversationNoteDto | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const pendingRef = useRef<Map<string, { text: string; files: File[]; replyToId: string | null }>>(new Map());
+  const pendingRef = useRef<
+    Map<
+      string,
+      {
+        text: string;
+        files: File[];
+        replyToId: string | null;
+        previews: NonNullable<DisplayMessage["pendingAttachments"]>;
+      }
+    >
+  >(new Map());
+
+  useEffect(
+    () => () => {
+      for (const pending of pendingRef.current.values()) revokePendingAttachmentPreviews(pending.previews);
+    },
+    [],
+  );
 
   const conversationKey = useMemo(() => {
     if (!identity || !conversation) return null;
@@ -303,7 +324,16 @@ export function ConversationView({ conversationId, onChanged }: Props) {
         }),
       );
       const payload = encryptMessageText(conversationKey!, text);
-      const dto = await sendAdminMessage(conversationId, { content: payload, replyToId, attachments });
+      const dto = await sendAdminMessage(conversationId, {
+        content: payload,
+        replyToId,
+        attachments,
+        onUploadProgress: (progress) => {
+          setMessages((prev) =>
+            prev.map((message) => (message.id === localId ? { ...message, transferProgress: progress } : message)),
+          );
+        },
+      });
       setMessages((prev) => {
         const withoutOptimistic = prev.filter((m) => m.id !== localId);
         // The WebSocket push for this same message can arrive before this
@@ -312,6 +342,8 @@ export function ConversationView({ conversationId, onChanged }: Props) {
         if (withoutOptimistic.some((m) => m.id === dto.id)) return withoutOptimistic;
         return [...withoutOptimistic, decryptDto(dto)].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
       });
+      const pending = pendingRef.current.get(localId);
+      if (pending) revokePendingAttachmentPreviews(pending.previews);
       pendingRef.current.delete(localId);
       draft.clearIfMatches(text);
       onChanged();
@@ -349,6 +381,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
 
     const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const replyToId = replyTo?.id ?? null;
+    const pendingAttachments = createPendingAttachmentPreviews(files);
     const optimistic: DisplayMessage = {
       id: localId,
       senderType: "ADMIN",
@@ -361,9 +394,11 @@ export function ConversationView({ conversationId, onChanged }: Props) {
       createdAt: new Date().toISOString(),
       readAt: null,
       status: "sending",
+      pendingAttachments,
+      transferProgress: files.length > 0 ? 0 : undefined,
     };
     setMessages((prev) => [...prev, optimistic]);
-    pendingRef.current.set(localId, { text, files, replyToId });
+    pendingRef.current.set(localId, { text, files, replyToId, previews: pendingAttachments });
     setReplyTo(null);
     void performSend(localId, text, files, replyToId);
   }
