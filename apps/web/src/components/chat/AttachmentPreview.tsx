@@ -20,6 +20,7 @@ import { DocxPreview } from "./preview/DocxPreview.js";
 import { ImageLightbox } from "./preview/ImageLightbox.js";
 import { MarkdownPreview } from "./preview/MarkdownPreview.js";
 import { TextCodePreview } from "./preview/TextCodePreview.js";
+import { ThemedAudioPlayer } from "./preview/ThemedAudioPlayer.js";
 import { detectTextLanguage, DOCX_MIMETYPE, isCsv, isMarkdown, resolveFileMimetype } from "./preview/textFileTypes.js";
 
 function formatBytes(bytes: number): string {
@@ -189,7 +190,7 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
     if (kind === "audio") {
       return (
         <div>
-          <audio src={state.url} controls preload="metadata" className="w-full" />
+          <ThemedAudioPlayer url={state.url} filename={meta.filename} />
           <PreviewFooter filename={meta.filename} size={meta.size} url={state.url} />
         </div>
       );
