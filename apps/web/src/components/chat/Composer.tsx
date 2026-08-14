@@ -394,7 +394,6 @@ export function Composer({
 
   function handleFilePick(e: ChangeEvent<HTMLInputElement>) {
     if (e.target.files) addFiles(Array.from(e.target.files));
-    e.target.value = "";
   }
 
   const overLimit = markdown.length > maxLength;
@@ -480,6 +479,13 @@ export function Composer({
             type="file"
             multiple
             className="hidden"
+            onClick={(event) => {
+              // Reset immediately before opening the next picker so choosing
+              // the same file again still emits change. Clearing in
+              // handleFilePick revoked Chromium's file handle before the
+              // asynchronous encryption read could finish.
+              event.currentTarget.value = "";
+            }}
             onChange={handleFilePick}
           />
           <label
