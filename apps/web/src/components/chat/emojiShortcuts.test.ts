@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   expandEmojiShortcuts,
   findActiveShortcodeQuery,
+  listShortcodes,
   matchCompletedShortcode,
   searchShortcodes,
 } from "./emojiShortcuts.js";
@@ -30,15 +31,21 @@ describe("expandEmojiShortcuts", () => {
   it("handles the +1/-1 aliases", () => {
     expect(expandEmojiShortcuts(":+1: :-1:")).toBe("👍 👎");
   });
+
+  it("expands a shortcode reachable only through the full generated dataset, not a curated alias", () => {
+    // Not one of the hand-picked short aliases - only reachable because
+    // every emoji in the dataset gets its own slug-derived shortcode.
+    expect(expandEmojiShortcuts(":unicorn:")).toBe("🦄");
+  });
 });
 
 describe("searchShortcodes", () => {
   it("matches by prefix", () => {
-    expect(searchShortcodes("so")).toEqual([{ code: "sob", emoji: "😭" }]);
+    expect(searchShortcodes("thinking")).toContainEqual({ code: "thinking", emoji: "🤔" });
   });
 
   it("is case-insensitive", () => {
-    expect(searchShortcodes("JOY")).toEqual([{ code: "joy", emoji: "😂" }]);
+    expect(searchShortcodes("JOY")).toContainEqual({ code: "joy", emoji: "😂" });
   });
 
   it("returns nothing for an empty query", () => {
@@ -46,12 +53,36 @@ describe("searchShortcodes", () => {
   });
 
   it("returns nothing for a query with no matches", () => {
-    expect(searchShortcodes("zzz")).toEqual([]);
+    expect(searchShortcodes("zzzzznotreal")).toEqual([]);
   });
 
   it("caps the result list", () => {
-    // "s" prefixes many shortcodes (smile, smiley, sob, scream, skull, sunglasses)
     expect(searchShortcodes("s", 3).length).toBe(3);
+  });
+
+  it("sorts shorter/closer matches first", () => {
+    const results = searchShortcodes("so", 5);
+    expect(results[0]).toEqual({ code: "sob", emoji: "😭" });
+  });
+
+  // The motivating example: a short, common word like "sad" needs to be
+  // reachable even though no emoji's own dataset slug is literally "sad" -
+  // this only works because CURATED_ALIASES layers "sad" on top of the
+  // generated slug map.
+  it('finds both "sad" and "sunglasses" for a short prefix, WhatsApp-style', () => {
+    const short = searchShortcodes("s", 3);
+    expect(short.map((m) => m.code)).toContain("sad");
+
+    const longer = searchShortcodes("sun", 5);
+    expect(longer.map((m) => m.code)).toContain("sunglasses");
+  });
+});
+
+describe("listShortcodes", () => {
+  it("includes far more than the old hand-picked list - the full dataset", () => {
+    // ~1900 emoji, plus curated aliases that don't collide with their own
+    // slug - comfortably more than the ~30 this used to be capped at.
+    expect(listShortcodes().length).toBeGreaterThan(1900);
   });
 });
 
