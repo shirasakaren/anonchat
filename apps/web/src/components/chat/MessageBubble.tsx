@@ -104,7 +104,13 @@ export function MessageBubble({
 
         <div
           className={clsx(
-            "rounded-2xl px-3.5 py-2 text-sm shadow-sm",
+            // min-w-0: this is a flex item (the row above is `flex`), and a
+            // flex item's default min-width is `auto` - i.e. it refuses to
+            // shrink below its content's intrinsic width. Without this, a
+            // long unbroken string overrides max-w-[80%] entirely instead
+            // of wrapping, since the bubble never gets small enough for
+            // .prose-message's own overflow-wrap to kick in.
+            "min-w-0 rounded-2xl px-3.5 py-2 text-sm shadow-sm",
             isOwn
               ? "bg-[var(--bubble-user)] text-[var(--bubble-user-text)]"
               : "bg-[var(--bubble-admin)] text-[var(--bubble-admin-text)]",

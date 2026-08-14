@@ -175,6 +175,20 @@ select:disabled {
 
 /* ── Message prose ─────────────────────────────────────────────────── */
 
+.prose-message {
+  /* A single long unbroken token (URL, hash, base64 blob) has no natural
+     wrap point - without this the bubble's flex-item content refuses to
+     shrink below that token's intrinsic width and the whole row grows
+     wider than max-w-[80%] instead, pushing the layout into a horizontal
+     scrollbar. `word-break` is the legacy fallback for browsers that
+     don't honor overflow-wrap on inherited-but-not-directly-set elements.
+     Inherited onto every descendant (p, li, headers) - `pre`/code blocks
+     are unaffected since `white-space: pre` there means there's never a
+     wrap opportunity for this to act on. */
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
 .prose-message a {
   /* Links render on the message bubble's own background (user or admin),
      which is a different color per-theme and not guaranteed to contrast
