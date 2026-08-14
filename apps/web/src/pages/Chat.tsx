@@ -298,7 +298,11 @@ export default function Chat() {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === localId
-            ? { ...m, status: "failed", failureReason: err instanceof ApiError ? err.message : "Failed to send" }
+            ? {
+                ...m,
+                status: "failed",
+                failureReason: err instanceof Error ? err.message : "Failed to send",
+              }
             : m,
         ),
       );
