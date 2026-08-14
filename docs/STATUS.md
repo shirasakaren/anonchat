@@ -23,9 +23,19 @@ specific privacy/deployment obligations; see "Known gaps" and
   instead of embedding video-sized data URLs in PostgreSQL. Public media URLs
   are immutable, and video responses support byte ranges for playback and
   seeking.
-- GIFs animate immediately when the visitor profile opens. Videos wait for a
-  clear play action. Selecting an image or GIF opens the existing large image
-  viewer with backdrop close, click zoom, wheel zoom, pan, reset, and download.
+- GIFs animate immediately when the visitor profile opens. Videos stay paused
+  as thumbnail tiles with a theme-colored play control. Selecting a video in
+  either the visitor profile or admin media manager opens a full-screen player;
+  playback never starts inside the compact profile grid. Selecting an image or
+  GIF opens the large image viewer with backdrop close, click zoom, wheel zoom,
+  pan, reset, and download.
+- Admins can drag profile media into a new grid slot. The server validates the
+  complete order, stores sequential positions in one transaction, and returns
+  the same order to the public profile. Failed saves restore the prior order and
+  show an error toast.
+- The visitor header profile control is now a toggle. Selecting the avatar or
+  name while the profile panel is open closes it and persists that preference
+  for the browser session; selecting it again reopens the panel.
 - A shared renderer keeps the visitor gallery and admin upload preview
   consistent. The existing dashboard image and video limits also apply to
   profile media.
@@ -42,6 +52,16 @@ an automatically animated image, and confirmed that the video remained paused
 until selected before advancing playback. The media endpoint returned a valid
 206 byte range for video seeking. Both temporary media records, their storage
 objects, the temporary identity, admin session, and fixtures were removed.
+
+The full-screen video follow-up was also exercised against the existing MP4.
+The compact tile stayed paused without native controls, its centered play
+control inherited the active pink theme, and selecting it opened a 1152 pixel
+wide player that streamed successfully through a 206 response. Clicking empty
+backdrop space closed the player. The profile trigger closed and reopened the
+left panel, and a reversed six-item media order appeared identically in admin
+and public API responses before the original order was restored. The temporary
+identity, admin verification session, browser sessions, and screenshots were
+removed afterward.
 
 All 16 migrations applied to a fresh PostgreSQL 17 database. The full 251-test
 suite passed (21 crypto, 21 shared, 107 server, 102 web), every workspace
