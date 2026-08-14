@@ -178,6 +178,7 @@ select:disabled {
 
 .prose-message pre {
   background: var(--surface-muted);
+  color: var(--text);
   border-radius: 0.5rem;
   padding: 0.5rem 0.75rem;
   overflow-x: auto;
@@ -194,6 +195,7 @@ select:disabled {
   border-radius: 0.5rem;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  color: var(--text);
 }
 
 .prose-message .code-block-wrapper pre {
@@ -232,6 +234,10 @@ select:disabled {
 .prose-message code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.875em;
+}
+
+.prose-message :not(pre) > code {
+  color: var(--text);
 }
 
 /* ── Syntax highlighting (highlight.js output) ───────────────────────

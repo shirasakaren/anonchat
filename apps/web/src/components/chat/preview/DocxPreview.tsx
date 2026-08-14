@@ -77,7 +77,7 @@ export function DocxPreview({ bytes }: Props) {
   }
   return (
     <div
-      className="prose-message max-h-96 overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-sm"
+      className="prose-message max-h-96 overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[var(--text)]"
       dangerouslySetInnerHTML={{ __html: state.html }}
     />
   );

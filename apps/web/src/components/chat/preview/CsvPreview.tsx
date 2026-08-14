@@ -88,7 +88,7 @@ export function CsvPreview({ bytes }: Props) {
   const body = rows.slice(1);
 
   return (
-    <div className="max-h-96 overflow-auto rounded-lg border border-[var(--border)]">
+    <div className="max-h-96 overflow-auto rounded-lg border border-[var(--border)] text-[var(--text)]">
       <table className="w-full border-collapse text-xs">
         <thead className="sticky top-0 bg-[var(--surface-muted)]">
           <tr>

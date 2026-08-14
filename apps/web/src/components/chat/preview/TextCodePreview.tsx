@@ -50,7 +50,7 @@ export function TextCodePreview({ bytes, language }: Props) {
       <pre
         ref={contentRef}
         className={clsx(
-          "prose-message m-0 overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-xs",
+          "prose-message m-0 overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-xs text-[var(--text)]",
           clamped && "overflow-hidden",
         )}
         style={clamped ? { maxHeight: COLLAPSED_MAX_HEIGHT_PX } : undefined}
