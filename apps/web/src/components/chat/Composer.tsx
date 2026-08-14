@@ -280,6 +280,13 @@ export function Composer({
       }));
       return [...prev, ...additions];
     });
+
+    // The native file chooser moves focus away from the editor. Restore the
+    // existing Tiptap selection after React has rendered the attachment
+    // chips so the person can keep typing without another click. The same
+    // behavior also makes drag/drop and pasted files consistently return to
+    // the message field.
+    requestAnimationFrame(() => editor?.commands.focus());
   }
 
   function removeFile(index: number) {
