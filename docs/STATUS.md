@@ -5,6 +5,34 @@ in a new session - it's the durable source of truth for what's done, what's
 verified, and what's next. (Don't rely solely on an in-session task list -
 this file is what's meant to survive across sessions.)
 
+## Editor Enter semantics and .docx preview (2026-08-15)
+
+- The composer sends on Enter from light text (plain paragraphs, including
+  bold/italic/inline code marks). Headings, code blocks, lists, and
+  blockquotes keep Enter as a new line; Shift+Enter inserts a line break
+  anywhere outside code blocks and lists. Cmd/Ctrl+Enter always sends.
+- Per-line formatting is isolated Notion-style across the composer, shared
+  note, and canned reply editors: heading Enter exits to one clean paragraph
+  (no redundant empty block, no mark dragging), paragraph Enter in the note
+  and canned editors starts a fresh unmarked line.
+- Inline `code` inherits the bubble's own text color with a subtle
+  currentColor tint - page-level --text made it invisible on white visitor
+  bubbles in dark themes. Code block highlighting tokens use the
+  contrast-audited --link-fg; common fence aliases (js, ts, py, ...)
+  resolve to registered languages.
+- .docx previews render paginated white pages via docx-preview (margins,
+  tables, colored text, and page breaks stay true to the document) instead
+  of the flattened mammoth HTML conversion. The rendered DOM gets the same
+  hardening pass as message markdown (safe links only, no scripts). Legacy
+  .doc still falls back to download.
+
+Browser verification: smart Enter (send on light text, newline in heavy
+blocks), Shift+Enter, inline code contrast on the sent bubble, and a
+generated .docx (heading, bold/italic, red text, table, explicit page
+break -> two white pages) were all exercised in headless Chromium against
+the production-style :3000 preview. All 116 web tests pass; typecheck and
+lint clean.
+
 ## Where things stand
 
 The requested feature set is built, the full stack has been exercised in a
