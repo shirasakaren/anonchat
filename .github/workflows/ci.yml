@@ -267,7 +267,11 @@ jobs:
 
       - name: Verify image structure
         run: |
-          docker inspect anonchat:ci-test --format '{{.Config.User}}' | grep -q anonchat
+          # The entrypoint runs as root to fix root-owned volume mounts, then
+          # drops to the anonchat user via su-exec - verify both pieces.
+          docker run --rm --entrypoint sh anonchat:ci-test -c 'command -v su-exec' | grep -q su-exec
+          docker run --rm --entrypoint sh anonchat:ci-test -c 'grep -q "exec su-exec anonchat" /app/docker-entrypoint.sh'
+          docker run --rm --entrypoint sh anonchat:ci-test -c 'id anonchat'
 
       - name: Lint Dockerfile
         uses: hadolint/hadolint-action@32c6895df40d4c982b0de822c4c8536908def4d8 # v3

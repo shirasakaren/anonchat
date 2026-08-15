@@ -53,7 +53,10 @@ RUN node_modules/.bin/prisma generate --schema=prisma/schema.prisma
 # runtime: minimal final image
 # ---------------------------------------------------------------------------
 FROM node:24-alpine AS runtime
-RUN apk add --no-cache curl \
+# su-exec lets the entrypoint fix root-owned volume mounts at startup and
+# then drop back to the unprivileged app user (the official postgres image
+# pattern).
+RUN apk add --no-cache curl su-exec \
   && addgroup -g 1001 anonchat \
   && adduser -D -u 1001 -G anonchat anonchat
 WORKDIR /app
@@ -71,7 +74,6 @@ RUN chmod +x /app/docker-entrypoint.sh \
   && mkdir -p /app/data/uploads \
   && chown -R anonchat:anonchat /app
 
-USER anonchat
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
