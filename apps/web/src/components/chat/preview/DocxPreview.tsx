@@ -29,13 +29,15 @@ const RENDER_OPTIONS = {
 
 /**
  * docx-preview builds the preview with DOM APIs, but the document itself is
- * attacker-controllable content (a .docx is just a zip of XML). This pass
- * applies the same discipline as message markdown: links open safely in a
- * new tab and only http(s)/mailto survives, and any script/event attributes
- * are dropped outright.
+ * attacker-controllable content (a .docx is just a zip of XML - and
+ * altChunk entries can embed HTML). This pass runs while the rendered tree
+ * is still detached (nothing executes or loads off-DOM), applying the same
+ * discipline as message markdown: script/style/embed nodes and event
+ * attributes are dropped outright, and links open safely in a new tab with
+ * only http(s)/mailto surviving.
  */
 function hardenRenderedDocument(container: HTMLElement): void {
-  for (const el of Array.from(container.querySelectorAll("script, style, iframe, object, embed, link"))) el.remove();
+  for (const el of Array.from(container.querySelectorAll("script, style, iframe, object, embed, link, form"))) el.remove();
   for (const el of Array.from(container.querySelectorAll<HTMLElement>("*"))) {
     for (const attr of Array.from(el.attributes)) {
       if (attr.name.startsWith("on")) el.removeAttribute(attr.name);
@@ -73,9 +75,15 @@ export function DocxPreview({ bytes, fullScreen = false }: Props) {
     // not as part of the app's main bundle.
     import("docx-preview")
       .then(async (docx) => {
-        container.replaceChildren();
-        await docx.renderAsync(bytes, container, undefined, RENDER_OPTIONS);
-        hardenRenderedDocument(container);
+        // Render into a detached tree first: document XML is untrusted, and
+        // anything executable it could produce (scripts, event handlers,
+        // iframes, javascript: links) must never touch the live DOM.
+        // hardenRenderedDocument strips those while the nodes are still
+        // detached, and only the cleaned nodes get moved into view.
+        const detached = document.createElement("div");
+        await docx.renderAsync(bytes, detached, undefined, RENDER_OPTIONS);
+        hardenRenderedDocument(detached);
+        container.replaceChildren(...Array.from(detached.childNodes));
         if (!cancelled) setState({ kind: "ready" });
       })
       .catch(() => {
