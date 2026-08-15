@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeEndpoint } from "./storage/s3Storage.js";
 
 const boolFromEnv = z
   .string()
@@ -83,6 +84,15 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     if (missing.length > 0) {
       // eslint-disable-next-line no-console
       console.error(`s3 storage requires: ${missing.join(", ")}`);
+      process.exit(1);
+    }
+    // Fail fast on a remote endpoint without an explicit scheme instead of
+    // surfacing it as a runtime error on the first upload.
+    try {
+      normalizeEndpoint(parsed.data.S3_ENDPOINT);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error((err as Error).message);
       process.exit(1);
     }
   }

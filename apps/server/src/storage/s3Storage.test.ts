@@ -31,13 +31,22 @@ const notFound = Object.assign(new Error("NotFound"), {
 });
 
 describe("normalizeEndpoint", () => {
-  it("prepends http:// to scheme-less endpoints", () => {
+  it("prepends http:// to scheme-less internal endpoints", () => {
     expect(normalizeEndpoint("minio.railway.internal:9000")).toBe("http://minio.railway.internal:9000");
+    expect(normalizeEndpoint("minio:9000")).toBe("http://minio:9000");
+    expect(normalizeEndpoint("localhost:9000")).toBe("http://localhost:9000");
+    expect(normalizeEndpoint("192.168.1.10:9000")).toBe("http://192.168.1.10:9000");
+    expect(normalizeEndpoint("10.0.0.5:9000")).toBe("http://10.0.0.5:9000");
   });
 
   it("keeps scheme-qualified endpoints untouched", () => {
     expect(normalizeEndpoint("https://s3.eu-central-1.amazonaws.com")).toBe("https://s3.eu-central-1.amazonaws.com");
     expect(normalizeEndpoint("http://localhost:9000")).toBe("http://localhost:9000");
+  });
+
+  it("rejects scheme-less remote endpoints instead of downgrading to plaintext", () => {
+    expect(() => normalizeEndpoint("s3.eu-central-1.amazonaws.com")).toThrow(/explicit scheme/);
+    expect(() => normalizeEndpoint("backblaze.example.com:9000")).toThrow(/explicit scheme/);
   });
 
   it("passes undefined through", () => {

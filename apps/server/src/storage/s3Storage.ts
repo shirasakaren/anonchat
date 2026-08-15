@@ -22,10 +22,51 @@ interface S3ErrorLike {
   $metadata?: { httpStatusCode?: number };
 }
 
-/** Ensures the endpoint carries a scheme; S3-compatible endpoints are plain HTTP. */
+/**
+ * True for hosts that are only reachable on a private network: loopback,
+ * RFC 1918/ULA/link-local addresses, mDNS-style names, and bare service
+ * aliases (docker compose, Kubernetes, Railway private networking).
+ */
+function isInternalHost(hostname: string): boolean {
+  const h = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (h === "localhost" || h.endsWith(".localhost")) return true;
+  if (h === "internal" || h.endsWith(".internal") || h.endsWith(".local")) return true;
+  if (!h.includes(".")) return true;
+  const ipv4 = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (ipv4) {
+    const [a, b] = [Number(ipv4[1]), Number(ipv4[2])];
+    return (
+      a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)
+    );
+  }
+  if (h.includes(":")) {
+    // IPv6: loopback ::1, ULA fc00::/7, link-local fe80::/10
+    return h === "::1" || /^f[cd]/.test(h) || /^fe[89ab]/.test(h);
+  }
+  return false;
+}
+
+/**
+ * Ensures the endpoint carries a scheme. Scheme-less endpoints are accepted
+ * only for internal hosts (MinIO on a private network and the like), where
+ * plain HTTP is the norm; remote hosts must state their scheme explicitly so
+ * a TLS-capable endpoint can never be silently downgraded to plaintext.
+ */
 export function normalizeEndpoint(endpoint: string | undefined): string | undefined {
   if (!endpoint) return endpoint;
-  return endpoint.includes("://") ? endpoint : `http://${endpoint}`;
+  if (endpoint.includes("://")) return endpoint;
+  let hostname: string;
+  try {
+    hostname = new URL(`http://${endpoint}`).hostname;
+  } catch {
+    throw new Error(`S3_ENDPOINT "${endpoint}" is not a valid host:port endpoint`);
+  }
+  if (!isInternalHost(hostname)) {
+    throw new Error(
+      `S3_ENDPOINT "${endpoint}" must include an explicit scheme (http:// or https://) for non-internal hosts`,
+    );
+  }
+  return `http://${endpoint}`;
 }
 
 /** True when a bucket lookup failed because the bucket does not exist. */
