@@ -9,16 +9,15 @@ Everything required to run is wired automatically when the template deploys:
 
 - `DATABASE_URL` points at the provisioned Postgres over Railway's private
   network (`${{Postgres.DATABASE_URL}}`)
-- A Minio object-storage service is provisioned on the private network and
-  wired to the app via the `S3_*` variables; the app creates its bucket
-  automatically on first use (Minio's persistent volume is mounted at
-  `/data`)
 - `SESSION_SECRET` is generated on deploy with a template variable function
 - `PUBLIC_URL` is derived from the generated `*.up.railway.app` domain
 - `TRUST_PROXY` is enabled (the app sits behind Railway's proxy)
-- The image's built-in `/health` endpoint is used as the healthcheck
+- A persistent volume is mounted at `/app/data/uploads` for attachment
+  storage; the image's built-in `/health` endpoint is used as the
+  healthcheck
 - Database migrations run automatically on every start via
-  `docker-entrypoint.sh` (`prisma migrate deploy`)
+  `docker-entrypoint.sh` (`prisma migrate deploy`), which also fixes the
+  uploads volume ownership before dropping to the unprivileged app user
 
 ## One-click deploy (recommended)
 
@@ -31,10 +30,10 @@ Everything required to run is wired automatically when the template deploys:
 
 - Attach a custom domain (Railway manages TLS automatically), then the
   `PUBLIC_URL` reference updates on the next deploy.
-- Attachment storage ships as the template's Minio service. To use
-  Cloudflare R2, AWS S3, or any other S3-compatible provider instead, set
+- Attachment storage defaults to the local volume (`local` driver). To use
+  Cloudflare R2, AWS S3, MinIO, or any other S3-compatible provider, set
   the `S3_*` variables on the `anonchat` service to the provider's
-  credentials (and delete the Minio service if you don't need it).
+  credentials.
 - Email digests and Web Push are optional; see
   [`.env.example`](../../.env.example) for the variables.
 

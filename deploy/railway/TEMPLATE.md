@@ -11,16 +11,13 @@ real-time replies, and moderation tools.
 This template provisions the complete stack in one click:
 
 - **anonchat** - the app, pulled from the official Docker image
-  (`shirasakaren/anonchat:latest`), with a `/health` healthcheck
+  (`shirasakaren/anonchat:latest`), with a persistent volume at
+  `/app/data/uploads` for attachment storage and a `/health` healthcheck
 - **Postgres** - a managed PostgreSQL database on Railway's private network,
   wired to the app automatically; migrations run on every start
-- **Minio** - S3-compatible object storage for attachments on the private
-  network, with a persistent volume at `/data`; the app connects to it
-  automatically and creates the bucket on first use
 
-Everything is configured for you: the database URL, object storage
-credentials, a freshly generated session secret, the public URL, and proxy
-settings. No variables to fill in.
+Everything is configured for you: the database URL, a freshly generated
+session secret, the public URL, and proxy settings. No variables to fill in.
 
 ## Why Deploy
 
@@ -46,10 +43,9 @@ settings. No variables to fill in.
 
 - **PostgreSQL** - provisioned by this template and connected over Railway's
   private network
-- **Object storage (Minio)** - provisioned by this template with a persistent
-  volume at `/data`; the `anonchat` service creates its bucket automatically.
-  AWS S3, Cloudflare R2, Backblaze B2, or any S3-compatible provider can
-  replace it by updating the `S3_*` variables
+- **Persistent volume** - attached at `/app/data/uploads` for attachment
+  storage; AWS S3, Cloudflare R2, MinIO, or any S3-compatible provider can
+  replace it by setting the `S3_*` variables
 - **A public domain** - a `*.up.railway.app` domain is generated
   automatically; attach a custom domain at any time
 
@@ -65,8 +61,8 @@ start chatting; you reply from the admin dashboard.
 ## Optional configuration
 
 - Attach a custom domain - `PUBLIC_URL` updates automatically
-- Replace Minio with AWS S3, Cloudflare R2, or another S3-compatible
-  provider by updating the `S3_*` variables on the `anonchat` service
+- Switch attachment storage to AWS S3, Cloudflare R2, MinIO, or another
+  S3-compatible provider with the `S3_*` variables on the `anonchat` service
 - Enable email digests (`EMAIL_DRIVER=smtp` or `resend`) and Web Push
   (`VAPID_*`) - see the `.env.example` in the
   [repository](https://github.com/shirasakaren/anonchat)
