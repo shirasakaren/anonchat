@@ -37,7 +37,8 @@ const RENDER_OPTIONS = {
  * only http(s)/mailto surviving.
  */
 function hardenRenderedDocument(container: HTMLElement): void {
-  for (const el of Array.from(container.querySelectorAll("script, style, iframe, object, embed, link, form"))) el.remove();
+  for (const el of Array.from(container.querySelectorAll("script, style, iframe, object, embed, link, form")))
+    el.remove();
   for (const el of Array.from(container.querySelectorAll<HTMLElement>("*"))) {
     for (const attr of Array.from(el.attributes)) {
       if (attr.name.startsWith("on")) el.removeAttribute(attr.name);
@@ -96,9 +97,7 @@ export function DocxPreview({ bytes, fullScreen = false }: Props) {
 
   return (
     <div className="relative w-full min-w-0 max-w-full">
-      {state.kind === "loading" && (
-        <p className="p-3 text-xs text-[var(--text-muted)]">Rendering document…</p>
-      )}
+      {state.kind === "loading" && <p className="p-3 text-xs text-[var(--text-muted)]">Rendering document…</p>}
       {state.kind === "error" && (
         <p className="p-3 text-xs text-[var(--danger-fg)]">Couldn't render a preview of this document.</p>
       )}

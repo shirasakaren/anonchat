@@ -38,7 +38,10 @@ function dropRedundantEmptyBlock(editor: Editor): void {
   if (next?.type.name === "paragraph" && next.content.size === 0) {
     if (!editor.chain().joinForward().run()) {
       const start = $from.after();
-      editor.chain().deleteRange({ from: start, to: start + next.nodeSize }).run();
+      editor
+        .chain()
+        .deleteRange({ from: start, to: start + next.nodeSize })
+        .run();
     }
   } else if (previous?.type.name === "paragraph" && previous.content.size === 0) {
     editor.commands.joinBackward();

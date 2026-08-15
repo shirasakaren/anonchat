@@ -36,11 +36,7 @@ function typeEnter(editor: Editor) {
   } else if (editor.isActive("codeBlock")) {
     const { from, to } = editor.state.selection;
     editor.chain().focus().insertContentAt({ from, to }, editor.schema.text("\n")).run();
-  } else if (
-    !editor.isActive("bulletList") &&
-    !editor.isActive("orderedList") &&
-    !editor.isActive("blockquote")
-  ) {
+  } else if (!editor.isActive("bulletList") && !editor.isActive("orderedList") && !editor.isActive("blockquote")) {
     // Composer sends on Enter from light text; handleSend clears the editor.
     editor.commands.clearContent(true);
   }
