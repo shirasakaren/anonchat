@@ -151,6 +151,51 @@ jobs:
           sbom: true
 
   # ─────────────────────────────────────────────────────────────
+  # Build and push multi-platform Docker image to Docker Hub
+  # (shirasakaren/anonchat) — :latest, :commit-sha, :timestamp
+  # ─────────────────────────────────────────────────────────────
+  dockerhub:
+    name: "Push to Docker Hub"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: version
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU for multi-platform builds
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log into Docker Hub
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata for Docker Hub
+        id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+        with:
+          images: ${{ vars.DOCKERHUB_USERNAME }}/anonchat
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=,format=short
+            type=raw,value={{date 'YYYYMMDD-HHmmss'}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─────────────────────────────────────────────────────────────
   # Sign container image with cosign (keyless)
   # ─────────────────────────────────────────────────────────────
   sign:
@@ -216,6 +261,12 @@ jobs:
             echo "docker pull ghcr.io/${{ env.IMAGE_NAME }}:${{ needs.version.outputs.version }}"
             echo "docker pull ghcr.io/${{ env.IMAGE_NAME }}:latest"
             echo "\`\`\`"
+            echo ""
+            echo "## Docker Hub"
+            echo ""
+            echo "\`\`\`"
+            echo "docker pull ${{ vars.DOCKERHUB_USERNAME }}/anonchat:latest"
+            echo "\`\`\`"
           } > CHANGELOG.md
 
       - name: Create tag and GitHub Release
@@ -237,7 +288,7 @@ jobs:
     name: "CD complete"
     runs-on: ubuntu-latest
     timeout-minutes: 1
-    needs: [version, docker, sign, release]
+    needs: [version, docker, dockerhub, sign, release]
     if: always()
     steps:
       - name: Publish summary
@@ -249,5 +300,6 @@ jobs:
             echo "|----------|-----------|"
             echo "| Docker Image | \`ghcr.io/${{ env.IMAGE_NAME }}:${{ needs.version.outputs.version }}\` |"
             echo "| Docker Image (latest) | \`ghcr.io/${{ env.IMAGE_NAME }}:latest\` |"
+            echo "| Docker Hub | \`${{ vars.DOCKERHUB_USERNAME }}/anonchat:latest\` |"
             echo "| GitHub Release | [v${{ needs.version.outputs.version }}](${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ needs.version.outputs.version }}) |"
           } >> $GITHUB_STEP_SUMMARY
