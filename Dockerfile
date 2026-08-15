@@ -70,10 +70,12 @@ COPY --from=deploy /deployed /app
 COPY --from=build /repo/apps/web/dist /app/web-dist
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 
+# /app stays root-owned so the app user can't replace the root-executed
+# entrypoint; only the data directory (uploads volume) is app-writable.
 RUN chmod +x /app/docker-entrypoint.sh \
   && mkdir -p /app/data/uploads \
-  && chown -R anonchat:anonchat /app \
-  && chown root:root /app/docker-entrypoint.sh
+  && chown -R anonchat:anonchat /app/data \
+  && chown root:root /app /app/docker-entrypoint.sh
 
 EXPOSE 3000
 

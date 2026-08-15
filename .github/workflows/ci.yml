@@ -272,6 +272,9 @@ jobs:
           docker run --rm --entrypoint sh anonchat:ci-test -c 'command -v su-exec' | grep -q su-exec
           docker run --rm --entrypoint sh anonchat:ci-test -c 'grep -q "exec su-exec anonchat" /app/docker-entrypoint.sh'
           docker run --rm --entrypoint sh anonchat:ci-test -c 'id anonchat'
+          # /app must be root-owned (only /app/data is app-writable) so the
+          # root-executed entrypoint can't be swapped out by the app user.
+          docker run --rm --entrypoint sh anonchat:ci-test -c 'test "$(stat -c %U /app)" = root'
 
       - name: Lint Dockerfile
         uses: hadolint/hadolint-action@32c6895df40d4c982b0de822c4c8536908def4d8 # v3
