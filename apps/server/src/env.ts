@@ -79,9 +79,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   // name always has a default, so it's never missing here.
   const s3Requested = parsed.data.STORAGE_DRIVER === "s3" || !!parsed.data.S3_ENDPOINT;
   if (s3Requested) {
-    const missing = ["S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY"].filter(
-      (key) => !parsed.data[key as keyof Env],
-    );
+    const missing = ["S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY"].filter((key) => !parsed.data[key as keyof Env]);
     if (missing.length > 0) {
       // eslint-disable-next-line no-console
       console.error(`s3 storage requires: ${missing.join(", ")}`);

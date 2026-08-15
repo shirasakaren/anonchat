@@ -32,9 +32,7 @@ function isNotFound(err: unknown): boolean {
 function isAlreadyOwned(err: unknown): boolean {
   const e = err as S3ErrorLike;
   return (
-    e?.name === "BucketAlreadyOwnedByYou" ||
-    e?.name === "BucketAlreadyExists" ||
-    e?.$metadata?.httpStatusCode === 409
+    e?.name === "BucketAlreadyOwnedByYou" || e?.name === "BucketAlreadyExists" || e?.$metadata?.httpStatusCode === 409
   );
 }
 
