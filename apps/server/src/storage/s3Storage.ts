@@ -22,6 +22,12 @@ interface S3ErrorLike {
   $metadata?: { httpStatusCode?: number };
 }
 
+/** Ensures the endpoint carries a scheme; S3-compatible endpoints are plain HTTP. */
+export function normalizeEndpoint(endpoint: string | undefined): string | undefined {
+  if (!endpoint) return endpoint;
+  return endpoint.includes("://") ? endpoint : `http://${endpoint}`;
+}
+
 /** True when a bucket lookup failed because the bucket does not exist. */
 function isNotFound(err: unknown): boolean {
   const e = err as S3ErrorLike;
@@ -52,7 +58,11 @@ export class S3StorageAdapter implements StorageAdapter {
       client ??
       new S3Client({
         region: options.region,
-        endpoint: options.endpoint,
+        // The SDK requires a scheme. Endpoints may arrive scheme-less (for
+        // example "minio.railway.internal:9000") because some PaaS runtimes
+        // rewrite only scheme-qualified http:// URLs, so platform templates
+        // deliberately omit the scheme.
+        endpoint: normalizeEndpoint(options.endpoint),
         forcePathStyle: options.forcePathStyle,
         credentials: {
           accessKeyId: options.accessKeyId,

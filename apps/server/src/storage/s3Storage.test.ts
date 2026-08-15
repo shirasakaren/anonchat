@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { S3Client } from "@aws-sdk/client-s3";
-import { S3StorageAdapter, type S3StorageOptions } from "./s3Storage.js";
+import { S3StorageAdapter, normalizeEndpoint, type S3StorageOptions } from "./s3Storage.js";
 
 /** Minimal fake of the S3Client surface the adapter uses. */
 function fakeClient(handlers: Record<string, () => Promise<unknown>>) {
@@ -28,6 +28,21 @@ const options: S3StorageOptions = {
 const notFound = Object.assign(new Error("NotFound"), {
   name: "NotFound",
   $metadata: { httpStatusCode: 404 },
+});
+
+describe("normalizeEndpoint", () => {
+  it("prepends http:// to scheme-less endpoints", () => {
+    expect(normalizeEndpoint("minio.railway.internal:9000")).toBe("http://minio.railway.internal:9000");
+  });
+
+  it("keeps scheme-qualified endpoints untouched", () => {
+    expect(normalizeEndpoint("https://s3.eu-central-1.amazonaws.com")).toBe("https://s3.eu-central-1.amazonaws.com");
+    expect(normalizeEndpoint("http://localhost:9000")).toBe("http://localhost:9000");
+  });
+
+  it("passes undefined through", () => {
+    expect(normalizeEndpoint(undefined)).toBeUndefined();
+  });
 });
 
 describe("S3StorageAdapter bucket lifecycle", () => {
