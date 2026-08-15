@@ -1,4 +1,11 @@
-import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  CreateBucketCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadBucketCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import type { StorageAdapter } from "./types.js";
 
 export interface S3StorageOptions {
@@ -10,25 +17,73 @@ export interface S3StorageOptions {
   forcePathStyle: boolean;
 }
 
-/** Works unmodified against AWS S3, Cloudflare R2, Backblaze B2, or MinIO. */
+interface S3ErrorLike {
+  name?: string;
+  $metadata?: { httpStatusCode?: number };
+}
+
+/** True when a bucket lookup failed because the bucket does not exist. */
+function isNotFound(err: unknown): boolean {
+  const e = err as S3ErrorLike;
+  return e?.name === "NotFound" || e?.name === "NoSuchBucket" || e?.$metadata?.httpStatusCode === 404;
+}
+
+/** True when a create raced another client and the bucket already exists. */
+function isAlreadyOwned(err: unknown): boolean {
+  const e = err as S3ErrorLike;
+  return (
+    e?.name === "BucketAlreadyOwnedByYou" ||
+    e?.name === "BucketAlreadyExists" ||
+    e?.$metadata?.httpStatusCode === 409
+  );
+}
+
+/**
+ * Works unmodified against AWS S3, Cloudflare R2, Backblaze B2, or MinIO.
+ * The bucket is created lazily before the first operation, so pointing this
+ * adapter at an empty MinIO or a fresh bucket name just works.
+ */
 export class S3StorageAdapter implements StorageAdapter {
   private readonly client: S3Client;
   private readonly bucket: string;
+  private ready?: Promise<void>;
 
-  constructor(options: S3StorageOptions) {
+  constructor(options: S3StorageOptions, client?: S3Client) {
     this.bucket = options.bucket;
-    this.client = new S3Client({
-      region: options.region,
-      endpoint: options.endpoint,
-      forcePathStyle: options.forcePathStyle,
-      credentials: {
-        accessKeyId: options.accessKeyId,
-        secretAccessKey: options.secretAccessKey,
-      },
-    });
+    this.client =
+      client ??
+      new S3Client({
+        region: options.region,
+        endpoint: options.endpoint,
+        forcePathStyle: options.forcePathStyle,
+        credentials: {
+          accessKeyId: options.accessKeyId,
+          secretAccessKey: options.secretAccessKey,
+        },
+      });
+  }
+
+  /** Shared by every operation so concurrent first writes race the create once. */
+  private ensureReady(): Promise<void> {
+    return (this.ready ??= this.ensureBucket());
+  }
+
+  private async ensureBucket(): Promise<void> {
+    try {
+      await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
+    } catch (err) {
+      if (!isNotFound(err)) throw err;
+      try {
+        await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
+      } catch (createErr) {
+        // Another replica (or a previous crashed start) won the race.
+        if (!isAlreadyOwned(createErr)) throw createErr;
+      }
+    }
   }
 
   async put(key: string, data: Buffer): Promise<void> {
+    await this.ensureReady();
     await this.client.send(
       new PutObjectCommand({
         Bucket: this.bucket,
@@ -40,6 +95,7 @@ export class S3StorageAdapter implements StorageAdapter {
   }
 
   async get(key: string): Promise<Buffer> {
+    await this.ensureReady();
     const result = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
     const chunks: Buffer[] = [];
     for await (const chunk of result.Body as AsyncIterable<Buffer>) {
@@ -49,6 +105,7 @@ export class S3StorageAdapter implements StorageAdapter {
   }
 
   async delete(key: string): Promise<void> {
+    await this.ensureReady();
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }
 }

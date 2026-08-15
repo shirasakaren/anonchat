@@ -15,12 +15,19 @@ const EnvSchema = z.object({
   PUBLIC_URL: z.string().url().default("http://localhost:3000"),
   TRUST_PROXY: boolFromEnv,
 
+  // "local" (default, no extra setup - files live on disk under UPLOAD_DIR)
+  // or "s3" (works with AWS S3, Cloudflare R2, MinIO, Backblaze B2, or any
+  // S3-compatible endpoint). Setting S3_ENDPOINT alone also selects the s3
+  // driver - platform templates wire object storage with references, so they
+  // can't carry a separate flag.
   STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
   UPLOAD_DIR: z.string().default("./data/uploads"),
 
+  // Only used when the s3 driver is active. S3_BUCKET defaults to "anonchat"
+  // and is created automatically if it doesn't exist yet.
   S3_ENDPOINT: z.string().optional(),
   S3_REGION: z.string().default("auto"),
-  S3_BUCKET: z.string().optional(),
+  S3_BUCKET: z.string().default("anonchat"),
   S3_ACCESS_KEY_ID: z.string().optional(),
   S3_SECRET_ACCESS_KEY: z.string().optional(),
   S3_FORCE_PATH_STYLE: boolFromEnv,
@@ -67,13 +74,17 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     console.error(`Invalid environment configuration:\n${issues}`);
     process.exit(1);
   }
-  if (parsed.data.STORAGE_DRIVER === "s3") {
-    const missing = ["S3_BUCKET", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY"].filter(
+  // S3_ENDPOINT alone opts into the s3 driver (see storage/index.ts), so
+  // validate the credentials whenever either signal is present. The bucket
+  // name always has a default, so it's never missing here.
+  const s3Requested = parsed.data.STORAGE_DRIVER === "s3" || !!parsed.data.S3_ENDPOINT;
+  if (s3Requested) {
+    const missing = ["S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY"].filter(
       (key) => !parsed.data[key as keyof Env],
     );
     if (missing.length > 0) {
       // eslint-disable-next-line no-console
-      console.error(`STORAGE_DRIVER=s3 requires: ${missing.join(", ")}`);
+      console.error(`s3 storage requires: ${missing.join(", ")}`);
       process.exit(1);
     }
   }
