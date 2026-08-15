@@ -3,6 +3,9 @@ import type { CannedReplyDto } from "@anonchat/shared";
 import { createCannedReply, deleteCannedReply, listCannedReplies, updateCannedReply } from "../../api/admin.js";
 import { ApiError } from "../../api/client.js";
 import { FullScreenLoader } from "../../components/common/Loader.js";
+import { CannedReplyEditor } from "../../components/admin/CannedReplyEditor.js";
+import { ExpandableProse } from "../../components/chat/ExpandableProse.js";
+import { renderMessageMarkdown } from "../../components/chat/markdown.js";
 
 /** Titles double as the "/name" typed in the composer to trigger a
  *  template, so they can't contain spaces - auto-format as the admin types
@@ -33,6 +36,7 @@ export default function CannedRepliesPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!title.trim() || !body.trim()) return;
     setError(null);
     try {
       if (editingId) {
@@ -84,19 +88,13 @@ export default function CannedRepliesPage() {
               Type <code>/{title || "template-name"}</code> in the composer to use this template.
             </p>
           </div>
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder="Reply text (markdown supported)"
-            required
-            rows={3}
-            className="w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
-          />
+          <CannedReplyEditor value={body} onChange={setBody} />
           {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
           <div className="flex gap-2">
             <button
               type="submit"
-              className="rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)]"
+              disabled={!title.trim() || !body.trim()}
+              className="rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
             >
               {editingId ? "Update" : "Add"}
             </button>
@@ -126,11 +124,13 @@ export default function CannedRepliesPage() {
             {replies.map((reply) => (
               <div key={reply.id} className="rounded-xl border border-[var(--border)] p-4">
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">{reply.title}</p>
-                    <p className="mt-1 text-sm text-[var(--text-muted)]">{reply.body}</p>
+                    <div className="mt-2 text-sm text-[var(--text-muted)]">
+                      <ExpandableProse html={renderMessageMarkdown(reply.body)} clamp={false} />
+                    </div>
                   </div>
-                  <div className="flex gap-2 text-xs">
+                  <div className="ml-3 flex shrink-0 gap-2 text-xs">
                     <button
                       type="button"
                       onClick={() => startEdit(reply)}

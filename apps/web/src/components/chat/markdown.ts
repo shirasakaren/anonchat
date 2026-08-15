@@ -14,6 +14,29 @@ function linkify(raw: string): string {
 
 const renderer = new marked.Renderer();
 
+// Common shorthand aliases for the curated language set. highlight.js'
+// language ids are the canonical ones registered in codeLanguages.ts; the
+// aliases people actually type in fenced blocks (```js, ```ts, …) resolve
+// to those so syntax highlighting isn't silently skipped.
+const LANGUAGE_ALIASES: Record<string, string> = {
+  js: "javascript",
+  jsx: "javascript",
+  ts: "typescript",
+  tsx: "typescript",
+  sh: "bash",
+  shell: "bash",
+  zsh: "bash",
+  py: "python",
+  rb: "ruby",
+  golang: "go",
+  html: "xml",
+  htm: "xml",
+  yml: "yaml",
+  kt: "kotlin",
+  rs: "rust",
+  cs: "csharp",
+};
+
 // Overrides marked's default `code` rendering to run the fenced block's
 // content through highlight.js first. highlight.js escapes the source
 // itself before wrapping it in `hljs-*` spans, so `result.value` is already
@@ -23,7 +46,8 @@ renderer.code = ({ text, lang }: Tokens.Code): string => {
   const hljs = ensureLanguagesRegistered();
   const code = text.replace(/\n$/, "");
   const requested = (lang || "").trim().split(/\s+/)[0]?.toLowerCase();
-  const known = requested && hljs.getLanguage(requested) ? requested : null;
+  const canonical = requested ? (LANGUAGE_ALIASES[requested] ?? requested) : undefined;
+  const known = canonical && hljs.getLanguage(canonical) ? canonical : null;
   const highlighted = known ? hljs.highlight(code, { language: known, ignoreIllegals: true }).value : escapeHtml(code);
   const id = known ?? "plaintext";
   // The human-readable label (languageLabel) is looked up client-side from

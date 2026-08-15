@@ -28,6 +28,8 @@ import { CannedReplySlashOverlay } from "./CannedReplySlashOverlay.js";
 import { EmojiPicker } from "./emoji/EmojiPicker.js";
 import { maxAttachmentSizeMbForFile } from "./preview/textFileTypes.js";
 import { useToast } from "../../context/ToastContext.js";
+import { CodeBlockWithCopy } from "../editor/CodeBlockWithCopy.js";
+import { IsolatedHeading } from "../editor/IsolatedHeading.js";
 
 const SHORTCODE_SUGGESTION_LIMIT = 30;
 const OVERLAY_GAP_PX = 8;
@@ -145,9 +147,13 @@ export function Composer({
       immediatelyRender: false,
       extensions: [
         StarterKit.configure({
-          link: { openOnClick: false, autolink: true },
-          codeBlock: { enableTabIndentation: true, tabSize: 2 },
+          // markdownLinks enables the `[text](url)` input rule; it defaults
+          // to false in Tiptap 3 even though the Markdown extension is used.
+          link: { openOnClick: false, autolink: true, markdownLinks: true },
+          codeBlock: false,
         }),
+        CodeBlockWithCopy.configure({ enableTabIndentation: true, tabSize: 2 }),
+        IsolatedHeading,
         Markdown,
         Placeholder.configure({ placeholder: "Type a message…" }),
       ],
@@ -392,11 +398,8 @@ export function Composer({
         return;
       }
     }
-    if (e.key === "Enter" && editor?.isActive("heading")) {
-      e.preventDefault();
-      editor.chain().focus().enter().setParagraph().run();
-      return;
-    }
+    // Heading/paragraph Enter is handled by the IsolatedHeading extension's
+    // keyboard shortcut, which keeps each line's formatting isolated.
     if (e.key === "Enter" && editor?.isActive("codeBlock")) {
       if (e.metaKey || e.ctrlKey) {
         e.preventDefault();
@@ -404,7 +407,7 @@ export function Composer({
       }
       return;
     }
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       handleSend();
     }

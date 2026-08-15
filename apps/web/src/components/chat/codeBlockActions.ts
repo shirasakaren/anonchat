@@ -4,7 +4,7 @@ import { languageLabel } from "./codeLanguages.js";
  *  trick for non-secure-context deployments (Clipboard API requires HTTPS
  *  or localhost, and this app is meant to be self-hostable over plain
  *  HTTP too). */
-async function copyText(text: string): Promise<boolean> {
+export async function copyText(text: string): Promise<boolean> {
   try {
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(text);

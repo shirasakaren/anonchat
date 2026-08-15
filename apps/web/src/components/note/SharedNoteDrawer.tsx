@@ -35,6 +35,8 @@ import {
   toBlobPart,
 } from "../../crypto/conversationCrypto.js";
 import { NoteAssetLoaderContext, NoteAssetNode } from "./NoteAssetNode.js";
+import { CodeBlockWithCopy } from "../editor/CodeBlockWithCopy.js";
+import { IsolatedHeading } from "../editor/IsolatedHeading.js";
 
 const EMPTY_DOCUMENT: JSONContent = { type: "doc", content: [{ type: "paragraph" }] };
 
@@ -135,7 +137,9 @@ export default function SharedNoteDrawer({
     {
       immediatelyRender: false,
       extensions: [
-        StarterKit.configure({ link: { openOnClick: false, autolink: true } }),
+        StarterKit.configure({ link: { openOnClick: false, autolink: true, markdownLinks: true }, codeBlock: false }),
+        CodeBlockWithCopy.configure({ enableTabIndentation: true, tabSize: 2 }),
+        IsolatedHeading,
         Placeholder.configure({ placeholder: "Write anything…" }),
         NoteAssetNode,
       ],

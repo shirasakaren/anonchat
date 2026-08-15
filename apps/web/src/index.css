@@ -258,7 +258,11 @@ select:disabled {
 .prose-message .hljs-literal,
 .prose-message .hljs-type,
 .prose-message .hljs-doctag {
-  color: var(--color-accent-600);
+  /* --link-fg is the contrast-audited accent variant; --color-accent-600
+     itself drops below 3:1 against --surface-muted in several dark themes
+     (ocean-dark, amethyst-dark, midnight, ...), which made keywords
+     invisible against the code block background. */
+  color: var(--link-fg);
   font-weight: 600;
 }
 
@@ -281,7 +285,7 @@ select:disabled {
 .prose-message .hljs-section,
 .prose-message .hljs-selector-id,
 .prose-message .hljs-selector-class {
-  color: var(--color-accent-600);
+  color: var(--link-fg);
   font-weight: 600;
 }
 
@@ -383,6 +387,61 @@ select:disabled {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+/* Editable fenced code block shared by message, canned-reply, and note
+   editors. The header is outside the editable code content, so its copy
+   control stays usable without moving the text selection. */
+.rich-editor-code-block {
+  margin-block: 0.45rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  background: var(--surface-muted);
+  color: var(--text);
+}
+
+.rich-editor-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  padding: 0.3rem 0.625rem;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.rich-editor-code-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 0.3rem;
+  padding: 0.15rem 0.4rem;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.rich-editor-code-copy:hover {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.composer-editor-content .rich-editor-code-block pre,
+.note-editor-content .rich-editor-code-block pre,
+.canned-reply-editor-content .rich-editor-code-block pre {
+  margin: 0;
+  overflow-x: auto;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0.65rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8rem;
+}
+
 .composer-editor-content p.is-editor-empty:first-child::before {
   float: left;
   height: 0;
@@ -474,6 +533,77 @@ select:disabled {
 
 .note-asset {
   margin-block: 0.8rem;
+}
+
+/* Canned replies use the same in-place block editing model as chat and
+   private notes. Keep this surface roomy enough to edit a template while
+   containing long replies within the settings page. */
+.canned-reply-editor-content {
+  min-height: 7rem;
+  max-height: 22rem;
+  overflow: auto;
+  padding: 0.75rem;
+  color: var(--text);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  outline: none;
+  overflow-wrap: anywhere;
+}
+
+.canned-reply-editor-content > * + * {
+  margin-top: 0.55rem;
+}
+
+.canned-reply-editor-content h1 {
+  font-size: 1.45rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.canned-reply-editor-content h2 {
+  font-size: 1.2rem;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.canned-reply-editor-content h3 {
+  font-size: 1rem;
+  line-height: 1.3;
+  font-weight: 650;
+}
+
+.canned-reply-editor-content ul,
+.canned-reply-editor-content ol {
+  padding-left: 1.4rem;
+}
+
+.canned-reply-editor-content ul {
+  list-style: disc;
+}
+
+.canned-reply-editor-content ol {
+  list-style: decimal;
+}
+
+.canned-reply-editor-content blockquote {
+  border-left: 3px solid var(--border-strong);
+  padding-left: 0.75rem;
+  color: var(--text-muted);
+}
+
+.canned-reply-editor-content code:not(pre code) {
+  border-radius: 0.3rem;
+  background: var(--surface-muted);
+  padding: 0.1rem 0.3rem;
+  font-size: 0.86em;
+}
+
+.canned-reply-editor-content p.is-editor-empty:first-child::before {
+  float: left;
+  height: 0;
+  color: var(--text-muted);
+  content: attr(data-placeholder);
+  pointer-events: none;
 }
 
 .prose-message h1,
