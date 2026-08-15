@@ -2,7 +2,7 @@
 import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { afterEach, describe, expect, it } from "vitest";
-import { exitHeadingToParagraph, IsolatedHeading } from "./IsolatedHeading.js";
+import { enterCleanLine, exitHeadingToParagraph, IsolatedHeading } from "./IsolatedHeading.js";
 
 let editor: Editor | null = null;
 
@@ -80,5 +80,42 @@ describe("isolated headings", () => {
     expect(exitHeadingToParagraph(activeEditor)).toBe(true);
     expect(activeEditor.getJSON().content?.map((node) => node.type)).toEqual(["heading", "paragraph", "paragraph"]);
     expect(activeEditor.state.doc.textContent).toBe("Titlenext");
+  });
+});
+
+describe("clean paragraph lines", () => {
+  it("starts a fresh unmarked line after Enter at the end of a paragraph", () => {
+    const element = document.createElement("div");
+    document.body.appendChild(element);
+    const activeEditor = new Editor({
+      element,
+      extensions: [StarterKit, IsolatedHeading],
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [{ type: "text", marks: [{ type: "bold" }], text: "bold text" }],
+          },
+        ],
+      },
+    });
+    editor = activeEditor;
+    activeEditor.commands.setTextSelection(10); // end of "bold text"
+
+    expect(enterCleanLine(activeEditor)).toBe(true);
+    expect(activeEditor.getJSON()).toEqual({
+      type: "doc",
+      content: [
+        { type: "paragraph", content: [{ type: "text", marks: [{ type: "bold" }], text: "bold text" }] },
+        { type: "paragraph" },
+      ],
+    });
+    expect(activeEditor.isActive("bold")).toBe(false);
+
+    // New text typed on the fresh line stays unmarked.
+    activeEditor.commands.insertContentAt(activeEditor.state.selection.from, activeEditor.schema.text("plain"));
+    const marks = activeEditor.state.doc.content.content[1].content.firstChild?.marks ?? [];
+    expect(marks).toHaveLength(0);
   });
 });

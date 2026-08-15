@@ -237,7 +237,15 @@ select:disabled {
 }
 
 .prose-message :not(pre) > code {
-  color: var(--text);
+  /* Inline `code` sits on the bubble's own background: inherit the bubble's
+     text color (page-level --text is white in dark themes, which turned
+     invisible on the white visitor bubble) and add a faint currentColor
+     tint so inline code reads as code without shouting - the same
+     theme-agnostic mix the code block header/copy button already use. */
+  color: inherit;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  border-radius: 0.3rem;
+  padding: 0.08rem 0.3rem;
 }
 
 /* ── Syntax highlighting (highlight.js output) ───────────────────────
@@ -630,4 +638,33 @@ select:disabled {
 
 .prose-message h3 {
   font-size: 1.05em;
+}
+
+/* ── Paginated .docx preview (docx-preview output) ────────────────────
+   The library lays the document out into one <section.docx> per page with
+   the file's own margins. Style the pages like the PDF viewer: white
+   paper on the themed surface, faint shadow, centered column. */
+.docx-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
+.docx-preview > .docx-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.docx-preview section.docx {
+  flex: none;
+  margin: 0 auto;
+  background: #ffffff;
+  color: #111111;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  max-width: 100%;
 }

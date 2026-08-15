@@ -5,7 +5,7 @@ import CodeBlock from "@tiptap/extension-code-block";
 import { Markdown } from "@tiptap/markdown";
 import type { Mark } from "@tiptap/pm/model";
 import { afterEach, describe, expect, it } from "vitest";
-import { enterCleanLine, exitHeadingToParagraph, IsolatedHeading } from "./IsolatedHeading.js";
+import { exitHeadingToParagraph, IsolatedHeading } from "./IsolatedHeading.js";
 
 /**
  * Types one character the way a browser keystroke does: ProseMirror's
@@ -24,9 +24,11 @@ function typeText(editor: Editor, text: string) {
 }
 
 /**
- * Presses Enter through the same handlers the IsolatedHeading keyboard
- * shortcut runs in the app (jsdom has no contenteditable editing, so the
- * keydown event itself is not dispatched - only the commands it maps to).
+ * Presses Enter the way the Composer + IsolatedHeading handle it in the
+ * app: light paragraphs send (and clear the editor), headings exit to a
+ * paragraph, code blocks keep their multiline newline, and lists/quotes
+ * keep StarterKit's rules (jsdom has no contenteditable editing, so only
+ * the commands the handlers map to are run).
  */
 function typeEnter(editor: Editor) {
   if (editor.isActive("heading")) {
@@ -39,7 +41,8 @@ function typeEnter(editor: Editor) {
     !editor.isActive("orderedList") &&
     !editor.isActive("blockquote")
   ) {
-    enterCleanLine(editor);
+    // Composer sends on Enter from light text; handleSend clears the editor.
+    editor.commands.clearContent(true);
   }
 }
 

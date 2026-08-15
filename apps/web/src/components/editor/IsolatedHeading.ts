@@ -60,9 +60,28 @@ export function enterCleanLine(editor: Editor): boolean {
   return true;
 }
 
-export const IsolatedHeading = Extension.create({
+interface IsolatedHeadingOptions {
+  /**
+   * What Enter does in a plain paragraph:
+   * - "newline" (default): start a clean new line - used by the shared note
+   *   and canned reply editors, which are documents, not chat inputs.
+   * - "consume": do nothing and consume the key - used by the chat composer,
+   *   whose React key handler already sent the message before ProseMirror
+   *   sees the Enter. Consuming here keeps the fallback keymap from adding
+   *   an extra block to the just-cleared editor.
+   */
+  paragraphEnter: "newline" | "consume";
+}
+
+export const IsolatedHeading = Extension.create<IsolatedHeadingOptions>({
   name: "isolatedHeading",
   priority: 1_000,
+
+  addOptions() {
+    return {
+      paragraphEnter: "newline",
+    };
+  },
 
   addKeyboardShortcuts() {
     return {
@@ -73,7 +92,15 @@ export const IsolatedHeading = Extension.create({
         // Lists and blockquotes keep StarterKit's Enter behavior.
         if (this.editor.isActive("bulletList") || this.editor.isActive("orderedList")) return false;
         if (this.editor.isActive("blockquote")) return false;
+        if (this.options.paragraphEnter === "consume") return true;
         return enterCleanLine(this.editor);
+      },
+      // Shift+Enter is the escape hatch for a line break inside a paragraph
+      // (Notion-style), everywhere except code blocks and lists.
+      "Shift-Enter": () => {
+        if (this.editor.isActive("codeBlock")) return false;
+        if (this.editor.isActive("bulletList") || this.editor.isActive("orderedList")) return false;
+        return this.editor.commands.setHardBreak();
       },
     };
   },

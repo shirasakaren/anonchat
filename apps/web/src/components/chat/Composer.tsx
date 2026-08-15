@@ -153,7 +153,10 @@ export function Composer({
           codeBlock: false,
         }),
         CodeBlockWithCopy.configure({ enableTabIndentation: true, tabSize: 2 }),
-        IsolatedHeading,
+        // The chat composer sends on Enter from light text; the extension
+        // only consumes the leftover key event after the React handler
+        // already sent, so the fallback keymap doesn't add extra blocks.
+        IsolatedHeading.configure({ paragraphEnter: "consume" }),
         Markdown,
         Placeholder.configure({ placeholder: "Type a message…" }),
       ],
@@ -398,8 +401,11 @@ export function Composer({
         return;
       }
     }
-    // Heading/paragraph Enter is handled by the IsolatedHeading extension's
-    // keyboard shortcut, which keeps each line's formatting isolated.
+    // Enter sends straight from light text (a plain paragraph - bold,
+    // italic, inline code and other marks don't change that). Heavy blocks
+    // keep their newline behavior: headings, code blocks, lists, and
+    // blockquotes are handled by the IsolatedHeading extension and
+    // StarterKit's own Enter rules.
     if (e.key === "Enter" && editor?.isActive("codeBlock")) {
       if (e.metaKey || e.ctrlKey) {
         e.preventDefault();
@@ -408,6 +414,18 @@ export function Composer({
       return;
     }
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleSend();
+      return;
+    }
+    if (
+      e.key === "Enter" &&
+      !e.shiftKey &&
+      editor?.isActive("paragraph") &&
+      !editor.isActive("bulletList") &&
+      !editor.isActive("orderedList") &&
+      !editor.isActive("blockquote")
+    ) {
       e.preventDefault();
       handleSend();
     }

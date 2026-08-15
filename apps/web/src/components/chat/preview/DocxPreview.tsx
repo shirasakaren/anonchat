@@ -1,66 +1,82 @@
-import { useEffect, useState } from "react";
-import DOMPurify from "dompurify";
+import { useEffect, useRef, useState } from "react";
 
 interface Props {
   bytes: Uint8Array<ArrayBuffer>;
   fullScreen?: boolean;
 }
 
-type State = { kind: "loading" } | { kind: "ready"; html: string } | { kind: "error" };
+type State = { kind: "loading" } | { kind: "ready" } | { kind: "error" };
 
-// Only .docx (OOXML) is supported - mammoth can't read the legacy binary
-// .doc format, and there's no lightweight, actively-maintained client-side
-// library for it. A .doc attachment falls back to the generic download
-// button in AttachmentPreview.tsx, same as any other unrecognized type.
-const ALLOWED_TAGS = [
-  "p",
-  "br",
-  "strong",
-  "em",
-  "u",
-  "s",
-  "a",
-  "ul",
-  "ol",
-  "li",
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-  "h5",
-  "h6",
-  "table",
-  "thead",
-  "tbody",
-  "tr",
-  "th",
-  "td",
-  "img",
-  "blockquote",
-  "code",
-  "pre",
-  "hr",
-  "span",
-];
+// Only OOXML documents (.docx and friends) are supported - the legacy
+// binary .doc format has no client-side renderer here and falls back to
+// the generic download button in AttachmentPreview.tsx.
+const RENDER_OPTIONS = {
+  inWrapper: true,
+  ignoreWidth: false,
+  ignoreHeight: false,
+  ignoreFonts: false,
+  breakPages: true,
+  ignoreLastRenderedPageBreak: false,
+  experimental: true,
+  renderHeaders: true,
+  renderFooters: true,
+  renderFootnotes: true,
+  renderEndnotes: true,
+  useBase64URL: true,
+  renderChanges: true,
+  renderComments: false,
+};
 
+/**
+ * docx-preview builds the preview with DOM APIs, but the document itself is
+ * attacker-controllable content (a .docx is just a zip of XML). This pass
+ * applies the same discipline as message markdown: links open safely in a
+ * new tab and only http(s)/mailto survives, and any script/event attributes
+ * are dropped outright.
+ */
+function hardenRenderedDocument(container: HTMLElement): void {
+  for (const el of Array.from(container.querySelectorAll("script, style, iframe, object, embed, link"))) el.remove();
+  for (const el of Array.from(container.querySelectorAll<HTMLElement>("*"))) {
+    for (const attr of Array.from(el.attributes)) {
+      if (attr.name.startsWith("on")) el.removeAttribute(attr.name);
+    }
+  }
+  for (const a of Array.from(container.querySelectorAll("a"))) {
+    const href = a.getAttribute("href") ?? "";
+    const allowed = /^(https?:|mailto:)/i.test(href);
+    if (!allowed) {
+      a.removeAttribute("href");
+      continue;
+    }
+    a.setAttribute("target", "_blank");
+    a.setAttribute("rel", "noopener noreferrer nofollow");
+  }
+}
+
+/**
+ * Paginated, PDF-like .docx preview. docx-preview re-lays the document out
+ * page by page (margins, page breaks, headers/footers, tables, images)
+ * instead of flattening it to flowing HTML, so the visual formatting stays
+ * true to how Word renders it.
+ */
 export function DocxPreview({ bytes, fullScreen = false }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<State>({ kind: "loading" });
 
   useEffect(() => {
     let cancelled = false;
     setState({ kind: "loading" });
-    // Dynamically imported: mammoth (+ its jszip/xml dependencies) only
+    const container = containerRef.current;
+    if (!container) return;
+    // Dynamically imported: docx-preview (+ its jszip dependency) only
     // needs to load when a .docx attachment is actually being previewed,
     // not as part of the app's main bundle.
-    import("mammoth")
-      .then((mammoth) => mammoth.convertToHtml({ arrayBuffer: bytes.buffer }))
-      .then((result) => {
-        if (cancelled) return;
-        // mammoth's output is untrusted document content - same sanitizing
-        // discipline as message markdown, not a lesser trust level just
-        // because it came from a file rather than typed text.
-        const clean = DOMPurify.sanitize(result.value, { ALLOWED_TAGS, ALLOWED_ATTR: ["href", "src", "alt", "title"] });
-        setState({ kind: "ready", html: clean });
+    import("docx-preview")
+      .then(async (docx) => {
+        container.replaceChildren();
+        await docx.renderAsync(bytes, container, undefined, RENDER_OPTIONS);
+        hardenRenderedDocument(container);
+        if (!cancelled) setState({ kind: "ready" });
       })
       .catch(() => {
         if (!cancelled) setState({ kind: "error" });
@@ -70,16 +86,20 @@ export function DocxPreview({ bytes, fullScreen = false }: Props) {
     };
   }, [bytes]);
 
-  if (state.kind === "loading") {
-    return <p className="text-xs text-[var(--text-muted)]">Rendering document…</p>;
-  }
-  if (state.kind === "error") {
-    return <p className="text-xs text-[var(--danger-fg)]">Couldn't render a preview of this document.</p>;
-  }
   return (
-    <div
-      className={`prose-message w-full min-w-0 max-w-full overflow-auto overscroll-contain rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[var(--text)] ${fullScreen ? "min-h-full" : "max-h-96"}`}
-      dangerouslySetInnerHTML={{ __html: state.html }}
-    />
+    <div className="relative w-full min-w-0 max-w-full">
+      {state.kind === "loading" && (
+        <p className="p-3 text-xs text-[var(--text-muted)]">Rendering document…</p>
+      )}
+      {state.kind === "error" && (
+        <p className="p-3 text-xs text-[var(--danger-fg)]">Couldn't render a preview of this document.</p>
+      )}
+      <div
+        ref={containerRef}
+        className={`docx-preview w-full min-w-0 max-w-full overflow-auto overscroll-contain ${
+          fullScreen ? "min-h-full" : "max-h-96"
+        }`}
+      />
+    </div>
   );
 }
