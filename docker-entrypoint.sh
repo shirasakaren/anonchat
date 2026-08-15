@@ -6,6 +6,9 @@ set -e
 # which would leave the non-root app unable to write uploads (EACCES on
 # mkdir). Docker named volumes initialize from the image layer already
 # owned by the app user, so the chown is skipped when nothing is wrong.
+# chown -R does not follow symlinks encountered during traversal, and the
+# mount is either empty or contains only app-written files, so there is no
+# symlink-following escape path here.
 if [ -d /app/data/uploads ] && [ "$(stat -c %u /app/data/uploads 2>/dev/null || echo 1001)" != "1001" ]; then
   echo "Fixing uploads volume ownership..."
   chown -R anonchat:anonchat /app/data/uploads

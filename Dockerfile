@@ -72,7 +72,8 @@ COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 
 RUN chmod +x /app/docker-entrypoint.sh \
   && mkdir -p /app/data/uploads \
-  && chown -R anonchat:anonchat /app
+  && chown -R anonchat:anonchat /app \
+  && chown root:root /app/docker-entrypoint.sh
 
 EXPOSE 3000
 
