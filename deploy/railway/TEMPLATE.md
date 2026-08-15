@@ -1,4 +1,6 @@
-# Anonchat
+# Deploy and Host Anonchat
+
+## About Hosting
 
 Anonchat is a self-hosted, end-to-end encrypted, anonymous messaging inbox.
 Anyone can create an anonymous identity - no email, phone number, or account -
@@ -6,10 +8,7 @@ and get a private, persistent conversation with the site owner. The owner
 gets a Discord/WhatsApp-style admin dashboard with every conversation,
 real-time replies, and moderation tools.
 
-Message content, attachments, and reactions are end-to-end encrypted: the
-server stores and relays ciphertext only.
-
-## What this template provisions
+This template provisions the complete stack in one click:
 
 - **anonchat** - the app, pulled from the official Docker image
   (`shirasakaren/anonchat:latest`), with a persistent volume at
@@ -19,6 +18,36 @@ server stores and relays ciphertext only.
 
 Everything is configured for you: the database URL, a freshly generated
 session secret, the public URL, and proxy settings. No variables to fill in.
+
+## Why Deploy
+
+- **Privacy by design** - message content, attachments, and reactions are
+  end-to-end encrypted; the server stores and relays ciphertext only
+- **Zero-friction visitors** - no account, email, or phone number needed to
+  reach you
+- **One-click infrastructure** - managed Postgres, persistent storage, and
+  TLS are provisioned and wired automatically
+- **Operationally minimal** - the only required secret is generated for you
+  on every deploy
+
+## Common Use Cases
+
+- A private inbox for your readers, viewers, or community
+- Anonymous feedback and tip lines that stay persistent per visitor
+- A support channel where people can start a conversation without signing up
+- Any audience where anonymity makes people more willing to reach out
+
+## Dependencies for Deploying Anonchat
+
+### Deployment Dependencies
+
+- **PostgreSQL** - provisioned by this template and connected over Railway's
+  private network
+- **Persistent volume** - attached at `/app/data/uploads` for local
+  attachment storage; optional S3/R2/B2 storage is supported by setting
+  `STORAGE_DRIVER=s3` plus the `S3_*` variables
+- **A public domain** - a `*.up.railway.app` domain is generated
+  automatically; attach a custom domain at any time
 
 ## First steps
 
@@ -32,8 +61,8 @@ start chatting; you reply from the admin dashboard.
 ## Optional configuration
 
 - Attach a custom domain - `PUBLIC_URL` updates automatically
-- Switch attachment storage to S3/R2/B2 by setting `STORAGE_DRIVER=s3` plus
-  the `S3_*` variables on the `anonchat` service
+- Switch attachment storage to S3/R2/B2 with the `S3_*` variables on the
+  `anonchat` service
 - Enable email digests (`EMAIL_DRIVER=smtp` or `resend`) and Web Push
   (`VAPID_*`) - see the `.env.example` in the
   [repository](https://github.com/shirasakaren/anonchat)
