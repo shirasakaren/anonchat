@@ -57,12 +57,13 @@ export function toAdminConversationDto(
 
 export async function getMessagesPage(
   conversationId: string,
-  options: { cursor?: string; limit?: number },
+  options: { cursor?: string; limit?: number; direction?: "asc" | "desc" },
 ): Promise<MessagePage> {
   const limit = Math.min(options.limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+  const order = options.direction === "desc" ? "desc" : "asc";
   const rows = await prisma.message.findMany({
     where: { conversationId },
-    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    orderBy: [{ createdAt: order }, { id: order }],
     take: limit + 1,
     ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
     include: MESSAGE_INCLUDE,

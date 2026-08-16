@@ -178,8 +178,11 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
         if (previews[conv.id]) continue;
         try {
           const key = getConversationKey(identity, conv.anonymousExchangePublicKey, conv.id);
-          const page = await getAdminMessages(conv.id);
-          const last = page.messages[page.messages.length - 1];
+          // Only the newest message is needed for the preview - fetching a
+          // full oldest-first page and reading its tail showed a stale
+          // preview forever once a conversation outgrew one page.
+          const page = await getAdminMessages(conv.id, undefined, true);
+          const last = page.messages[0];
           if (!last) continue;
           if (last.deleted) {
             updates[conv.id] = { kind: "deleted" };

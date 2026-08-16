@@ -28,7 +28,12 @@ export const ReadReceiptRequestSchema = z.object({
 });
 export type ReadReceiptRequestInput = z.infer<typeof ReadReceiptRequestSchema>;
 
-export const MessagesQuerySchema = PaginationQuerySchema;
+export const MessagesQuerySchema = PaginationQuerySchema.extend({
+  /// Default "asc" (oldest first, cursor walks forward). "desc" returns the
+  /// newest page first - used by the inbox's last-message preview so it
+  /// never reads the tail of the oldest page of a long conversation.
+  direction: z.enum(["asc", "desc"]).optional(),
+});
 
 export interface AttachmentDto {
   id: string;

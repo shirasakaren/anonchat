@@ -149,10 +149,19 @@ export function updateConversationAlias(id: string, alias: string): Promise<Admi
   return api.patch<AdminConversationDto>(`/admin/conversations/${id}/alias`, { alias });
 }
 
-export function getAdminMessages(conversationId: string, cursor?: string): Promise<MessagePage> {
-  return api.get<MessagePage>(
-    `/admin/conversations/${conversationId}/messages${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`,
-  );
+export function getAdminMessages(conversationId: string, cursor?: string, latest?: boolean): Promise<MessagePage> {
+  const params = new URLSearchParams();
+  if (cursor) params.set("cursor", cursor);
+  // `latest` fetches only the single newest message (desc, limit 1) - the
+  // inbox preview needs that, since the default page is the OLDEST chunk
+  // and its tail is not the conversation's last message once a
+  // conversation outgrows one page.
+  if (latest) {
+    params.set("direction", "desc");
+    params.set("limit", "1");
+  }
+  const qs = params.toString();
+  return api.get<MessagePage>(`/admin/conversations/${conversationId}/messages${qs ? `?${qs}` : ""}`);
 }
 
 export async function sendAdminMessage(
