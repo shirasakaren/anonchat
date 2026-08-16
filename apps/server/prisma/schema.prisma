@@ -83,6 +83,13 @@ enum ProfileMediaKind {
   VIDEO
 }
 
+enum AutoDeleteMode {
+  OFF
+  DISCONNECT
+  BOTH_READ
+  AFTER_DAYS
+}
+
 model Conversation {
   id              String             @id @default(cuid())
   anonymousUserId String             @unique
@@ -97,6 +104,22 @@ model Conversation {
   /// Admin-only mute state: when set, new messages from this conversation
   /// don't fire admin notifications. Never sent to the anonymous user.
   mutedAt         DateTime?
+
+  /// WhatsApp-style disappearing messages, toggled by either participant
+  /// (the setting is conversation-wide and visible to both sides). When
+  /// set, every new message gets an expiry TTL; the retention sweep deletes
+  /// expired rows. Never applied to messages sent before it was enabled.
+  disappearingEnabled  Boolean         @default(false)
+  disappearingSeconds  Int?
+  disappearingOnLogout Boolean         @default(false)
+
+  /// Automatic chat deletion. Both sides see and can change these - they
+  /// are plain metadata, not message content. DISCONNECT purges messages
+  /// shortly after the visitor's socket drops; BOTH_READ purges once every
+  /// message has been read by its recipient; AFTER_DAYS purges messages
+  /// older than autoDeleteDays.
+  autoDeleteMode AutoDeleteMode @default(OFF)
+  autoDeleteDays Int?
 
   messages   Message[]
   note       ConversationNote?
@@ -126,6 +149,15 @@ model Message {
   updatedAt DateTime  @updatedAt
   readAt    DateTime?
 
+  /// Client-generated id echoed back on both the REST response and the
+  /// WebSocket broadcast, so a sender's optimistic bubble can be replaced
+  /// in place (no brief duplicate) whichever delivery path arrives first.
+  clientId String?
+
+  /// Set when the conversation has disappearing messages enabled. The
+  /// retention sweep deletes the row (and its attachments) after this.
+  expiresAt DateTime?
+
   attachments Attachment[]
   reactions   MessageReaction[]
 
@@ -134,6 +166,8 @@ model Message {
   /// last digest, system-wide" sweep (notificationDigest.service.ts) -
   /// distinct from the composite index above, which is scoped per-conversation.
   @@index([senderType, createdAt])
+  /// Retention sweep looks messages up by expiry across conversations.
+  @@index([expiresAt])
   @@map("messages")
 }
 
