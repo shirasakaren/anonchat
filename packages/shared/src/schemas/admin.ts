@@ -81,6 +81,9 @@ export const SiteSettingsRequestSchema = z.object({
   visitorGeolocationEnabled: z.boolean().optional(),
   adminDigestMinIntervalMinutes: z.coerce.number().int().min(1).max(1_440).optional(),
   replyEmailMinIntervalMinutes: z.coerce.number().int().min(1).max(1_440).optional(),
+  /// "" clears the key (hiding that provider).
+  giphyApiKey: z.union([z.literal(""), z.string().max(200)]).optional(),
+  klipyApiKey: z.union([z.literal(""), z.string().max(200)]).optional(),
 });
 export type SiteSettingsRequestInput = z.infer<typeof SiteSettingsRequestSchema>;
 
@@ -220,6 +223,10 @@ export interface SiteSettingsDto {
   visitorGeolocationEnabled: boolean;
   adminDigestMinIntervalMinutes: number;
   replyEmailMinIntervalMinutes: number;
+  /** GIF picker API keys - admin-only, never sent to visitors. Empty
+   *  string clears the key and hides that provider from the picker. */
+  giphyApiKey: string | null;
+  klipyApiKey: string | null;
 }
 
 export const BulkConversationsRequestSchema = z.object({

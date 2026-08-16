@@ -40,6 +40,10 @@ export function registerSiteRoutes(app: FastifyInstance): void {
         collectsIpAddress: settings.storeIpAddresses,
         coarseGeolocation: settings.visitorGeolocationEnabled,
       },
+      gifProviders: {
+        giphy: Boolean(settings.giphyApiKey),
+        klipy: Boolean(settings.klipyApiKey),
+      },
     };
     return response;
   });

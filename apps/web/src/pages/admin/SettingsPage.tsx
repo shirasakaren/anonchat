@@ -118,6 +118,10 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
   const [digestSaving, setDigestSaving] = useState(false);
   const [digestSaved, setDigestSaved] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(true);
+  const [giphyApiKey, setGiphyApiKey] = useState("");
+  const [klipyApiKey, setKlipyApiKey] = useState("");
+  const [gifKeysSaving, setGifKeysSaving] = useState(false);
+  const [gifKeysSaved, setGifKeysSaved] = useState(false);
   const [pushSubscribed, setPushSubscribed] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
   const [pushError, setPushError] = useState<string | null>(null);
@@ -166,6 +170,8 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
       setDigestEnabled(s.adminEmailDigestEnabled);
       setDigestInterval(s.adminEmailDigestIntervalMinutes);
       setPushEnabled(s.adminPushEnabled);
+      setGiphyApiKey(s.giphyApiKey ?? "");
+      setKlipyApiKey(s.klipyApiKey ?? "");
       setInsightsEnabled(s.visitorInsightsEnabled);
       setInsightsRetentionDays(s.visitorInsightsRetentionDays);
       setStoreIpAddresses(s.storeIpAddresses);
@@ -441,6 +447,22 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
       notifyError("Runtime limits could not be saved", error);
     } finally {
       setRuntimeSaving(false);
+    }
+  }
+
+  async function handleSaveGifKeys() {
+    setGifKeysSaving(true);
+    setGifKeysSaved(false);
+    try {
+      const updated = await updateSettings({ giphyApiKey, klipyApiKey });
+      setSettings(updated);
+      await refreshSite();
+      setGifKeysSaved(true);
+      setTimeout(() => setGifKeysSaved(false), 2000);
+    } catch (error) {
+      notifyError("GIF provider keys could not be saved", error);
+    } finally {
+      setGifKeysSaving(false);
     }
   }
 
@@ -1140,6 +1162,42 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
               <p className="mt-3 text-xs text-[var(--text-muted)]">
                 {themeSaving ? "Saving…" : themeSaved ? "Theme saved!" : ""}
               </p>
+            </section>
+
+            <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
+              <h2 className="mb-1 text-sm font-semibold">GIF picker</h2>
+              <p className="mb-4 text-xs text-[var(--text-muted)]">
+                Add a GIPHY or KLIPY API key to enable the GIF picker in the chat composer for you and your
+                visitors. Keys stay on the server - the browser only ever talks to this app.
+              </p>
+              <label className="mb-3 block text-sm font-medium">
+                GIPHY API key
+                <input
+                  type="password"
+                  value={giphyApiKey}
+                  onChange={(event) => setGiphyApiKey(event.target.value)}
+                  placeholder="Create one at developers.giphy.com"
+                  className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 font-mono text-xs"
+                />
+              </label>
+              <label className="mb-4 block text-sm font-medium">
+                KLIPY API key
+                <input
+                  type="password"
+                  value={klipyApiKey}
+                  onChange={(event) => setKlipyApiKey(event.target.value)}
+                  placeholder="Create one at partner.klipy.com"
+                  className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 font-mono text-xs"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => void handleSaveGifKeys()}
+                disabled={gifKeysSaving}
+                className="rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
+              >
+                {gifKeysSaving ? "Saving..." : gifKeysSaved ? "Saved!" : "Save GIF settings"}
+              </button>
             </section>
 
             <section className="mb-8 rounded-xl border border-[var(--border)] p-4">

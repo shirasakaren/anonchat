@@ -360,6 +360,13 @@ model SiteSettings {
   rateLimitRegistrationsPerHour     Int     @default(10)
   rateLimitLinkPreviewsPerMinute    Int     @default(20)
   linkPreviewsEnabled               Boolean @default(true)
+
+  /// GIPHY / KLIPY API keys for the composer's GIF picker. Both are
+  /// optional; each provider only appears in the picker when its key is
+  /// set. Keys are used server-side only (see gifSearch.service.ts) and
+  /// never sent to visitors.
+  giphyApiKey String?
+  klipyApiKey String?
   storeIpAddresses                  Boolean @default(false)
   visitorGeolocationEnabled         Boolean @default(false)
   adminDigestMinIntervalMinutes     Int     @default(5)

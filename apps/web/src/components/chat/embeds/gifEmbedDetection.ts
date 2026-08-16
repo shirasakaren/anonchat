@@ -2,7 +2,7 @@
  *  known to expose the actual animated gif as their og:image - the server's
  *  /api/link-preview fetch already resolves that for us (see
  *  fetchLinkPreview.ts), this just decides which URLs are worth trying. */
-const GIF_PROVIDER_HOSTS = [/(^|\.)tenor\.com$/i, /(^|\.)giphy\.com$/i, /(^|\.)gfycat\.com$/i];
+const GIF_PROVIDER_HOSTS = [/(^|\.)tenor\.com$/i, /(^|\.)giphy\.com$/i, /(^|\.)gfycat\.com$/i, /(^|\.)klipy\.com$/i];
 
 /** True for a URL that's either a direct .gif file or a known GIF-sharing
  *  provider's page - both routes end up rendered by GifEmbed via the same

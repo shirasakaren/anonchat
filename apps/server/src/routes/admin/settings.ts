@@ -66,6 +66,8 @@ async function toSettingsDto(): Promise<SiteSettingsDto> {
     visitorGeolocationEnabled: settings.visitorGeolocationEnabled,
     adminDigestMinIntervalMinutes: settings.adminDigestMinIntervalMinutes,
     replyEmailMinIntervalMinutes: settings.replyEmailMinIntervalMinutes,
+    giphyApiKey: settings.giphyApiKey,
+    klipyApiKey: settings.klipyApiKey,
   };
 }
 
@@ -155,6 +157,8 @@ export function registerAdminSettingsRoutes(app: FastifyInstance): void {
         ...(body.replyEmailMinIntervalMinutes !== undefined
           ? { replyEmailMinIntervalMinutes: body.replyEmailMinIntervalMinutes }
           : {}),
+        ...(body.giphyApiKey !== undefined ? { giphyApiKey: body.giphyApiKey || null } : {}),
+        ...(body.klipyApiKey !== undefined ? { klipyApiKey: body.klipyApiKey || null } : {}),
       },
     });
     if (body.visitorInsightsEnabled === false) {

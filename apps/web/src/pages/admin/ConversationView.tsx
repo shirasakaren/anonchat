@@ -763,6 +763,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
         draftId={`admin:${conversationId}`}
         draftText={draft.draftText}
         onDraftChange={draft.updateDraft}
+        gifProviders={site?.gifProviders}
       />
 
       {deleteTarget && (

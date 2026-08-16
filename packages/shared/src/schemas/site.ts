@@ -54,4 +54,11 @@ export interface PublicSiteInfoDto {
     collectsIpAddress: boolean;
     coarseGeolocation: boolean;
   };
+  /** Which GIF providers the composer's picker offers. Only true when the
+   *  admin configured an API key for that provider - the keys themselves
+   *  are server-side only (see gifSearch.service.ts). */
+  gifProviders: {
+    giphy: boolean;
+    klipy: boolean;
+  };
 }

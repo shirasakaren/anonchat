@@ -13,7 +13,7 @@ import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Markdown } from "@tiptap/markdown";
-import { X, Paperclip, Smile, File as FileIcon } from "lucide-react";
+import { X, Paperclip, Smile, Film, File as FileIcon } from "lucide-react";
 import type { AttachmentSizeLimitsDto, CannedReplyDto } from "@anonchat/shared";
 import {
   expandEmojiShortcuts,
@@ -26,6 +26,7 @@ import { findActiveSlashQuery, searchCannedReplies } from "./cannedReplySlash.js
 import { EmojiShortcutOverlay } from "./EmojiShortcutOverlay.js";
 import { CannedReplySlashOverlay } from "./CannedReplySlashOverlay.js";
 import { EmojiPicker } from "./emoji/EmojiPicker.js";
+import { GifPicker } from "./GifPicker.js";
 import { maxAttachmentSizeMbForFile } from "./preview/textFileTypes.js";
 import { hasSpoofedMediaClaim, resolveFileMimetypeWithBytes } from "./preview/fileSniffing.js";
 import { useToast } from "../../context/ToastContext.js";
@@ -71,6 +72,9 @@ interface Props {
   draftText?: string;
   onDraftChange?: (text: string) => void;
   cannedReplies?: CannedReplyDto[];
+  /** Which GIF providers are enabled (admin-configured API keys). The GIF
+   *  button opens the picker; without this the button stays hidden. */
+  gifProviders?: { giphy: boolean; klipy: boolean };
 }
 
 /**
@@ -96,11 +100,14 @@ export function Composer({
   draftText,
   onDraftChange,
   cannedReplies,
+  gifProviders,
 }: Props) {
   const { showToast } = useToast();
   const [markdown, setMarkdown] = useState(initialText ?? draftText ?? "");
   const [files, setFiles] = useState<PendingFile[]>([]);
   const [showEmoji, setShowEmoji] = useState(false);
+  const [showGif, setShowGif] = useState(false);
+  const gifWrapperRef = useRef<HTMLDivElement>(null);
   const [shortcodeQuery, setShortcodeQuery] = useState<ActiveShortcode | null>(null);
   const [slashQuery, setSlashQuery] = useState<{ query: string } | null>(null);
   const [selectedSuggestion, setSelectedSuggestion] = useState(0);
@@ -236,13 +243,15 @@ export function Composer({
   }, [editor, initialText]);
 
   useEffect(() => {
-    if (!showEmoji) return;
+    if (!showEmoji && !showGif) return;
     function handlePointerDown(e: MouseEvent) {
-      if (pickerWrapperRef.current && !pickerWrapperRef.current.contains(e.target as Node)) setShowEmoji(false);
+      const target = e.target as Node;
+      if (pickerWrapperRef.current && !pickerWrapperRef.current.contains(target)) setShowEmoji(false);
+      if (gifWrapperRef.current && !gifWrapperRef.current.contains(target)) setShowGif(false);
     }
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [showEmoji]);
+  }, [showEmoji, showGif]);
 
   // Starting a reply (or edit) moves the caret into the composer right
   // away - the person chose "Reply" on a specific message, so the next
@@ -582,6 +591,34 @@ export function Composer({
           >
             <Paperclip size={18} aria-hidden />
           </label>
+
+          {gifProviders && (gifProviders.giphy || gifProviders.klipy) && (
+            <div ref={gifWrapperRef} className="relative mb-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowGif((value) => !value);
+                  setShowEmoji(false);
+                }}
+                className="rounded-lg p-2 hover:bg-[var(--surface-muted)]"
+                title="GIF"
+                aria-label="Open GIF picker"
+                aria-expanded={showGif}
+              >
+                <Film size={18} aria-hidden />
+              </button>
+              {showGif && (
+                <GifPicker
+                  providers={gifProviders}
+                  onClose={() => setShowGif(false)}
+                  onSelect={(gifUrl) => {
+                    insertAtCursor(gifUrl);
+                    setShowGif(false);
+                  }}
+                />
+              )}
+            </div>
+          )}
 
           <div ref={pickerWrapperRef} className="relative mb-1">
             <button

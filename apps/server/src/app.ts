@@ -27,6 +27,7 @@ import { registerAdminSettingsRoutes } from "./routes/admin/settings.js";
 import { registerAnonymousRoutes } from "./routes/anonymous.js";
 import { registerConversationRoutes } from "./routes/conversation.js";
 import { registerHealthRoutes } from "./routes/health.js";
+import { registerGifRoutes } from "./routes/gifs.js";
 import { registerLinkPreviewRoutes } from "./routes/linkPreview.js";
 import { registerNoteRoutes } from "./routes/notes.js";
 import { registerSiteRoutes } from "./routes/site.js";
@@ -61,7 +62,10 @@ export async function buildApp(): Promise<FastifyInstance> {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "blob:"],
+        // The GIF picker hotlinks thumbnails from the two provider CDNs;
+        // the server-side GIF search (gifSearch.service.ts) only returns
+        // URLs from exactly these hosts.
+        imgSrc: ["'self'", "data:", "blob:", "https://media.giphy.com", "https://media.klipy.com"],
         mediaSrc: ["'self'", "blob:"],
         connectSrc: ["'self'", "ws:", "wss:"],
         scriptSrc: ["'self'"],
@@ -121,6 +125,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 
       registerSiteRoutes(api);
       registerLinkPreviewRoutes(api);
+      registerGifRoutes(api);
       registerNoteRoutes(api);
       registerAnonymousRoutes(api);
       registerConversationRoutes(api);

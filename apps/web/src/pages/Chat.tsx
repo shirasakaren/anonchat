@@ -737,6 +737,7 @@ export default function Chat() {
           draftId={`user:${session.conversationId}`}
           draftText={draft.draftText}
           onDraftChange={draft.updateDraft}
+          gifProviders={site.gifProviders}
         />
       </div>
 
