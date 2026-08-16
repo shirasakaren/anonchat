@@ -31,3 +31,34 @@ describe("renderMessageMarkdown code blocks", () => {
     expect(html).toContain("&lt;div&gt;");
   });
 });
+
+describe("renderMessageMarkdown links", () => {
+  it("linkifies a bare URL with a query string", () => {
+    const html = renderMessageMarkdown("https://youtu.be/LO7oifC5K8Y?si=2BiVdwKWYSZpwc8l");
+    expect(html).toContain('href="https://youtu.be/LO7oifC5K8Y?si=2BiVdwKWYSZpwc8l"');
+  });
+
+  it("keeps the real href when the message is already a markdown link (Tiptap autolink serialization)", () => {
+    const html = renderMessageMarkdown(
+      "[https://youtu.be/LO7oifC5K8Y?si=2BiVdwKWYSZpwc8l](https://youtu.be/LO7oifC5K8Y?si=2BiVdwKWYSZpwc8l)",
+    );
+    // Regression: a second linkify pass used to nest the href inside a new
+    // link, producing href="[url](url)" which the browser then resolved
+    // against the current route instead of opening the real URL.
+    expect(html).toContain('href="https://youtu.be/LO7oifC5K8Y?si=2BiVdwKWYSZpwc8l"');
+    expect(html).not.toContain("href=&quot;");
+    expect(html).not.toContain("%5B");
+  });
+
+  it("keeps a labeled markdown link's href intact", () => {
+    const html = renderMessageMarkdown("[my video](https://youtu.be/LO7oifC5K8Y?si=2BiVdwKWYSZpwc8l)");
+    expect(html).toContain('href="https://youtu.be/LO7oifC5K8Y?si=2BiVdwKWYSZpwc8l"');
+    expect(html).toContain("my video");
+  });
+
+  it("linkifies a bare URL sitting after a markdown link in the same text", () => {
+    const html = renderMessageMarkdown("see [docs](https://example.com/a) and https://example.com/b");
+    expect(html).toContain('href="https://example.com/a"');
+    expect(html).toContain('href="https://example.com/b"');
+  });
+});

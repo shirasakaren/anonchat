@@ -6,10 +6,23 @@ import { BARE_URL_RE } from "./embeds/urlExtraction.js";
 marked.setOptions({ breaks: true, gfm: true });
 
 function linkify(raw: string): string {
-  return raw.replace(
+  // Text that already contains a markdown link must be protected before the
+  // bare-URL pass runs on it. Tiptap serializes an autolinked URL as
+  // `[url](url)` (text === href), and linkifying that again produced
+  // `[url]([url](url))` - marked then parsed the outer link's href as the
+  // literal markdown source `[url](url)`, and clicking it navigated to a
+  // mangled relative route like /admin/c/[url](url). Swap existing links
+  // out for placeholders, linkify everything else, then restore them.
+  const preserved: string[] = [];
+  const withPlaceholders = raw.replace(/\[[^[\]]*\]\([^()\n]*\)/g, (match) => {
+    preserved.push(match);
+    return `\u0000ANONCHAT_LINK_${preserved.length - 1}\u0000`;
+  });
+  const linked = withPlaceholders.replace(
     new RegExp(BARE_URL_RE.source, "g"),
     (match, lead: string, url: string) => `${lead}[${url}](${url})`,
   );
+  return linked.replace(/\u0000ANONCHAT_LINK_(\d+)\u0000/g, (_, index: string) => preserved[Number(index)]!);
 }
 
 const renderer = new marked.Renderer();

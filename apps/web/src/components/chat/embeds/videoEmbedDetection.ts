@@ -1,6 +1,9 @@
 export interface VideoEmbedInfo {
   platform: "youtube" | "vimeo";
   embedUrl: string;
+  /** The original watch URL, kept for the "Open on YouTube/Vimeo" fallback
+   *  link - some uploaders disable embedding on individual videos. */
+  watchUrl: string;
 }
 
 // Only platforms with a stable, no-auth, iframe-embeddable URL pattern -
@@ -25,12 +28,20 @@ export function detectVideoEmbed(url: string): VideoEmbedInfo | null {
       // youtube-nocookie.com (not youtube.com/embed) - avoids setting
       // YouTube's ordinary tracking cookies for a video someone merely
       // shared and hasn't necessarily chosen to play yet.
-      return { platform: "youtube", embedUrl: `https://www.youtube-nocookie.com/embed/${match[1]}` };
+      return {
+        platform: "youtube",
+        embedUrl: `https://www.youtube-nocookie.com/embed/${match[1]}`,
+        watchUrl: `https://www.youtube.com/watch?v=${match[1]}`,
+      };
     }
   }
   const vimeoMatch = VIMEO_PATTERN.exec(url);
   if (vimeoMatch) {
-    return { platform: "vimeo", embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}` };
+    return {
+      platform: "vimeo",
+      embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}`,
+      watchUrl: `https://vimeo.com/${vimeoMatch[1]}`,
+    };
   }
   return null;
 }
