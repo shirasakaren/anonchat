@@ -258,10 +258,15 @@ export function MessageBubble({
   return (
     <div
       className={clsx("group flex flex-col gap-1 [touch-action:pan-y]", isOwn ? "items-end" : "items-start")}
+      // A transform is applied ONLY while the finger is actually swiping.
+      // An always-present (even identity) transform makes this div the
+      // containing block for position:fixed descendants, which confined
+      // the full-screen attachment viewers to the message's own box
+      // instead of covering the screen.
       style={
         swipeOffset > 0
           ? { transform: `translateX(${swipeOffset}px)`, transition: "none", opacity: 1 - swipeOffset / 220 }
-          : { transform: "translateX(0)", transition: "transform 150ms ease-out, opacity 150ms ease-out" }
+          : undefined
       }
       {...pressHandlers}
     >
@@ -328,7 +333,7 @@ export function MessageBubble({
                 // .prose-message's own overflow-wrap to kick in.
                 "min-w-0 max-w-full overflow-hidden rounded-2xl px-3.5 py-2 text-sm shadow-sm",
                 isOwn
-                  ? "bg-[var(--bubble-user)] text-[var(--bubble-user-text)]"
+                  ? "bg-[var(--bubble-user)] text-[var(--bubble-user-text)] text-right"
                   : "bg-[var(--bubble-admin)] text-[var(--bubble-admin-text)]",
               )}
             >
