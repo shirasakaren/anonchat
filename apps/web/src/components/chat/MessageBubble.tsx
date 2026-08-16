@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { format } from "date-fns";
-import { AlertTriangle, SmilePlus, Reply, Pencil, Trash2 } from "lucide-react";
+import { AlertTriangle, SmilePlus, Reply, Pencil, Trash2, Paperclip } from "lucide-react";
 import { decryptReaction } from "../../crypto/conversationCrypto.js";
 import { renderMessageMarkdown } from "./markdown.js";
 import { AttachmentPreview } from "./AttachmentPreview.js";
@@ -15,6 +15,7 @@ import { LinkPreviewCard } from "./embeds/LinkPreviewCard.js";
 import { ReactionOverlay } from "./ReactionOverlay.js";
 import type { DisplayMessage } from "./types.js";
 import { PendingAttachmentTransfer } from "./PendingAttachmentTransfer.js";
+import { buildReplyPreviewInfo } from "./replyPreview.js";
 
 /** Slack/Discord-style: a message can carry a few link embeds/previews,
  *  not an unbounded wall of them if someone pastes a long list of URLs. */
@@ -25,7 +26,9 @@ interface Props {
   isOwn: boolean;
   conversationKey: Uint8Array;
   attachmentUrlFor: (attachmentId: string) => string;
-  replyPreview?: string;
+  /** The message this one quotes, when it's a reply - the bubble builds its
+   *  own truncated preview from it (see replyPreview.ts). */
+  replyPreviewMessage?: DisplayMessage;
   canEdit: boolean;
   disableActions?: boolean;
   /** Only the single most-recent read own-message in the thread should show
@@ -45,7 +48,7 @@ export function MessageBubble({
   isOwn,
   conversationKey,
   attachmentUrlFor,
-  replyPreview,
+  replyPreviewMessage,
   canEdit,
   disableActions = false,
   showReadReceipt = false,
@@ -101,16 +104,26 @@ export function MessageBubble({
     [message.deleted, message.decryptionError, message.text],
   );
 
+  const replyInfo = useMemo(
+    () => buildReplyPreviewInfo(replyPreviewMessage, conversationKey),
+    [replyPreviewMessage, conversationKey],
+  );
+  const showReplyPreview = replyInfo.kind !== "empty" && !message.deleted;
+
   return (
     <div className={clsx("group flex flex-col gap-1", isOwn ? "items-end" : "items-start")}>
-      {replyPreview && (
+      {showReplyPreview && (
         <div
           className={clsx(
-            "max-w-[80%] truncate rounded-md border-l-2 px-2 py-1 text-xs text-[var(--text-muted)]",
+            // min-w-0 + truncate keep even a very long quoted message or
+            // filename to a single compact line above the bubble.
+            "flex max-w-[80%] min-w-0 items-center gap-1.5 rounded-md border-l-2 px-2 py-1 text-xs text-[var(--text-muted)]",
             "border-[var(--color-accent-400)]",
+            replyInfo.kind === "deleted" && "italic",
           )}
         >
-          {replyPreview}
+          {replyInfo.kind === "attachment" && <Paperclip size={11} className="shrink-0" aria-hidden />}
+          <span className="min-w-0 truncate">{replyInfo.text}</span>
         </div>
       )}
 

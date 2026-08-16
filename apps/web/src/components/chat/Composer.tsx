@@ -243,6 +243,21 @@ export function Composer({
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [showEmoji]);
 
+  // Starting a reply (or edit) moves the caret into the composer right
+  // away - the person chose "Reply" on a specific message, so the next
+  // thing they do is type. Focus only on the transition into reply/edit
+  // mode, not while it's already active (which would steal focus back
+  // mid-reply whenever the banner re-renders).
+  const bannerActive = Boolean(replyPreview || editingPreview);
+  const bannerActiveRef = useRef(bannerActive);
+  useEffect(() => {
+    const wasActive = bannerActiveRef.current;
+    bannerActiveRef.current = bannerActive;
+    if (bannerActive && !wasActive && !disabled) {
+      requestAnimationFrame(() => editor?.commands.focus("end"));
+    }
+  }, [bannerActive, disabled, editor]);
+
   useEffect(
     () => () => {
       for (const pending of filesRef.current) if (pending.previewUrl) URL.revokeObjectURL(pending.previewUrl);
@@ -469,8 +484,11 @@ export function Composer({
       )}
 
       {(replyPreview || editingPreview) && (
-        <div className="mb-2 flex items-center justify-between rounded-md bg-[var(--surface-muted)] px-3 py-1.5 text-xs">
-          <span className="truncate">
+        <div className="mb-2 flex items-center justify-between gap-2 rounded-md bg-[var(--surface-muted)] px-3 py-1.5 text-xs">
+          {/* min-w-0 (not just truncate) is what lets this flex child give
+              up width to the close button - a very long reply preview must
+              ellipsize instead of pushing the banner past the viewport. */}
+          <span className="min-w-0 truncate">
             {editingPreview ? `Editing: ${editingPreview}` : `Replying to: ${replyPreview}`}
           </span>
           <button

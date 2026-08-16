@@ -31,6 +31,7 @@ import { NotificationPreferencesButton } from "../components/chat/NotificationPr
 import { VisitorInsightsControl } from "../components/chat/VisitorInsightsControl.js";
 import { ExpandableProse } from "../components/chat/ExpandableProse.js";
 import { renderMessageMarkdown } from "../components/chat/markdown.js";
+import { buildReplyPreviewInfo } from "../components/chat/replyPreview.js";
 import {
   dismissNotificationEmailPrompt,
   isNotificationEmailPromptDismissed,
@@ -458,6 +459,14 @@ export default function Chat() {
   const visibleMessages = useMemo(() => messages.filter((m) => !hiddenIds.has(m.id)), [messages, hiddenIds]);
   const threadItems = useMemo(() => withDateSeparators(visibleMessages), [visibleMessages]);
 
+  // The composer's "Replying to: …" banner shows a compact single-line
+  // preview - truncated text, or a "Photo · cat.jpg"-style label when the
+  // reply target is an attachment-only message.
+  const replyPreviewText = useMemo(
+    () => (replyTo ? buildReplyPreviewInfo(replyTo, conversationKey).text : undefined),
+    [replyTo, conversationKey],
+  );
+
   // Only the single most-recently-read own message should show "Read" -
   // find its id once per messages change rather than inside MessageBubble
   // (which only ever sees one message at a time).
@@ -611,8 +620,8 @@ export default function Chat() {
                     canEdit={canEdit(item.message)}
                     disableActions={isBlocked}
                     showReadReceipt={item.message.id === lastReadOwnMessageId}
-                    replyPreview={
-                      item.message.replyToId ? messages.find((m) => m.id === item.message.replyToId)?.text : undefined
+                    replyPreviewMessage={
+                      item.message.replyToId ? messages.find((m) => m.id === item.message.replyToId) : undefined
                     }
                     onReply={() => setReplyTo(item.message)}
                     onEdit={() => setEditing(item.message)}
@@ -634,7 +643,7 @@ export default function Chat() {
           attachmentLimits={site.limits.attachmentSize}
           disabled={isBlocked}
           disabledReason={isBlocked ? "You can no longer send messages in this conversation." : undefined}
-          replyPreview={replyTo?.text}
+          replyPreview={replyPreviewText}
           onCancelReply={() => setReplyTo(null)}
           editingPreview={editing ? "editing message" : undefined}
           initialText={editing?.text}

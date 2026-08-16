@@ -35,6 +35,7 @@ import { withDateSeparators } from "../../components/chat/dateSeparators.js";
 import { DeleteMessageModal } from "../../components/chat/DeleteMessageModal.js";
 import { getLocallyDeletedMessageIds, hideMessageLocally } from "../../components/chat/locallyDeletedMessages.js";
 import { MessageBubble } from "../../components/chat/MessageBubble.js";
+import { buildReplyPreviewInfo } from "../../components/chat/replyPreview.js";
 import { TypingIndicator } from "../../components/chat/TypingIndicator.js";
 import { FullScreenLoader } from "../../components/common/Loader.js";
 import { VisitorInsightsDrawer } from "../../components/admin/VisitorInsightsDrawer.js";
@@ -297,6 +298,13 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   // reload if it were removed from there instead.
   const visibleMessages = useMemo(() => messages.filter((m) => !hiddenIds.has(m.id)), [messages, hiddenIds]);
   const threadItems = useMemo(() => withDateSeparators(visibleMessages), [visibleMessages]);
+
+  // Compact single-line "Replying to: …" banner text for the composer -
+  // truncated for long quotes, "Photo · cat.jpg"-style for attachments.
+  const replyPreviewText = useMemo(
+    () => (replyTo && conversationKey ? buildReplyPreviewInfo(replyTo, conversationKey).text : undefined),
+    [replyTo, conversationKey],
+  );
 
   // Only the single most-recently-read own (ADMIN) message should show
   // "Read" - computed once per messages change, not per-bubble.
@@ -611,8 +619,8 @@ export function ConversationView({ conversationId, onChanged }: Props) {
                       : false
                   }
                   showReadReceipt={item.message.id === lastReadOwnMessageId}
-                  replyPreview={
-                    item.message.replyToId ? messages.find((m) => m.id === item.message.replyToId)?.text : undefined
+                  replyPreviewMessage={
+                    item.message.replyToId ? messages.find((m) => m.id === item.message.replyToId) : undefined
                   }
                   onReply={() => setReplyTo(item.message)}
                   onEdit={() => setEditing(item.message)}
@@ -642,7 +650,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
           }
         }
         disabled={false}
-        replyPreview={replyTo?.text}
+        replyPreview={replyPreviewText}
         onCancelReply={() => setReplyTo(null)}
         editingPreview={editing ? "editing message" : undefined}
         initialText={editing?.text}
