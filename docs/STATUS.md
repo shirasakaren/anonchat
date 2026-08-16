@@ -1,9 +1,98 @@
 # Project status / handoff
 
-Last updated: 2026-08-16. Read this first if you're picking up this project
+Last updated: 2026-08-17. Read this first if you're picking up this project
 in a new session - it's the durable source of truth for what's done, what's
 verified, and what's next. (Don't rely solely on an in-session task list -
 this file is what's meant to survive across sessions.)
+
+## Reliability, mobile chat interactions, and caching pass (2026-08-17)
+
+Bug fixes (the production inbox was hitting real failures):
+
+- Attachment downloads were breaking: every conversation view re-fetched
+  each attachment, and a page full of photos tripped the 60/min download
+  rate limit (production logs showed a burst of 429s). A missing storage
+  file streamed a truncated 200 whose empty body surfaced in the client as
+  "nonce expected Uint8Array of length 24, got length=0". Fixed on all
+  three layers: the rate limit is now 300/min, download routes stat the
+  stored object first and return a clean 404 when it's gone, and the
+  client pre-checks the blob length and explains 429s and damaged files
+  instead of showing raw crypto errors.
+- Multi-photo messages rendered inside one shared bubble: the rectangle
+  took the widest image's width and drew a border around every photo.
+  Image-only messages now skip the shared wrapper - each photo keeps its
+  own rounded frame and aspect ratio, with the timestamp below the stack.
+- Read receipts moved out of the bubble: the sender's own messages carry
+  their time / edited / Sending / Read row below the bubble (right-
+  aligned), so the receipt sits at the bottom of the sent stream and
+  never shifts the bubble's contents.
+
+Mobile chat interactions:
+
+- Long-press on a message opens an iOS-style menu: the chat blurs behind
+  an enlarged copy of the bubble, with the quick-react emoji strip
+  (expandable to the full picker) and Reply / Edit / Delete / Cancel.
+  The always-visible mobile action buttons are gone - they're desktop
+  hover-reveal only (md+).
+- Swiping a message right (touch) tracks the bubble with the finger and
+  releases into reply mode, WhatsApp-style. touch-action: pan-y keeps
+  vertical scrolling native.
+- The emoji button opens one Emoji | GIFs tabbed panel, and opening it
+  never focuses an input, so the phone keyboard stays closed until the
+  person taps search. GIFs follow whichever providers are configured:
+  with both GIPHY and KLIPY keys the server aggregates (provider=all
+  queries both in parallel and interleaves results); with one, only that
+  one is queried.
+- On small screens the attach button moved out of the input field to sit
+  beside Send; the input's left side holds only emoji. Desktop keeps the
+  attach button inside the input.
+- The disappearing-messages panel is a centered popup on mobile (the
+  anchored popover ran off the edge of the screen) and an anchored
+  popover from the md breakpoint up.
+
+Product changes:
+
+- Auto-delete chat is removed (migration 20260817000000 drops the
+  columns). Disappearing messages is the single retention control: one
+  Off / 24 hours / 7 days / 90 days dropdown plus the optional wipe-on-
+  logout checkbox. The setting stays conversation-wide metadata set by
+  either participant - the admin uses the visitor's setting and can
+  change it themselves, and vice versa.
+- The inbox Select button moved into each row's chevron menu; choosing
+  it enters selection mode with that conversation checked. The bulk bar
+  shows Select all (N selected), Archive, Block, Delete, and Cancel in
+  line. The checkbox sits on the sender-name line and the preview line
+  indents to match, instead of the checkbox floating at the row's
+  vertical center.
+- Both roles confirm before leaving their account: the visitor's Switch
+  identity and the admin's Logout open a confirmation popup naming what
+  it takes to get back in.
+- The visitor auth screen shows only the profile header above the
+  identity card; the three privacy/security notes moved below the card
+  behind a Show details toggle, above the privacy policy link.
+
+Caching (no new infrastructure):
+
+- Client keeps an IndexedDB cache of downloaded attachment ciphertext:
+  repeat views decrypt from disk with zero network requests (verified -
+  a reload renders a two-photo message with 0 attachment fetches).
+  Ciphertext only, plaintext never at rest; evicted when a message is
+  deleted, on both chat surfaces.
+- Server keeps a size-bounded in-process LRU (256MB, 32MB max entry) of
+  recently served ciphertext, evicted wherever storage.delete runs -
+  the honest caching layer for the single-instance deployment, no Redis
+  dependency. Attachment/note downloads also send private max-age=3600.
+- Vite's hashed /assets/ files are served immutable (1y) so the browser
+  and any CDN in front never re-fetch them; index.html still revalidates.
+
+Verification: 295 tests green (21 crypto, 21 shared, 117 server, 136
+web), typecheck/lint clean, production build passes. 36 Playwright
+checks against the production-style preview covered the auth details
+toggle, mobile composer layout, keyboard-free emoji panel, long-press
+menu (blurred backdrop, 1.08x clone, quick reactions, reply entry),
+swipe gating, below-bubble meta row, mobile/desktop retention panel
+modes, the dropdown options, per-image multi-photo layout, and the
+attachment cache + delete eviction.
 
 ## Chat fixes, retention features, GIF picker, and RAM pass (2026-08-16)
 
