@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { encryptBlob } from "@anonchat/crypto";
-import { ChevronRight, StickyNote, Trash2 } from "lucide-react";
+import { ChevronRight, LogOut, StickyNote, Trash2 } from "lucide-react";
 import type { ConversationNoteDto, MessageDto, ServerWsEvent } from "@anonchat/shared";
 import {
   attachmentUrl,
@@ -452,28 +452,28 @@ export default function Chat() {
     <main className="flex h-screen overflow-hidden">
       {profileOpen && <AdminProfilePanel site={site} onClose={hideProfile} />}
       <div className={profileOpen ? "hidden min-w-0 flex-1 flex-col sm:flex" : "flex min-w-0 flex-1 flex-col"}>
-        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface-raised)] px-4 py-2.5">
+        <header className="flex items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 sm:px-4 sm:py-2.5">
           <button
             type="button"
             onClick={toggleProfile}
             aria-label={profileOpen ? "Hide admin profile" : "Show admin profile"}
             aria-expanded={profileOpen}
-            className="flex items-center gap-2.5 rounded-lg text-left hover:bg-[var(--surface-muted)]"
+            className="flex min-w-0 items-center gap-2.5 rounded-lg text-left hover:bg-[var(--surface-muted)]"
           >
             {!profileOpen && <ChevronRight size={16} className="ml-1 shrink-0 text-[var(--text-muted)]" aria-hidden />}
             {site.avatarUrl ? (
-              <img src={site.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
+              <img src={site.avatarUrl} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
             ) : (
-              <DefaultAvatar name={site.displayName} className="h-8 w-8 text-sm" />
+              <DefaultAvatar name={site.displayName} className="h-8 w-8 shrink-0 text-sm" />
             )}
-            <div>
-              <h1 className="text-sm font-semibold leading-tight">{site.displayName}</h1>
+            <div className="min-w-0">
+              <h1 className="truncate text-sm font-semibold leading-tight">{site.displayName}</h1>
               {site.presenceEnabled && adminOnline !== null && (
                 <p className="text-xs leading-tight text-[var(--text-muted)]">{adminOnline ? "Online" : "Offline"}</p>
               )}
             </div>
           </button>
-          <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             <VisitorInsightsControl conversationId={session.conversationId} config={site.visitorInsights} />
             <NotificationPreferencesButton
               vapidPublicKey={site.vapidPublicKey}
@@ -488,19 +488,29 @@ export default function Chat() {
             >
               <StickyNote size={18} aria-hidden />
             </button>
-            <span className="max-w-48 truncate rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-xs">
+            {/* The account ID is only meaningful when there is room for it -
+                on small screens it is noise, and everything here must fit in
+                a single header row. */}
+            <span className="hidden max-w-48 truncate rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-xs sm:inline-block">
               {session.displayName ? `${session.displayName} · ` : ""}
               <span className="font-mono">#{session.publicId}</span>
             </span>
-            <button type="button" onClick={() => logout()} className="text-xs text-[var(--text-muted)] underline">
-              Switch identity
+            <button
+              type="button"
+              onClick={() => logout()}
+              title="Switch identity"
+              aria-label="Switch identity"
+              className="flex items-center gap-1.5 rounded-lg p-1.5 text-xs text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
+            >
+              <LogOut size={16} aria-hidden />
+              <span className="hidden underline underline-offset-2 sm:inline">Switch identity</span>
             </button>
             {site.privacyPolicyUrl && (
               <a
                 href={site.privacyPolicyUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs text-[var(--text-muted)] underline underline-offset-2 hover:text-[var(--text)]"
+                className="hidden text-xs text-[var(--text-muted)] underline underline-offset-2 hover:text-[var(--text)] sm:block"
               >
                 Privacy
               </a>
