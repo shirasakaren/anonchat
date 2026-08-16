@@ -18,6 +18,8 @@ const LABELS: Record<string, string> = {
   "conversation.alias_updated": "Updated a conversation alias",
   "conversation.muted": "Muted a conversation",
   "conversation.unmuted": "Unmuted a conversation",
+  "conversation.bulk_action": "Applied a bulk inbox action",
+  "conversation.retention_updated": "Updated a conversation's message retention",
   "message.edited": "Edited a message",
   "message.deleted": "Deleted a message",
   "message.reaction.set": "Reacted to a message",

@@ -28,6 +28,36 @@ export const ReadReceiptRequestSchema = z.object({
 });
 export type ReadReceiptRequestInput = z.infer<typeof ReadReceiptRequestSchema>;
 
+/** WhatsApp-style disappearing-message timelines, in seconds. */
+export const DISAPPEARING_OPTIONS_SECONDS = [86_400, 604_800, 7_776_000] as const;
+export type DisappearingSeconds = (typeof DISAPPEARING_OPTIONS_SECONDS)[number];
+
+/** Per-conversation message retention, configurable by either participant.
+ *  Both fields are plain metadata (not content), so the server can apply
+ *  them without breaking the E2EE property. */
+export const RetentionRequestSchema = z.object({
+  disappearingEnabled: z.boolean().optional(),
+  disappearingSeconds: z
+    .union([z.literal(null), z.coerce.number().refine((n) => DISAPPEARING_OPTIONS_SECONDS.includes(n as DisappearingSeconds))])
+    .optional(),
+  disappearingOnLogout: z.boolean().optional(),
+  autoDeleteMode: z.enum(["OFF", "DISCONNECT", "BOTH_READ", "AFTER_DAYS"]).optional(),
+  autoDeleteDays: z.union([z.literal(null), z.coerce.number().int().min(1).max(365)]).optional(),
+});
+export type RetentionRequestInput = z.infer<typeof RetentionRequestSchema>;
+
+export interface ConversationRetentionDto {
+  disappearing: {
+    enabled: boolean;
+    seconds: number | null;
+    onLogout: boolean;
+  };
+  autoDelete: {
+    mode: "OFF" | "DISCONNECT" | "BOTH_READ" | "AFTER_DAYS";
+    days: number | null;
+  };
+}
+
 export const MessagesQuerySchema = PaginationQuerySchema.extend({
   /// Default "asc" (oldest first, cursor walks forward). "desc" returns the
   /// newest page first - used by the inbox's last-message preview so it
@@ -76,6 +106,9 @@ export interface ConversationDto {
   unreadCount: number;
   /** The anonymous participant's X25519 public key - needed by the admin's client to derive the shared conversation key via ECDH. */
   anonymousExchangePublicKey: string;
+  /** Disappearing messages and auto-delete settings - visible to both
+   *  participants, since either side can change them. */
+  retention: ConversationRetentionDto;
 }
 
 /** Admin-only view of a conversation. `adminAlias`/`mutedAt` are deliberately

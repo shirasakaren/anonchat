@@ -1,16 +1,23 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { encryptBlob } from "@anonchat/crypto";
 import { ChevronRight, LogOut, StickyNote, Trash2 } from "lucide-react";
-import type { ConversationNoteDto, MessageDto, ServerWsEvent } from "@anonchat/shared";
+import type {
+  ConversationNoteDto,
+  ConversationRetentionDto,
+  MessageDto,
+  ServerWsEvent,
+} from "@anonchat/shared";
 import {
   attachmentUrl,
   deleteMessage,
   editMessage,
+  getConversation,
   getMessages,
   markRead,
   sendMessage,
   setReaction,
   clearReaction,
+  updateRetention,
 } from "../api/conversation.js";
 import { ApiError } from "../api/client.js";
 import { useAnonymousSession } from "../context/AnonymousSessionContext.js";
@@ -35,6 +42,7 @@ import { VisitorInsightsControl } from "../components/chat/VisitorInsightsContro
 import { ExpandableProse } from "../components/chat/ExpandableProse.js";
 import { renderMessageMarkdown } from "../components/chat/markdown.js";
 import { buildReplyPreviewInfo } from "../components/chat/replyPreview.js";
+import { RetentionPopover } from "../components/chat/RetentionPopover.js";
 import {
   dismissNotificationEmailPrompt,
   isNotificationEmailPromptDismissed,
@@ -89,6 +97,10 @@ export default function Chat() {
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [incomingNote, setIncomingNote] = useState<ConversationNoteDto | null>(null);
+  const [retention, setRetention] = useState<ConversationRetentionDto>({
+    disappearing: { enabled: false, seconds: null, onLogout: false },
+    autoDelete: { mode: "OFF", days: null },
+  });
   // The profile panel opens by default on desktop where it sits beside the
   // chat, but on small screens it replaces the chat entirely - so mobile
   // visitors land in the conversation and can open the profile on demand.
@@ -131,6 +143,18 @@ export default function Chat() {
   );
   const welcomeHtml = useMemo(() => renderMessageMarkdown(site.welcomeMessage), [site.welcomeMessage]);
   const draft = useEncryptedDraft("USER", session.conversationId, conversationKey);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getConversation()
+      .then((conversation) => {
+        if (!cancelled) setRetention(conversation.retention);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const decryptDto = useCallback(
     (dto: MessageDto): DisplayMessage => {
@@ -274,6 +298,12 @@ export default function Chat() {
           setMessages((prev) => prev.map((m) => (m.id === event.messageId ? { ...m, deleted: true, text: "" } : m)));
           break;
         }
+        case "messages.deleted": {
+          if (event.conversationId !== session.conversationId) break;
+          const removed = new Set(event.messageIds);
+          setMessages((prev) => prev.filter((m) => !removed.has(m.id)));
+          break;
+        }
         case "reaction.updated": {
           setMessages((prev) => prev.map((m) => (m.id === event.messageId ? { ...m, reactions: event.reactions } : m)));
           break;
@@ -294,6 +324,7 @@ export default function Chat() {
         }
         case "conversation.updated": {
           setConversationStatus(event.conversation.status);
+          setRetention(event.conversation.retention);
           break;
         }
         case "typing": {
@@ -572,6 +603,11 @@ export default function Chat() {
           </button>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             <VisitorInsightsControl conversationId={session.conversationId} config={site.visitorInsights} />
+            <RetentionPopover
+              retention={retention}
+              who="USER"
+              onChange={(patch) => updateRetention(patch).then((conversation) => setRetention(conversation.retention))}
+            />
             <NotificationPreferencesButton
               vapidPublicKey={site.vapidPublicKey}
               emailAvailable={site.emailNotificationsAvailable}

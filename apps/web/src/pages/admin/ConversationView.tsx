@@ -20,6 +20,7 @@ import {
   sendAdminMessage,
   setAdminReaction,
   clearAdminReaction,
+  updateAdminRetention,
   updateConversationAlias,
   adminAttachmentUrl,
 } from "../../api/admin.js";
@@ -39,6 +40,7 @@ import { DeleteMessageModal } from "../../components/chat/DeleteMessageModal.js"
 import { getLocallyDeletedMessageIds, hideMessageLocally } from "../../components/chat/locallyDeletedMessages.js";
 import { MessageBubble } from "../../components/chat/MessageBubble.js";
 import { buildReplyPreviewInfo } from "../../components/chat/replyPreview.js";
+import { RetentionPopover } from "../../components/chat/RetentionPopover.js";
 import { TypingIndicator } from "../../components/chat/TypingIndicator.js";
 import { FullScreenLoader } from "../../components/common/Loader.js";
 import { VisitorInsightsDrawer } from "../../components/admin/VisitorInsightsDrawer.js";
@@ -306,6 +308,13 @@ export function ConversationView({ conversationId, onChanged }: Props) {
         case "message.deleted":
           if (!belongsHere(event.conversationId)) return;
           setMessages((prev) => prev.map((m) => (m.id === event.messageId ? { ...m, deleted: true, text: "" } : m)));
+          break;
+        case "messages.deleted":
+          if (!belongsHere(event.conversationId)) return;
+          setMessages((prev) => {
+            const removed = new Set(event.messageIds);
+            return prev.filter((m) => !removed.has(m.id));
+          });
           break;
         case "reaction.updated":
           if (!belongsHere(event.conversationId)) return;
@@ -649,6 +658,14 @@ export function ConversationView({ conversationId, onChanged }: Props) {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          <RetentionPopover
+            retention={conversation.retention}
+            who="ADMIN"
+            onChange={async (patch) => {
+              const updated = await updateAdminRetention(conversationId, patch);
+              setConversation((prev) => (prev ? { ...prev, retention: updated.retention } : prev));
+            }}
+          />
           {/* Only visitors who explicitly opted into diagnostics have a row
               to look at - don't show an info icon that opens an empty
               drawer for everyone else. */}

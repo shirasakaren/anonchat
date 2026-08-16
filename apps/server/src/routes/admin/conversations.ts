@@ -10,6 +10,7 @@ import {
   MessagesQuerySchema,
   ReactionRequestSchema,
   ReadReceiptRequestSchema,
+  RetentionRequestSchema,
 } from "@anonchat/shared";
 import { requireAdmin } from "../../auth/plugin.js";
 import { prisma } from "../../db.js";
@@ -22,6 +23,7 @@ import {
   restoreConversation,
   setConversationAlias,
   setConversationMuted,
+  setConversationRetention,
   setConversationStatus,
   softDeleteConversation,
 } from "../../services/conversation.service.js";
@@ -231,6 +233,15 @@ export function registerAdminConversationRoutes(app: FastifyInstance): void {
     const params = ConversationIdParam.parse(request.params);
     const dto = await setConversationStatus(params.id, "ACTIVE");
     await recordAudit(admin.id, "conversation.unblocked", { type: "Conversation", id: params.id });
+    reply.send(dto);
+  });
+
+  app.patch("/admin/conversations/:id/retention", { preHandler: requireAdmin }, async (request, reply) => {
+    const { admin } = request.adminAuth!;
+    const params = ConversationIdParam.parse(request.params);
+    const body = RetentionRequestSchema.parse(request.body);
+    const dto = await setConversationRetention(params.id, body);
+    await recordAudit(admin.id, "conversation.retention_updated", { type: "Conversation", id: params.id });
     reply.send(dto);
   });
 

@@ -1,5 +1,12 @@
 import type { EncryptedPayload } from "@anonchat/crypto";
-import type { ConversationDto, ConversationNoteDto, MessageDto, MessagePage, NoteAssetDto } from "@anonchat/shared";
+import type {
+  ConversationDto,
+  ConversationNoteDto,
+  MessageDto,
+  MessagePage,
+  NoteAssetDto,
+  RetentionRequestInput,
+} from "@anonchat/shared";
 import { api, apiFetch, apiUpload } from "./client.js";
 
 export function getConversation(): Promise<ConversationDto> {
@@ -58,6 +65,10 @@ export function clearReaction(id: string): Promise<void> {
 
 export function markRead(upToMessageId: string): Promise<{ upToMessageId: string; readAt: string }> {
   return api.post("/conversation/read", { upToMessageId });
+}
+
+export function updateRetention(retention: RetentionRequestInput): Promise<ConversationDto> {
+  return api.patch<ConversationDto>("/conversation/retention", retention);
 }
 
 export function attachmentUrl(id: string): string {

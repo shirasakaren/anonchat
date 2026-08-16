@@ -37,11 +37,16 @@ import { ensureCsrfCookie, verifyCsrf } from "./security/csrf.js";
 // start their own cleanup timers just by being imported.
 import "./services/notificationDigest.service.js";
 import "./services/visitorInsights.service.js";
+// Side-effect import: starts the disappearing-message / auto-delete sweep
+// timer (see retention.service.ts), same pattern as the imports above.
+import "./services/retention.service.js";
+import { startRetentionSweep } from "./services/retention.service.js";
 import { handleError } from "./utils/errors.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export async function buildApp(): Promise<FastifyInstance> {
+  startRetentionSweep();
   const env = loadEnv();
 
   const app = Fastify({

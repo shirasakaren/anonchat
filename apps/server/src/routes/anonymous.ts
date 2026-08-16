@@ -23,6 +23,7 @@ import {
   setAnonSessionCookie,
 } from "../auth/session.js";
 import { requireAnon, requireAnonIdentity } from "../auth/plugin.js";
+import { purgeAllMessages } from "../services/retention.service.js";
 import { getClientIp } from "../utils/ip.js";
 import { checkRateLimit } from "../utils/rateLimiter.js";
 import { Errors } from "../utils/errors.js";
@@ -192,6 +193,12 @@ export function registerAnonymousRoutes(app: FastifyInstance): void {
         where: { tokenHash: hashSessionToken(token), revokedAt: null },
         data: { revokedAt: new Date() },
       });
+    }
+    // Opt-in "disappear on logout": the visitor asked for the conversation
+    // to be wiped when they sign out / switch identity.
+    const conversation = request.anonUser?.conversation;
+    if (conversation?.disappearingOnLogout) {
+      void purgeAllMessages(conversation.id);
     }
     clearAnonSessionCookie(reply);
     reply.status(204).send();

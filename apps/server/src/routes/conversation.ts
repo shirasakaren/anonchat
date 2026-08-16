@@ -5,11 +5,18 @@ import {
   MessagesQuerySchema,
   ReactionRequestSchema,
   ReadReceiptRequestSchema,
+  RetentionRequestSchema,
 } from "@anonchat/shared";
 import { requireAnon } from "../auth/plugin.js";
 import { prisma } from "../db.js";
 import { createMessage, deleteMessage, editMessage, setReaction } from "../services/message.service.js";
-import { countUnread, getMessagesPage, markRead, toConversationDto } from "../services/conversation.service.js";
+import {
+  countUnread,
+  getMessagesPage,
+  markRead,
+  setConversationRetention,
+  toConversationDto,
+} from "../services/conversation.service.js";
 import { getStorageAdapter } from "../storage/index.js";
 import { getSiteSettings } from "../services/siteSettings.service.js";
 import { Errors } from "../utils/errors.js";
@@ -101,6 +108,13 @@ export function registerConversationRoutes(app: FastifyInstance): void {
     const params = IdParamSchema.parse(request.params);
     await setReaction({ conversationId: conversation.id, messageId: params.id, senderType: "USER", emoji: null });
     reply.status(204).send();
+  });
+
+  app.patch("/conversation/retention", { preHandler: requireAnon }, async (request, reply) => {
+    const conversation = request.anonUser!.conversation!;
+    const body = RetentionRequestSchema.parse(request.body);
+    const dto = await setConversationRetention(conversation.id, body);
+    reply.send(dto);
   });
 
   app.post("/conversation/read", { preHandler: requireAnon }, async (request, reply) => {

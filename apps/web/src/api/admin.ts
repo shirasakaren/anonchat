@@ -11,6 +11,7 @@ import type {
   MessageDto,
   MessagePage,
   NoteAssetDto,
+  RetentionRequestInput,
   SiteSettingsRequestInput,
   SiteSettingsDto,
   VisitorInsightDto,
@@ -217,6 +218,13 @@ export function markAdminRead(
   upToMessageId: string,
 ): Promise<{ upToMessageId: string; readAt: string }> {
   return api.post(`/admin/conversations/${conversationId}/read`, { upToMessageId });
+}
+
+export function updateAdminRetention(
+  conversationId: string,
+  retention: RetentionRequestInput,
+): Promise<AdminConversationDto> {
+  return api.patch<AdminConversationDto>(`/admin/conversations/${conversationId}/retention`, retention);
 }
 
 export function archiveConversation(id: string): Promise<AdminConversationDto> {

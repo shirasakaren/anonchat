@@ -19,6 +19,9 @@ export type ServerWsEvent =
   | { type: "message.created"; conversationId: string; message: MessageDto }
   | { type: "message.updated"; conversationId: string; message: MessageDto }
   | { type: "message.deleted"; conversationId: string; messageId: string }
+  /** Disappearing-message / auto-delete sweeps delete many messages at
+   *  once - one event instead of a per-message burst. */
+  | { type: "messages.deleted"; conversationId: string; messageIds: string[] }
   | { type: "reaction.updated"; conversationId: string; messageId: string; reactions: ReactionDto[] }
   | { type: "note.updated"; conversationId: string; note: ConversationNoteDto }
   | { type: "conversation.updated"; conversation: ConversationDto }

@@ -73,6 +73,12 @@ export async function createMessage(params: {
           contentNonce: content.nonce,
           replyToId: params.replyToId ?? null,
           clientId: params.clientId ?? null,
+          // Disappearing messages: only messages sent AFTER the setting was
+          // enabled carry an expiry - never retroactively applied to older
+          // history.
+          ...(conversation.disappearingEnabled && conversation.disappearingSeconds
+            ? { expiresAt: new Date(Date.now() + conversation.disappearingSeconds * 1000) }
+            : {}),
           attachments: {
             create: attachmentInputs.map((attachment, index) => {
               const metaBuf = toBuffer(attachment.meta);
