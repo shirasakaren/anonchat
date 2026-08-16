@@ -80,8 +80,13 @@ export default function Chat() {
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [incomingNote, setIncomingNote] = useState<ConversationNoteDto | null>(null);
+  // The profile panel opens by default on desktop where it sits beside the
+  // chat, but on small screens it replaces the chat entirely - so mobile
+  // visitors land in the conversation and can open the profile on demand.
   const [profileOpen, setProfileOpen] = useState(
-    () => sessionStorage.getItem("anonchat.adminProfileHidden") !== "true",
+    () =>
+      window.matchMedia("(min-width: 640px)").matches &&
+      sessionStorage.getItem("anonchat.adminProfileHidden") !== "true",
   );
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
