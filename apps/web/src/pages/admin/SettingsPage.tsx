@@ -106,6 +106,12 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
   const [mediaDropTargetId, setMediaDropTargetId] = useState<string | null>(null);
   const [profileMediaOrder, setProfileMediaOrder] = useState<string[]>([]);
   const [savedProfileMediaOrder, setSavedProfileMediaOrder] = useState<string[]>([]);
+  // Media added this session: shown as local previews in the grid and
+  // uploaded only when the admin clicks Save changes - adding no longer
+  // saves-and-refreshes by itself.
+  const [pendingMediaFiles, setPendingMediaFiles] = useState<
+    { id: string; file: File; previewUrl: string; kind: "image" | "video" }[]
+  >([]);
   const [digestEmail, setDigestEmail] = useState("");
   const [digestEnabled, setDigestEnabled] = useState(false);
   const [digestInterval, setDigestInterval] = useState(15);
@@ -189,7 +195,15 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
   }, [isSoundEnabled]);
 
   const mediaOrderDirty = !mediaOrdersEqual(profileMediaOrder, savedProfileMediaOrder);
-  const navigationBlocker = useBlocker(view === "profile" && mediaOrderDirty);
+
+  // Revoke the local preview object URLs this page created.
+  useEffect(() => {
+    const current = pendingMediaFiles;
+    return () => {
+      for (const pending of current) URL.revokeObjectURL(pending.previewUrl);
+    };
+  }, [pendingMediaFiles]);
+  const navigationBlocker = useBlocker(view === "profile" && (mediaOrderDirty || pendingMediaFiles.length > 0));
 
   useEffect(() => {
     if (!mediaOrderDirty) return;
@@ -252,7 +266,31 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
         contactLinks,
         pgpPublicKey,
       });
-      if (mediaOrderDirty) updated = await reorderProfileMedia(profileMediaOrder);
+      // Upload any newly added media now - this is the explicit save the
+      // grid has been previewing for. Keep partial progress on failure so
+      // already-uploaded files aren't re-queued on the next attempt.
+      const previousIds = new Set(savedProfileMediaOrder);
+      let uploadedCount = 0;
+      try {
+        for (const pending of pendingMediaFiles) {
+          updated = await uploadProfileMedia(pending.file);
+          uploadedCount += 1;
+        }
+      } catch (error) {
+        setPendingMediaFiles((current) => {
+          const drop = current.slice(0, uploadedCount);
+          for (const pending of drop) URL.revokeObjectURL(pending.previewUrl);
+          return current.slice(uploadedCount);
+        });
+        notifyError("Some profile media could not be uploaded", error);
+        return false;
+      }
+      const uploadedIds = updated.profileMedia.map(({ id }) => id).filter((id) => !previousIds.has(id));
+      if (mediaOrderDirty) {
+        updated = await reorderProfileMedia([...profileMediaOrder, ...uploadedIds]);
+      }
+      for (const pending of pendingMediaFiles) URL.revokeObjectURL(pending.previewUrl);
+      setPendingMediaFiles([]);
       const savedOrder = updated.profileMedia.map(({ id }) => id);
       setSettings(updated);
       setProfileMediaOrder(savedOrder);
@@ -445,25 +483,47 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
     }
   }
 
-  async function handleProfileMediaUpload(event: React.ChangeEvent<HTMLInputElement>) {
+  function handleProfileMediaUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (!file) return;
-    setMediaBusy(true);
+    if (!file || !settings || !site) return;
     setMediaError(null);
-    try {
-      const updated = await uploadProfileMedia(file);
-      const serverOrder = updated.profileMedia.map(({ id }) => id);
-      setSettings(updated);
-      setSavedProfileMediaOrder(serverOrder);
-      setProfileMediaOrder((current) => reconcileMediaOrder(current, serverOrder));
-      await refreshSite();
-    } catch (error) {
-      setMediaError(error instanceof ApiError ? error.message : "Could not upload that media file.");
-      notifyError("Profile media upload failed", error);
-    } finally {
-      setMediaBusy(false);
+    const total = settings.profileMedia.length + pendingMediaFiles.length;
+    if (total >= 8) {
+      setMediaError("You can add up to 8 profile media items.");
+      return;
     }
+    const isVideo = file.type.startsWith("video/");
+    const isImage = file.type.startsWith("image/");
+    if (!isVideo && !isImage) {
+      setMediaError("Media must be an image, animated GIF, or video (PNG, JPEG, WebP, GIF, AVIF, MP4, WebM, OGG, MOV).");
+      return;
+    }
+    const limitMb = isVideo ? site.limits.attachmentSize.videoMb : site.limits.attachmentSize.imageMb;
+    if (file.size > limitMb * 1024 * 1024) {
+      setMediaError(`The ${isVideo ? "video" : "image"} upload limit is ${limitMb} MB.`);
+      return;
+    }
+    // Queue only: the grid shows a local preview immediately, and the file
+    // reaches the server when the admin clicks Save changes - no more
+    // auto-save + page refresh on every add.
+    setPendingMediaFiles((current) => [
+      ...current,
+      {
+        id: `pending-${Date.now()}-${current.length}`,
+        file,
+        previewUrl: URL.createObjectURL(file),
+        kind: isVideo ? "video" : "image",
+      },
+    ]);
+  }
+
+  function removePendingMedia(id: string) {
+    setPendingMediaFiles((current) => {
+      const target = current.find((pending) => pending.id === id);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return current.filter((pending) => pending.id !== id);
+    });
   }
 
   async function handleProfileMediaDelete(id: string) {
@@ -696,7 +756,7 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
                 <label
                   className={clsx(
                     "inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border-strong)] px-3 py-2 text-xs font-semibold",
-                    mediaBusy || settings.profileMedia.length >= 8
+                    mediaBusy || settings.profileMedia.length + pendingMediaFiles.length >= 8
                       ? "pointer-events-none opacity-50"
                       : "cursor-pointer",
                   )}
@@ -706,13 +766,19 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
                   <input
                     type="file"
                     accept="image/png,image/jpeg,image/webp,image/gif,image/avif,video/mp4,video/webm,video/ogg,video/quicktime"
-                    disabled={mediaBusy || settings.profileMedia.length >= 8}
-                    onChange={(event) => void handleProfileMediaUpload(event)}
+                    disabled={mediaBusy || settings.profileMedia.length + pendingMediaFiles.length >= 8}
+                    onChange={handleProfileMediaUpload}
                     className="hidden"
                   />
                 </label>
               </div>
-              {orderedProfileMedia.length > 0 && (
+              {pendingMediaFiles.length > 0 && (
+                <p className="mt-3 text-xs text-[var(--text-muted)]">
+                  {pendingMediaFiles.length} new {pendingMediaFiles.length === 1 ? "file" : "files"} ready to
+                  upload - select Save changes to publish.
+                </p>
+              )}
+              {(orderedProfileMedia.length > 0 || pendingMediaFiles.length > 0) && (
                 <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {orderedProfileMedia.map((media, index) => (
                     <div
@@ -756,6 +822,39 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
                         disabled={mediaBusy}
                         onClick={() => void handleProfileMediaDelete(media.id)}
                         aria-label={`Remove ${media.filename}`}
+                        className="absolute right-2 top-2 rounded-full bg-black/70 p-2 text-white hover:bg-black disabled:opacity-50"
+                      >
+                        <Trash2 size={14} aria-hidden />
+                      </button>
+                    </div>
+                  ))}
+                  {pendingMediaFiles.map((pending) => (
+                    <div key={pending.id} className="group relative aspect-[4/3] overflow-hidden rounded-xl">
+                      <ProfileMediaTile
+                        media={{
+                          id: pending.id,
+                          kind: pending.kind === "video" ? "video" : "image",
+                          mimetype: pending.file.type,
+                          filename: pending.file.name,
+                          sizeBytes: pending.file.size,
+                          url: pending.previewUrl,
+                        }}
+                        alt={`New ${pending.kind} awaiting save`}
+                        className="h-full w-full opacity-80"
+                        onImageOpen={() => undefined}
+                        onVideoOpen={() => undefined}
+                      />
+                      <span
+                        className="pointer-events-none absolute left-2 top-2 rounded-full bg-[var(--btn-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--btn-fg)]"
+                        aria-hidden
+                      >
+                        New
+                      </span>
+                      <button
+                        type="button"
+                        disabled={mediaBusy}
+                        onClick={() => removePendingMedia(pending.id)}
+                        aria-label={`Remove new file ${pending.file.name}`}
                         className="absolute right-2 top-2 rounded-full bg-black/70 p-2 text-white hover:bg-black disabled:opacity-50"
                       >
                         <Trash2 size={14} aria-hidden />
