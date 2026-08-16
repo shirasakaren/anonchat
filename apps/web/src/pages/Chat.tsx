@@ -23,6 +23,8 @@ import { Composer } from "../components/chat/Composer.js";
 import { ConnectionBanner } from "../components/chat/ConnectionBanner.js";
 import { DateSeparator } from "../components/chat/DateSeparator.js";
 import { withDateSeparators } from "../components/chat/dateSeparators.js";
+import { UnreadDivider } from "../components/chat/UnreadDivider.js";
+import { computeUnreadAnchor, getLastSeen, setLastSeen } from "../components/chat/lastSeen.js";
 import { DeleteMessageModal } from "../components/chat/DeleteMessageModal.js";
 import { DeleteIdentityModal } from "../components/chat/DeleteIdentityModal.js";
 import { getLocallyDeletedMessageIds, hideMessageLocally } from "../components/chat/locallyDeletedMessages.js";
@@ -77,6 +79,11 @@ export default function Chat() {
   const [deleteTarget, setDeleteTarget] = useState<DisplayMessage | null>(null);
   const [deleteIdentityOpen, setDeleteIdentityOpen] = useState(false);
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => getLocallyDeletedMessageIds(session.conversationId));
+  // First message the visitor hasn't seen yet on this device - the thread
+  // renders an unread divider above it and opens scrolled to it instead of
+  // loading from the very top and scrolling through everything.
+  const [unreadAnchorId, setUnreadAnchorId] = useState<string | null>(null);
+  const didInitialScrollRef = useRef(false);
   const [adminOnline, setAdminOnline] = useState<boolean | null>(null);
   const [adminTyping, setAdminTyping] = useState(false);
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
@@ -163,7 +170,17 @@ export default function Chat() {
     void loadAllMessages()
       .then((all) => {
         if (cancelled) return;
-        setMessages(all.map(decryptDto));
+        const decrypted = all.map(decryptDto);
+        const lastSeen = getLastSeen("USER", session.conversationId);
+        const anchor = computeUnreadAnchor(decrypted, lastSeen);
+        setUnreadAnchorId(anchor?.id ?? null);
+        didInitialScrollRef.current = false;
+        setMessages(decrypted);
+        // Opening the conversation means everything up to the newest
+        // message has now been seen - the next open only anchors to
+        // messages that arrive after this visit.
+        const newest = decrypted[decrypted.length - 1];
+        if (newest) setLastSeen("USER", session.conversationId, newest.id, newest.createdAt);
         const lastAdmin = [...all].reverse().find((m) => m.senderType === "ADMIN");
         if (lastAdmin && !lastAdmin.readAt) markRead(lastAdmin.id).catch(() => {});
       })
@@ -174,10 +191,34 @@ export default function Chat() {
     return () => {
       cancelled = true;
     };
-  }, [loadAllMessages, decryptDto]);
+  }, [loadAllMessages, decryptDto, session.conversationId]);
 
   useEffect(() => {
-    if (nearBottomRef.current) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!didInitialScrollRef.current) {
+      // First paint of a freshly loaded history: land on the unread
+      // divider (or the bottom when there's nothing unseen) instead of
+      // starting at the top and scrolling down through everything.
+      didInitialScrollRef.current = true;
+      const scroller = scrollerRef.current;
+      if (!scroller) return;
+      if (unreadAnchorId) {
+        scroller
+          .querySelector(`[data-message-id="${CSS.escape(unreadAnchorId)}"]`)
+          ?.scrollIntoView({ block: "center" });
+      } else {
+        scroller.scrollTop = scroller.scrollHeight;
+      }
+      return;
+    }
+    // New messages while pinned to the bottom: follow them and keep the
+    // last-seen cursor current so a later reopen anchors correctly.
+    if (nearBottomRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      const newest = messages[messages.length - 1];
+      if (newest && !newest.id.startsWith("local-")) {
+        setLastSeen("USER", session.conversationId, newest.id, newest.createdAt);
+      }
+    }
   }, [messages.length]);
 
   // Mobile keyboards: keep the shell's height in sync with the visual
@@ -456,7 +497,10 @@ export default function Chat() {
   // message would just silently reappear next reload if it were removed
   // from there instead.
   const visibleMessages = useMemo(() => messages.filter((m) => !hiddenIds.has(m.id)), [messages, hiddenIds]);
-  const threadItems = useMemo(() => withDateSeparators(visibleMessages), [visibleMessages]);
+  const threadItems = useMemo(
+    () => withDateSeparators(visibleMessages, new Date(), unreadAnchorId),
+    [visibleMessages, unreadAnchorId],
+  );
 
   // The composer's "Replying to: …" banner shows a compact single-line
   // preview - truncated text, or a "Photo · cat.jpg"-style label when the
@@ -609,9 +653,11 @@ export default function Chat() {
               {threadItems.map((item) =>
                 item.kind === "separator" ? (
                   <DateSeparator key={item.key} label={item.label} />
+                ) : item.kind === "unread" ? (
+                  <UnreadDivider key={item.key} />
                 ) : (
+                  <div key={item.key} data-message-id={item.message.id}>
                   <MessageBubble
-                    key={item.key}
                     message={item.message}
                     isOwn={item.message.senderType === "USER"}
                     conversationKey={conversationKey}
@@ -628,6 +674,7 @@ export default function Chat() {
                     onReact={(emoji) => handleReact(item.message, emoji)}
                     onRetry={() => handleRetry(item.message)}
                   />
+                  </div>
                 ),
               )}
             </div>

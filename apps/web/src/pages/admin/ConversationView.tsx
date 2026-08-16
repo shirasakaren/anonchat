@@ -33,6 +33,8 @@ import { Composer } from "../../components/chat/Composer.js";
 import { ConnectionBanner } from "../../components/chat/ConnectionBanner.js";
 import { DateSeparator } from "../../components/chat/DateSeparator.js";
 import { withDateSeparators } from "../../components/chat/dateSeparators.js";
+import { UnreadDivider } from "../../components/chat/UnreadDivider.js";
+import { computeUnreadAnchor, getLastSeen, setLastSeen } from "../../components/chat/lastSeen.js";
 import { DeleteMessageModal } from "../../components/chat/DeleteMessageModal.js";
 import { getLocallyDeletedMessageIds, hideMessageLocally } from "../../components/chat/locallyDeletedMessages.js";
 import { MessageBubble } from "../../components/chat/MessageBubble.js";
@@ -74,6 +76,11 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   const [editing, setEditing] = useState<DisplayMessage | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DisplayMessage | null>(null);
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => getLocallyDeletedMessageIds(conversationId));
+  // First message the admin hasn't seen yet on this device - the thread
+  // renders an unread divider above it and opens scrolled to it instead of
+  // loading from the very top and scrolling through everything.
+  const [unreadAnchorId, setUnreadAnchorId] = useState<string | null>(null);
+  const pendingInitialScrollRef = useRef(false);
   const [userTyping, setUserTyping] = useState(false);
   const [editingAlias, setEditingAlias] = useState(false);
   const [aliasDraft, setAliasDraft] = useState("");
@@ -147,31 +154,39 @@ export function ConversationView({ conversationId, onChanged }: Props) {
       cursor = page.nextCursor ?? undefined;
     } while (cursor);
     const key = identity ? getConversationKey(identity, conv.anonymousExchangePublicKey, conv.id) : null;
-    setMessages(
-      all.map((dto) => {
-        const decrypted = dto.content && key ? decryptMessageTextWithStatus(key, dto.content) : null;
-        return {
-          id: dto.id,
-          senderType: dto.senderType,
-          text: decrypted?.text ?? "",
-          decryptionError: decrypted?.error ?? undefined,
-          replyToId: dto.replyToId,
-          attachments: dto.attachments,
-          reactions: dto.reactions,
-          edited: dto.edited,
-          deleted: dto.deleted,
-          createdAt: dto.createdAt,
-          readAt: dto.readAt,
-          status: "sent" as const,
-        };
-      }),
-    );
+    const decrypted = all.map((dto) => {
+      const text = dto.content && key ? decryptMessageTextWithStatus(key, dto.content) : null;
+      return {
+        id: dto.id,
+        senderType: dto.senderType,
+        text: text?.text ?? "",
+        decryptionError: text?.error ?? undefined,
+        replyToId: dto.replyToId,
+        attachments: dto.attachments,
+        reactions: dto.reactions,
+        edited: dto.edited,
+        deleted: dto.deleted,
+        createdAt: dto.createdAt,
+        readAt: dto.readAt,
+        status: "sent" as const,
+      };
+    });
+    const lastSeen = getLastSeen("ADMIN", conversationId);
+    setUnreadAnchorId(computeUnreadAnchor(decrypted, lastSeen)?.id ?? null);
+    setMessages(decrypted);
+    const newest = decrypted[decrypted.length - 1];
+    if (newest) setLastSeen("ADMIN", conversationId, newest.id, newest.createdAt);
     const lastUser = [...all].reverse().find((m) => m.senderType === "USER");
     if (lastUser && !lastUser.readAt) markAdminRead(conversationId, lastUser.id).catch(() => {});
   }, [conversationId, identity]);
 
   const load = useCallback(async () => {
     setLoading(true);
+    // The next successful fetch (messages + anchor) must re-anchor the
+    // scroll. Set here rather than in fetchConversation so silent
+    // reconnect refetches - which also call fetchConversation - never
+    // yank the admin's view back to the anchor mid-reading.
+    pendingInitialScrollRef.current = true;
     try {
       await fetchConversation();
     } finally {
@@ -207,8 +222,35 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   }, [conversationId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+    if (pendingInitialScrollRef.current) {
+      // First paint of a freshly loaded history: land on the unread
+      // divider (or the bottom when there's nothing unseen) instead of
+      // starting at the top and scrolling down through everything. Keyed
+      // on the messages array identity (not its length), so switching
+      // between two conversations of equal length still re-anchors.
+      pendingInitialScrollRef.current = false;
+      const scroller = scrollerRef.current;
+      if (scroller) {
+        if (unreadAnchorId) {
+          scroller
+            .querySelector(`[data-message-id="${CSS.escape(unreadAnchorId)}"]`)
+            ?.scrollIntoView({ block: "center" });
+        } else {
+          scroller.scrollTop = scroller.scrollHeight;
+        }
+      }
+      return;
+    }
+    // New messages while pinned to the bottom: follow them and keep the
+    // last-seen cursor current so a later reopen anchors correctly.
+    if (nearBottomRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      const newest = messages[messages.length - 1];
+      if (newest && !newest.id.startsWith("local-")) {
+        setLastSeen("ADMIN", conversationId, newest.id, newest.createdAt);
+      }
+    }
+  }, [messages]);
 
   function handleThreadScroll() {
     const scroller = scrollerRef.current;
@@ -325,7 +367,10 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   // load/reconnect, so a locally-hidden message would just reappear next
   // reload if it were removed from there instead.
   const visibleMessages = useMemo(() => messages.filter((m) => !hiddenIds.has(m.id)), [messages, hiddenIds]);
-  const threadItems = useMemo(() => withDateSeparators(visibleMessages), [visibleMessages]);
+  const threadItems = useMemo(
+    () => withDateSeparators(visibleMessages, new Date(), unreadAnchorId),
+    [visibleMessages, unreadAnchorId],
+  );
 
   // Compact single-line "Replying to: …" banner text for the composer -
   // truncated for long quotes, "Photo · cat.jpg"-style for attachments.
@@ -634,9 +679,11 @@ export function ConversationView({ conversationId, onChanged }: Props) {
             {threadItems.map((item) =>
               item.kind === "separator" ? (
                 <DateSeparator key={item.key} label={item.label} />
+              ) : item.kind === "unread" ? (
+                <UnreadDivider key={item.key} />
               ) : (
+                <div key={item.key} data-message-id={item.message.id}>
                 <MessageBubble
-                  key={item.key}
                   message={item.message}
                   isOwn={item.message.senderType === "ADMIN"}
                   conversationKey={conversationKey}
@@ -657,6 +704,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
                   onReact={(emoji) => handleReact(item.message, emoji)}
                   onRetry={() => handleRetry(item.message)}
                 />
+                </div>
               ),
             )}
           </div>

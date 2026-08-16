@@ -51,3 +51,22 @@ describe("withDateSeparators", () => {
     expect(withDateSeparators([], NOW)).toEqual([]);
   });
 });
+
+describe("withDateSeparators unread divider", () => {
+  const messages = [
+    { id: "m1", createdAt: "2026-08-13T08:00:00Z" },
+    { id: "m2", createdAt: "2026-08-13T09:00:00Z" },
+    { id: "m3", createdAt: "2026-08-13T10:00:00Z" },
+  ];
+
+  it("inserts an unread item directly above the anchor message", () => {
+    const items = withDateSeparators(messages, NOW, "m3");
+    expect(items.map((i) => i.kind)).toEqual(["separator", "message", "message", "unread", "message"]);
+    expect(items[3]).toEqual({ kind: "unread", key: "unread-divider" });
+  });
+
+  it("adds no unread item when no anchor is given", () => {
+    const items = withDateSeparators(messages, NOW, null);
+    expect(items.some((i) => i.kind === "unread")).toBe(false);
+  });
+});

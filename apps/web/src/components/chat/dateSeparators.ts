@@ -24,19 +24,28 @@ export interface DateSeparatorItem {
   label: string;
 }
 
+export interface UnreadDividerItem {
+  kind: "unread";
+  key: string;
+}
+
 export interface MessageItem<M> {
   kind: "message";
   key: string;
   message: M;
 }
 
-export type ThreadItem<M> = DateSeparatorItem | MessageItem<M>;
+export type ThreadItem<M> = DateSeparatorItem | MessageItem<M> | UnreadDividerItem;
 
 /** Interleaves a date-separator item before the first message of every new
- *  local calendar day in an already-chronologically-sorted message list. */
+ *  local calendar day in an already-chronologically-sorted message list.
+ *  When `unreadAnchorId` is set, an "unread" divider item is inserted
+ *  directly above that message - the boundary between what the viewer has
+ *  seen and what arrived since they last had this conversation open. */
 export function withDateSeparators<M extends { id: string; createdAt: string }>(
   messages: M[],
   now: Date = new Date(),
+  unreadAnchorId?: string | null,
 ): ThreadItem<M>[] {
   const items: ThreadItem<M>[] = [];
   let lastDayKey: string | null = null;
@@ -46,6 +55,9 @@ export function withDateSeparators<M extends { id: string; createdAt: string }>(
     if (dayKey !== lastDayKey) {
       items.push({ kind: "separator", key: `sep-${dayKey}`, label: formatDateSeparator(date, now) });
       lastDayKey = dayKey;
+    }
+    if (message.id === unreadAnchorId) {
+      items.push({ kind: "unread", key: "unread-divider" });
     }
     items.push({ kind: "message", key: message.id, message });
   }
