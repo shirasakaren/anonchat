@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../db.js";
 import { getStorageAdapter } from "../storage/index.js";
+import { evictCachedBlob } from "../utils/blobCache.js";
 import { isUserOnline, publishToConversation } from "../realtime/hub.js";
 
 /**
@@ -35,6 +36,7 @@ async function deleteMessagesWithStorage(rows: MessageRow[]): Promise<string[]> 
   if (rows.length === 0) return [];
   const storage = getStorageAdapter();
   const storageKeys = rows.flatMap((m) => m.attachments.map((a) => a.storageKey));
+  storageKeys.forEach(evictCachedBlob);
   await Promise.allSettled(storageKeys.map((key) => storage.delete(key)));
   // Deleting the message rows cascades to their attachment/reaction rows.
   await prisma.message.deleteMany({ where: { id: { in: rows.map((m) => m.id) } } });

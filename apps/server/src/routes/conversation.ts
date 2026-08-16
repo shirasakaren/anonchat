@@ -22,6 +22,7 @@ import { getSiteSettings } from "../services/siteSettings.service.js";
 import { Errors } from "../utils/errors.js";
 import { parseSendMessageBody } from "../utils/multipartMessage.js";
 import { checkRateLimit } from "../utils/rateLimiter.js";
+import { serveStoredBlob } from "../utils/serveStoredBlob.js";
 
 export function registerConversationRoutes(app: FastifyInstance): void {
   app.get("/conversation", { preHandler: requireAnon }, async (request) => {
@@ -127,7 +128,9 @@ export function registerConversationRoutes(app: FastifyInstance): void {
 
   app.get("/conversation/attachments/:id", { preHandler: requireAnon }, async (request, reply) => {
     const conversation = request.anonUser!.conversation!;
-    if (!checkRateLimit(`attachment-download:USER:${request.anonUser!.id}`, 60, 60_000)) {
+    // One chat with a page of photos re-fetches every attachment on each
+    // view; the old 60/min budget tripped on a single conversation reload.
+    if (!checkRateLimit(`attachment-download:USER:${request.anonUser!.id}`, 300, 60_000)) {
       throw Errors.rateLimited();
     }
     const params = IdParamSchema.parse(request.params);
@@ -135,15 +138,6 @@ export function registerConversationRoutes(app: FastifyInstance): void {
       where: { id: params.id, message: { conversationId: conversation.id } },
     });
     if (!attachment) throw Errors.notFound();
-    const storage = getStorageAdapter();
-    // Streamed out of storage - a large attachment never sits whole in
-    // memory on its way to the client.
-    const stream = await storage.getStream(attachment.storageKey);
-    reply
-      .header("Content-Type", "application/octet-stream")
-      .header("Content-Disposition", "attachment")
-      .header("Cache-Control", "private, no-store")
-      .header("Content-Length", String(attachment.sizeBytes))
-      .send(stream);
+    await serveStoredBlob({ storage: getStorageAdapter(), storageKey: attachment.storageKey, reply });
   });
 }

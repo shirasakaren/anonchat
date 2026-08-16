@@ -4,6 +4,7 @@ import { prisma } from "../db.js";
 import { publishToConversation } from "../realtime/hub.js";
 import { getStorageAdapter } from "../storage/index.js";
 import { Errors } from "../utils/errors.js";
+import { evictCachedBlob } from "../utils/blobCache.js";
 import { MESSAGE_INCLUDE, toMessageDto, toReactionDto } from "../utils/dto.js";
 import { maybeSendAdminPush, maybeSendUserPush } from "./pushNotification.service.js";
 import { maybeSendReplyNotification } from "./replyNotification.service.js";
@@ -163,7 +164,12 @@ export async function deleteMessage(params: { conversationId: string; messageId:
   if (!message || message.deletedAt) throw Errors.notFound();
 
   const storage = getStorageAdapter();
-  await Promise.allSettled(message.attachments.map((attachment) => storage.delete(attachment.storageKey)));
+  await Promise.allSettled(
+    message.attachments.map((attachment) => {
+      evictCachedBlob(attachment.storageKey);
+      return storage.delete(attachment.storageKey);
+    }),
+  );
 
   await prisma.$transaction([
     prisma.attachment.deleteMany({ where: { messageId: message.id } }),

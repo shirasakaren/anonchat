@@ -11,9 +11,10 @@ import {
   Video,
   ZoomIn,
 } from "lucide-react";
-import { decryptBlob } from "@anonchat/crypto";
+import { decryptBlob, XCHACHA_NONCE_BYTES } from "@anonchat/crypto";
 import type { AttachmentDto } from "@anonchat/shared";
 import { decryptAttachmentMeta, toBlobPart } from "../../crypto/conversationCrypto.js";
+import { getCachedAttachment, putCachedAttachment } from "../../crypto/attachmentCache.js";
 import { CsvPreview } from "./preview/CsvPreview.js";
 import { DocumentLightbox } from "./preview/DocumentLightbox.js";
 import { DocxPreview } from "./preview/DocxPreview.js";
@@ -156,11 +157,28 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
       if (!meta) return;
       setState({ kind: "loading", progress: 0 });
       try {
-        const response = await fetch(downloadUrl, { credentials: "include" });
-        if (!response.ok) throw new Error(`The server returned HTTP ${response.status} while downloading this file.`);
-        const raw = await readResponseBytes(response, attachment.sizeBytes, (progress) => {
-          setState({ kind: "loading", progress });
-        });
+        // The ciphertext cache (see attachmentCache.ts) serves repeat views
+        // from disk - no network round trip, no download rate limit.
+        const cached = await getCachedAttachment(attachment.id, attachment.sizeBytes);
+        let raw: Uint8Array<ArrayBuffer>;
+        if (cached) {
+          raw = cached;
+        } else {
+          const response = await fetch(downloadUrl, { credentials: "include" });
+          if (response.status === 429) {
+            throw new Error("Too many attachments were downloaded at once. Wait a moment and try again.");
+          }
+          if (!response.ok) {
+            throw new Error(`The server returned HTTP ${response.status} while downloading this file.`);
+          }
+          raw = await readResponseBytes(response, attachment.sizeBytes, (progress) => {
+            setState({ kind: "loading", progress });
+          });
+          if (raw.byteLength < XCHACHA_NONCE_BYTES) {
+            throw new Error("The stored file for this attachment is empty or damaged and cannot be decrypted.");
+          }
+          void putCachedAttachment(attachment.id, attachment.sizeBytes, raw);
+        }
         const plaintext = toBlobPart(decryptBlob(conversationKey, raw));
         const mimetype = resolveFileMimetype(meta.mimetype, meta.filename);
         const blob = new Blob([plaintext], { type: mimetype });
@@ -181,7 +199,7 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
         });
       }
     },
-    [attachment.sizeBytes, conversationKey, downloadUrl, meta, showToast],
+    [attachment.id, attachment.sizeBytes, conversationKey, downloadUrl, meta, showToast],
   );
 
   useEffect(() => {

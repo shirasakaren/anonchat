@@ -6,6 +6,7 @@ import { prisma } from "../db.js";
 import { isUserOnline, publishToConversation } from "../realtime/hub.js";
 import { getStorageAdapter } from "../storage/index.js";
 import { Errors } from "../utils/errors.js";
+import { evictCachedBlob } from "../utils/blobCache.js";
 import { MESSAGE_INCLUDE, toMessageDto } from "../utils/dto.js";
 import { purgeAllMessages } from "./retention.service.js";
 
@@ -339,9 +340,10 @@ export async function hardDeleteConversation(conversationId: string): Promise<vo
 
   const storage = getStorageAdapter();
   await Promise.allSettled(
-    [...conversation.messages.flatMap((message) => message.attachments), ...conversation.noteAssets].map((attachment) =>
-      storage.delete(attachment.storageKey),
-    ),
+    [...conversation.messages.flatMap((message) => message.attachments), ...conversation.noteAssets].map((attachment) => {
+      evictCachedBlob(attachment.storageKey);
+      return storage.delete(attachment.storageKey);
+    }),
   );
 
   // "Permanent" must erase the identity row, not merely mark it deleted.

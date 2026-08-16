@@ -5,6 +5,7 @@ import { prisma } from "../db.js";
 import { publishToConversation } from "../realtime/hub.js";
 import { getStorageAdapter } from "../storage/index.js";
 import { Errors } from "../utils/errors.js";
+import { evictCachedBlob } from "../utils/blobCache.js";
 import { encryptedPayloadFromColumns } from "../utils/dto.js";
 
 function payloadToColumns(payload: EncryptedPayloadInput) {
@@ -93,16 +94,17 @@ export async function createNoteAsset(params: {
   }
 }
 
-export async function getNoteAsset(conversationId: string, assetId: string): Promise<Buffer> {
+export async function getNoteAsset(conversationId: string, assetId: string): Promise<{ storageKey: string }> {
   const asset = await prisma.noteAsset.findFirst({ where: { id: assetId, conversationId } });
   if (!asset) throw Errors.notFound();
-  return getStorageAdapter().get(asset.storageKey);
+  return { storageKey: asset.storageKey };
 }
 
 export async function deleteNoteAsset(conversationId: string, assetId: string): Promise<void> {
   const asset = await prisma.noteAsset.findFirst({ where: { id: assetId, conversationId } });
   if (!asset) return;
   await prisma.noteAsset.delete({ where: { id: asset.id } });
+  evictCachedBlob(asset.storageKey);
   await getStorageAdapter()
     .delete(asset.storageKey)
     .catch(() => {});

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { encryptBlob } from "@anonchat/crypto";
+import { evictAttachmentsOf } from "../crypto/attachmentCache.js";
 import { ChevronRight, LogOut, StickyNote, Trash2 } from "lucide-react";
 import type {
   ConversationNoteDto,
@@ -295,13 +296,20 @@ export default function Chat() {
           break;
         }
         case "message.deleted": {
-          setMessages((prev) => prev.map((m) => (m.id === event.messageId ? { ...m, deleted: true, text: "" } : m)));
+          setMessages((prev) => {
+            const target = prev.find((m) => m.id === event.messageId);
+            if (target) evictAttachmentsOf(target.attachments);
+            return prev.map((m) => (m.id === event.messageId ? { ...m, deleted: true, text: "" } : m));
+          });
           break;
         }
         case "messages.deleted": {
           if (event.conversationId !== session.conversationId) break;
           const removed = new Set(event.messageIds);
-          setMessages((prev) => prev.filter((m) => !removed.has(m.id)));
+          setMessages((prev) => {
+            evictAttachmentsOf(prev.filter((m) => removed.has(m.id)).flatMap((m) => m.attachments));
+            return prev.filter((m) => !removed.has(m.id));
+          });
           break;
         }
         case "reaction.updated": {
@@ -502,6 +510,7 @@ export default function Chat() {
     setDeleteTarget(null);
     try {
       await deleteMessage(message.id);
+      evictAttachmentsOf(message.attachments);
       setMessages((prev) => prev.map((m) => (m.id === message.id ? { ...m, deleted: true, text: "" } : m)));
     } catch (error) {
       showToast({

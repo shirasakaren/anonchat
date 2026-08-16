@@ -13,6 +13,8 @@ import { parseNoteAssetUpload } from "../utils/multipartNoteAsset.js";
 import { checkRateLimit } from "../utils/rateLimiter.js";
 import { Errors } from "../utils/errors.js";
 import { getSiteSettings } from "../services/siteSettings.service.js";
+import { getStorageAdapter } from "../storage/index.js";
+import { serveStoredBlob } from "../utils/serveStoredBlob.js";
 
 export function registerNoteRoutes(app: FastifyInstance): void {
   app.get("/conversation/note", { preHandler: requireAnon }, async (request) => ({
@@ -43,8 +45,8 @@ export function registerNoteRoutes(app: FastifyInstance): void {
   app.get("/conversation/note/assets/:id", { preHandler: requireAnon }, async (request, reply) => {
     if (!checkRateLimit(`note-asset-get:USER:${request.anonUser!.id}`, 120, 60_000)) throw Errors.rateLimited();
     const { id } = IdParamSchema.parse(request.params);
-    const buffer = await getNoteAsset(request.anonUser!.conversation!.id, id);
-    reply.header("Content-Type", "application/octet-stream").header("Cache-Control", "private, no-store").send(buffer);
+    const { storageKey } = await getNoteAsset(request.anonUser!.conversation!.id, id);
+    await serveStoredBlob({ storage: getStorageAdapter(), storageKey, reply });
   });
 
   app.delete("/conversation/note/assets/:id", { preHandler: requireAnon }, async (request, reply) => {
@@ -89,8 +91,8 @@ export function registerNoteRoutes(app: FastifyInstance): void {
     await getConversationForAdmin(id);
     const { admin } = request.adminAuth!;
     if (!checkRateLimit(`note-asset-get:ADMIN:${admin.id}`, 120, 60_000)) throw Errors.rateLimited();
-    const buffer = await getNoteAsset(id, assetId);
-    reply.header("Content-Type", "application/octet-stream").header("Cache-Control", "private, no-store").send(buffer);
+    const { storageKey } = await getNoteAsset(id, assetId);
+    await serveStoredBlob({ storage: getStorageAdapter(), storageKey, reply });
   });
 
   app.delete("/admin/conversations/:id/note/assets/:assetId", { preHandler: requireAdmin }, async (request, reply) => {

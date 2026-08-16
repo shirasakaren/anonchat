@@ -146,7 +146,21 @@ export async function buildApp(): Promise<FastifyInstance> {
     // Defaults to the monorepo's dev layout (apps/server/dist -> ../../web/dist);
     // the Docker image sets WEB_DIST_DIR explicitly since its deployed layout differs.
     const webDist = process.env.WEB_DIST_DIR ?? join(__dirname, "../../web/dist");
-    await app.register(staticPlugin, { root: webDist, wildcard: false });
+    await app.register(staticPlugin, {
+      root: webDist,
+      wildcard: false,
+      setHeaders: (reply, path) => {
+        // Vite emits every hashed chunk/media file under /assets/, so those
+        // names can never change meaning - cache them immutably (browser
+        // plus any CDN in front). index.html and the other top-level files
+        // must revalidate on every load so a new deploy is picked up.
+        if (path.replaceAll("\\", "/").includes("/assets/")) {
+          reply.header("Cache-Control", "public, max-age=31536000, immutable");
+        } else {
+          reply.header("Cache-Control", "no-cache");
+        }
+      },
+    });
     app.setNotFoundHandler((request, reply) => {
       if (request.raw.url?.startsWith("/api")) {
         reply.status(404).send({ error: { code: "NOT_FOUND", message: "Not found." } });

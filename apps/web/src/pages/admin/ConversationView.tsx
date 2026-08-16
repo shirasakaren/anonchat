@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { encryptBlob } from "@anonchat/crypto";
+import { evictAttachmentsOf } from "../../crypto/attachmentCache.js";
 import { Info, Pencil, StickyNote } from "lucide-react";
 import {
   DEFAULT_MAX_MESSAGE_LENGTH,
@@ -307,12 +308,17 @@ export function ConversationView({ conversationId, onChanged }: Props) {
           break;
         case "message.deleted":
           if (!belongsHere(event.conversationId)) return;
-          setMessages((prev) => prev.map((m) => (m.id === event.messageId ? { ...m, deleted: true, text: "" } : m)));
+          setMessages((prev) => {
+            const target = prev.find((m) => m.id === event.messageId);
+            if (target) evictAttachmentsOf(target.attachments);
+            return prev.map((m) => (m.id === event.messageId ? { ...m, deleted: true, text: "" } : m));
+          });
           break;
         case "messages.deleted":
           if (!belongsHere(event.conversationId)) return;
           setMessages((prev) => {
             const removed = new Set(event.messageIds);
+            evictAttachmentsOf(prev.filter((m) => removed.has(m.id)).flatMap((m) => m.attachments));
             return prev.filter((m) => !removed.has(m.id));
           });
           break;
@@ -519,6 +525,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
     setDeleteTarget(null);
     try {
       await deleteAdminMessage(conversationId, message.id);
+      evictAttachmentsOf(message.attachments);
       setMessages((prev) => prev.map((m) => (m.id === message.id ? { ...m, deleted: true, text: "" } : m)));
     } catch (error) {
       showToast({

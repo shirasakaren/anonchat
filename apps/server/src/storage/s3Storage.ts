@@ -3,6 +3,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadBucketCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -176,6 +177,17 @@ export class S3StorageAdapter implements StorageAdapter {
     await this.ensureReady();
     const result = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
     return result.Body as Readable;
+  }
+
+  async stat(key: string): Promise<{ size: number } | null> {
+    await this.ensureReady();
+    try {
+      const result = await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));
+      return { size: result.ContentLength ?? 0 };
+    } catch (error) {
+      if (isNotFound(error)) return null;
+      throw error;
+    }
   }
 
   async delete(key: string): Promise<void> {

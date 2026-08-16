@@ -1,5 +1,5 @@
 import { createReadStream, createWriteStream } from "node:fs";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { pipeline } from "node:stream/promises";
 import type { Readable } from "node:stream";
 import { dirname, join, normalize, relative } from "node:path";
@@ -35,6 +35,16 @@ export class LocalStorageAdapter implements StorageAdapter {
 
   getStream(key: string): Promise<Readable> {
     return Promise.resolve(createReadStream(this.resolve(key)));
+  }
+
+  async stat(key: string): Promise<{ size: number } | null> {
+    try {
+      const info = await stat(this.resolve(key));
+      return { size: info.size };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw error;
+    }
   }
 
   async delete(key: string): Promise<void> {

@@ -18,7 +18,7 @@ import {
   Undo2,
   X,
 } from "lucide-react";
-import { decryptBlob, encryptBlob } from "@anonchat/crypto";
+import { decryptBlob, encryptBlob, XCHACHA_NONCE_BYTES } from "@anonchat/crypto";
 import type { ConversationNoteDto } from "@anonchat/shared";
 import {
   adminNoteAssetUrl,
@@ -210,6 +210,9 @@ export default function SharedNoteDrawer({
       const response = await fetch(url, { credentials: "include" });
       if (!response.ok) throw new Error("asset download failed");
       const encrypted = new Uint8Array(await response.arrayBuffer());
+      if (encrypted.byteLength < XCHACHA_NONCE_BYTES) {
+        throw new Error("the stored file for this media is empty or damaged");
+      }
       const plaintext = toBlobPart(decryptBlob(conversationKey, encrypted));
       return URL.createObjectURL(new Blob([plaintext], { type: mimetype }));
     },
