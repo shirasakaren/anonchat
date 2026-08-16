@@ -42,8 +42,9 @@ export async function parseSendMessageBody(
         if (attachments.length >= maxAttachments) {
           throw Errors.badRequest(`You can attach at most ${maxAttachments} files per message.`);
         }
-        const buffer = await part.toBuffer();
-        attachments.push({ meta: pendingMeta, buffer });
+        // Stream the part instead of buffering it - the storage adapter
+        // writes it out as it arrives (see storage/types.ts).
+        attachments.push({ meta: pendingMeta, stream: part.file });
         pendingMeta = null;
       } else if (part.fieldname === "content") {
         contentRaw = String(part.value);

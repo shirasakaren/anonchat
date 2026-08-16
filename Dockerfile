@@ -83,4 +83,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD ["curl", "-sf", "http://localhost:3000/health"]
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
-CMD ["node", "dist/main.js"]
+# Cap the V8 heap so GC runs early and often instead of letting RSS creep
+# toward a gigabyte on a messaging workload; uploads/downloads are streamed
+# through the storage adapters, so the live-heap need stays far below this.
+CMD ["node", "--max-old-space-size=512", "dist/main.js"]

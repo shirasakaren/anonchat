@@ -6,6 +6,8 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import { Upload } from "@aws-sdk/lib-storage";
+import type { Readable } from "node:stream";
 import type { StorageAdapter } from "./types.js";
 
 export interface S3StorageOptions {
@@ -151,6 +153,29 @@ export class S3StorageAdapter implements StorageAdapter {
       chunks.push(Buffer.from(chunk));
     }
     return Buffer.concat(chunks);
+  }
+
+  async putStream(key: string, stream: Readable): Promise<void> {
+    await this.ensureReady();
+    // The lib-storage Upload helper streams the body over the wire (with
+    // multipart uploads for larger objects) - a plain PutObjectCommand
+    // with an unknown-length stream would buffer the whole object in
+    // memory to compute its length, defeating the point of putStream.
+    await new Upload({
+      client: this.client,
+      params: {
+        Bucket: this.bucket,
+        Key: key,
+        Body: stream,
+        ContentType: "application/octet-stream",
+      },
+    }).done();
+  }
+
+  async getStream(key: string): Promise<Readable> {
+    await this.ensureReady();
+    const result = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+    return result.Body as Readable;
   }
 
   async delete(key: string): Promise<void> {

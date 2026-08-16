@@ -11,7 +11,7 @@ import { maybeSendReplyNotification } from "./replyNotification.service.js";
 
 export interface PendingAttachment {
   meta: EncryptedPayloadInput;
-  buffer: Buffer;
+  stream: import("node:stream").Readable;
 }
 
 function toBuffer(payload: EncryptedPayloadInput) {
@@ -56,11 +56,20 @@ export async function createMessage(params: {
   const storage = getStorageAdapter();
   const attachmentInputs = params.attachments ?? [];
   const storageKeys: string[] = [];
+  const attachmentSizes: number[] = [];
 
   try {
     for (const attachment of attachmentInputs) {
       const key = `attachments/${randomBytes(24).toString("hex")}`;
-      await storage.put(key, attachment.buffer);
+      // Streamed end-to-end: the multipart part is piped straight into the
+      // storage adapter without an in-memory copy (see multipartMessage.ts).
+      await storage.putStream(key, attachment.stream);
+      const stream = attachment.stream as import("node:stream").Readable & {
+        truncated?: boolean;
+        bytesRead?: number;
+      };
+      if (stream.truncated) throw Errors.tooLarge("An attachment exceeded the upload limit.");
+      attachmentSizes.push(stream.bytesRead ?? 0);
       storageKeys.push(key);
     }
 
@@ -86,7 +95,7 @@ export async function createMessage(params: {
                 storageKey: storageKeys[index]!,
                 metaCiphertext: metaBuf.ciphertext,
                 metaNonce: metaBuf.nonce,
-                sizeBytes: attachment.buffer.byteLength,
+                sizeBytes: attachmentSizes[index]!,
               };
             }),
           },

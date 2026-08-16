@@ -136,11 +136,14 @@ export function registerConversationRoutes(app: FastifyInstance): void {
     });
     if (!attachment) throw Errors.notFound();
     const storage = getStorageAdapter();
-    const buffer = await storage.get(attachment.storageKey);
+    // Streamed out of storage - a large attachment never sits whole in
+    // memory on its way to the client.
+    const stream = await storage.getStream(attachment.storageKey);
     reply
       .header("Content-Type", "application/octet-stream")
       .header("Content-Disposition", "attachment")
       .header("Cache-Control", "private, no-store")
-      .send(buffer);
+      .header("Content-Length", String(attachment.sizeBytes))
+      .send(stream);
   });
 }

@@ -1,4 +1,7 @@
+import { createReadStream, createWriteStream } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { pipeline } from "node:stream/promises";
+import type { Readable } from "node:stream";
 import { dirname, join, normalize, relative } from "node:path";
 import type { StorageAdapter } from "./types.js";
 
@@ -22,6 +25,16 @@ export class LocalStorageAdapter implements StorageAdapter {
 
   async get(key: string): Promise<Buffer> {
     return readFile(this.resolve(key));
+  }
+
+  async putStream(key: string, stream: Readable): Promise<void> {
+    const path = this.resolve(key);
+    await mkdir(dirname(path), { recursive: true });
+    await pipeline(stream, createWriteStream(path));
+  }
+
+  async getStream(key: string): Promise<Readable> {
+    return createReadStream(this.resolve(key));
   }
 
   async delete(key: string): Promise<void> {
