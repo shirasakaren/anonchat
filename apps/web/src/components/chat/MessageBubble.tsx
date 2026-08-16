@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { format } from "date-fns";
 import { AlertTriangle, SmilePlus, Reply, Pencil, Trash2, Paperclip } from "lucide-react";
-import { decryptReaction } from "../../crypto/conversationCrypto.js";
+import { decryptAttachmentMeta, decryptReaction } from "../../crypto/conversationCrypto.js";
 import { renderMessageMarkdown } from "./markdown.js";
-import { AttachmentPreview } from "./AttachmentPreview.js";
+import { AttachmentPreview, previewKind } from "./AttachmentPreview.js";
 import { ExpandableProse } from "./ExpandableProse.js";
 import { extractUrls } from "./embeds/urlExtraction.js";
 import { detectVideoEmbed } from "./embeds/videoEmbedDetection.js";
@@ -99,6 +99,27 @@ export function MessageBubble({
 
   const html = message.deleted || message.decryptionError ? null : renderMessageMarkdown(message.text);
 
+  // A message that is ONLY photos renders each image as its own rounded
+  // frame instead of one shared bubble rectangle: the shared wrapper used
+  // to take the widest image's width and draw that rectangle around every
+  // photo, so a portrait image next to a panorama looked like it was
+  // stretched into the panorama's box.
+  const attachmentKinds = useMemo(
+    () =>
+      message.attachments.map((a) => {
+        const meta = decryptAttachmentMeta(conversationKey, a.meta);
+        return meta ? previewKind(meta.mimetype, meta.filename) : "binary";
+      }),
+    [message.attachments, conversationKey],
+  );
+  const imageOnly =
+    !message.deleted &&
+    !message.decryptionError &&
+    message.attachments.length > 0 &&
+    message.attachments.every((_, i) => attachmentKinds[i] === "image") &&
+    message.text.trim() === "" &&
+    (message.pendingAttachments?.length ?? 0) === 0;
+
   const embedUrls = useMemo(
     () => (message.deleted || message.decryptionError ? [] : extractUrls(message.text, MAX_EMBEDS_PER_MESSAGE)),
     [message.deleted, message.decryptionError, message.text],
@@ -127,104 +148,144 @@ export function MessageBubble({
         </div>
       )}
 
-      <div className="flex min-w-0 max-w-[80%] items-end gap-1">
-        {isOwn && (
-          <MessageActions
-            canEdit={canEdit}
-            isOwn={isOwn}
-            disableActions={disableActions}
-            reactionActive={reactionAnchor !== null}
-            onToggleReaction={toggleReactionPicker}
-            onReply={onReply}
-            onEdit={onEdit}
-            onDelete={onDelete}
-          />
-        )}
-
-        <div
-          className={clsx(
-            // min-w-0: this is a flex item (the row above is `flex`), and a
-            // flex item's default min-width is `auto` - i.e. it refuses to
-            // shrink below its content's intrinsic width. Without this, a
-            // long unbroken string overrides max-w-[80%] entirely instead
-            // of wrapping, since the bubble never gets small enough for
-            // .prose-message's own overflow-wrap to kick in.
-            "min-w-0 max-w-full overflow-hidden rounded-2xl px-3.5 py-2 text-sm shadow-sm",
-            isOwn
-              ? "bg-[var(--bubble-user)] text-[var(--bubble-user-text)]"
-              : "bg-[var(--bubble-admin)] text-[var(--bubble-admin-text)]",
-          )}
-        >
-          {message.deleted ? (
-            <p className="italic opacity-70">Message deleted</p>
-          ) : message.decryptionError ? (
-            <div className="max-w-md" role="alert">
-              <p className="flex items-center gap-1.5 font-semibold">
-                <AlertTriangle size={15} aria-hidden />
-                This message could not be decrypted
-              </p>
-              <p className="mt-1 text-xs leading-relaxed opacity-80">{message.decryptionError}</p>
-            </div>
-          ) : (
-            <>
-              {message.pendingAttachments && message.pendingAttachments.length > 0 && (
-                <PendingAttachmentTransfer
-                  attachments={message.pendingAttachments}
-                  progress={message.transferProgress}
-                />
-              )}
-              {message.attachments.length > 0 && (
-                <div className="mb-2 min-w-0 max-w-full space-y-2 overflow-hidden">
-                  {message.attachments.map((a) => (
-                    <AttachmentPreview
-                      key={a.id}
-                      attachment={a}
-                      conversationKey={conversationKey}
-                      downloadUrl={attachmentUrlFor(a.id)}
-                    />
-                  ))}
-                </div>
-              )}
-              {html && <ExpandableProse html={html} />}
-              {embedUrls.length > 0 && (
-                <div className="mt-2 space-y-2">
-                  {embedUrls.map((url) => {
-                    if (isGifUrl(url)) return <GifEmbed key={url} url={url} />;
-                    const video = detectVideoEmbed(url);
-                    return video ? <VideoEmbed key={url} embed={video} /> : <LinkPreviewCard key={url} url={url} />;
-                  })}
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Anchored bottom-right inside the bubble, low-opacity. Inherits
-              the bubble's own text color (via `opacity` on the ambient
-              color) rather than a page-level muted token - a page-level
-              token is only contrast-checked against --surface, not against
-              the bubble backgrounds this renders on (same reasoning as
-              .prose-message a and the attachment file-size label). */}
-          <div className="mt-1 flex items-center justify-end gap-1 text-[10px] leading-none opacity-70">
+      {imageOnly ? (
+        <div className="min-w-0 max-w-[80%]">
+          <div className="min-w-0 max-w-full space-y-2">
+            {message.attachments.map((a) => (
+              <AttachmentPreview
+                key={a.id}
+                attachment={a}
+                conversationKey={conversationKey}
+                downloadUrl={attachmentUrlFor(a.id)}
+                standalone
+              />
+            ))}
+          </div>
+          {/* Timestamp under the photos (below the frames, like the Read
+              receipt on text messages) instead of inside a shared bubble. */}
+          <div
+            className={clsx(
+              "mt-1 flex items-center gap-1 px-1 text-[10px] leading-none text-[var(--text-muted)] opacity-70",
+              isOwn ? "justify-end" : "justify-start",
+            )}
+          >
             <span>{format(new Date(message.createdAt), "p")}</span>
-            {message.edited && !message.deleted && <span>· edited</span>}
-            {isOwn && message.status === "sending" && <span>· Sending…</span>}
+            {message.edited && <span>· edited</span>}
             {isOwn && showReadReceipt && <span>· Read</span>}
           </div>
         </div>
+      ) : (
+        <>
+          <div className="flex min-w-0 max-w-[80%] items-end gap-1">
+            {isOwn && (
+              <MessageActions
+                canEdit={canEdit}
+                isOwn={isOwn}
+                disableActions={disableActions}
+                reactionActive={reactionAnchor !== null}
+                onToggleReaction={toggleReactionPicker}
+                onReply={onReply}
+                onEdit={onEdit}
+                onDelete={onDelete}
+              />
+            )}
 
-        {!isOwn && (
-          <MessageActions
-            canEdit={canEdit}
-            isOwn={isOwn}
-            disableActions={disableActions}
-            reactionActive={reactionAnchor !== null}
-            onToggleReaction={toggleReactionPicker}
-            onReply={onReply}
-            onEdit={onEdit}
-            onDelete={onDelete}
-          />
-        )}
-      </div>
+            <div
+              className={clsx(
+                // min-w-0: this is a flex item (the row above is `flex`), and a
+                // flex item's default min-width is `auto` - i.e. it refuses to
+                // shrink below its content's intrinsic width. Without this, a
+                // long unbroken string overrides max-w-[80%] entirely instead
+                // of wrapping, since the bubble never gets small enough for
+                // .prose-message's own overflow-wrap to kick in.
+                "min-w-0 max-w-full overflow-hidden rounded-2xl px-3.5 py-2 text-sm shadow-sm",
+                isOwn
+                  ? "bg-[var(--bubble-user)] text-[var(--bubble-user-text)]"
+                  : "bg-[var(--bubble-admin)] text-[var(--bubble-admin-text)]",
+              )}
+            >
+              {message.deleted ? (
+                <p className="italic opacity-70">Message deleted</p>
+              ) : message.decryptionError ? (
+                <div className="max-w-md" role="alert">
+                  <p className="flex items-center gap-1.5 font-semibold">
+                    <AlertTriangle size={15} aria-hidden />
+                    This message could not be decrypted
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed opacity-80">{message.decryptionError}</p>
+                </div>
+              ) : (
+                <>
+                  {message.pendingAttachments && message.pendingAttachments.length > 0 && (
+                    <PendingAttachmentTransfer
+                      attachments={message.pendingAttachments}
+                      progress={message.transferProgress}
+                    />
+                  )}
+                  {message.attachments.length > 0 && (
+                    <div className="mb-2 min-w-0 max-w-full space-y-2 overflow-hidden">
+                      {message.attachments.map((a) => (
+                        <AttachmentPreview
+                          key={a.id}
+                          attachment={a}
+                          conversationKey={conversationKey}
+                          downloadUrl={attachmentUrlFor(a.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {html && <ExpandableProse html={html} />}
+                  {embedUrls.length > 0 && (
+                    <div className="mt-2 space-y-2">
+                      {embedUrls.map((url) => {
+                        if (isGifUrl(url)) return <GifEmbed key={url} url={url} />;
+                        const video = detectVideoEmbed(url);
+                        return video ? <VideoEmbed key={url} embed={video} /> : <LinkPreviewCard key={url} url={url} />;
+                      })}
+                    </div>
+                  )}
+                  {/* The other party's timestamp stays anchored inside their
+                      bubble (WhatsApp-style); the sender's own meta row
+                      lives below the bubble so the Read receipt never
+                      shifts the bubble's contents around. */}
+                  {!isOwn && (
+                    <div className="mt-1 flex items-center justify-end gap-1 text-[10px] leading-none opacity-70">
+                      <span>{format(new Date(message.createdAt), "p")}</span>
+                      {message.edited && <span>· edited</span>}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {!isOwn && (
+              <MessageActions
+                canEdit={canEdit}
+                isOwn={isOwn}
+                disableActions={disableActions}
+                reactionActive={reactionAnchor !== null}
+                onToggleReaction={toggleReactionPicker}
+                onReply={onReply}
+                onEdit={onEdit}
+                onDelete={onDelete}
+              />
+            )}
+          </div>
+
+          {/* Own-message meta row: time / edited / sending / Read, below the
+              bubble and outside it. Read stays at the very bottom of the
+              sender's own messages instead of moving around inside the
+              bubble as content changes. */}
+          {isOwn && (
+            <div className="flex items-center justify-end gap-1 pr-1 text-[10px] leading-none text-[var(--text-muted)] opacity-70">
+              <span>{format(new Date(message.createdAt), "p")}</span>
+              {message.edited && !message.deleted && <span>· edited</span>}
+              {message.status === "sending" && <span>· Sending…</span>}
+              {showReadReceipt && <span>· Read</span>}
+            </div>
+          )}
+        </>
+      )}
 
       {decryptedReactions.length > 0 && (
         <div className="flex gap-1">

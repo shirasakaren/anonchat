@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import clsx from "clsx";
 import {
   Download,
   FileCode,
@@ -36,7 +37,7 @@ function formatBytes(bytes: number): string {
 
 type PreviewKind = "image" | "video" | "audio" | "pdf" | "docx" | "csv" | "markdown" | "text" | "binary";
 
-function previewKind(mimetype: string, filename: string): PreviewKind {
+export function previewKind(mimetype: string, filename: string): PreviewKind {
   const effectiveMime = resolveFileMimetype(mimetype, filename);
   if (effectiveMime.startsWith("image/")) return "image";
   if (effectiveMime.startsWith("video/")) return "video";
@@ -64,6 +65,10 @@ interface Props {
   attachment: AttachmentDto;
   conversationKey: Uint8Array;
   downloadUrl: string;
+  /** Image-only messages render each image without the shared message
+   *  bubble wrapper - the standalone layout gives each photo its own
+   *  rounded frame instead of one rectangle around the whole group. */
+  standalone?: boolean;
 }
 
 type LoadState =
@@ -141,7 +146,7 @@ function DocumentPreviewContent({
   );
 }
 
-export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: Props) {
+export function AttachmentPreview({ attachment, conversationKey, downloadUrl, standalone = false }: Props) {
   const { showToast } = useToast();
   const [state, setState] = useState<LoadState>({ kind: "idle" });
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -234,7 +239,14 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl }: 
             aria-label={`Expand ${meta.filename}`}
             className="group relative block max-w-full"
           >
-            <img src={state.url} alt={meta.filename} className="max-h-64 max-w-full rounded-lg object-contain" />
+            <img
+              src={state.url}
+              alt={meta.filename}
+              className={clsx(
+                "max-w-full object-contain",
+                standalone ? "max-h-80 rounded-2xl" : "max-h-64 rounded-lg",
+              )}
+            />
             <span className="absolute right-1.5 bottom-1.5 rounded-md bg-black/60 p-1 text-white opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100">
               <ZoomIn size={14} aria-hidden />
             </span>
