@@ -3,7 +3,6 @@ import type { RawData } from "ws";
 import { ClientWsMessageSchema } from "@anonchat/shared";
 import { corsOrigins, loadEnv } from "../env.js";
 import { getSiteSettings } from "../services/siteSettings.service.js";
-import { scheduleDisconnectPurge } from "../services/retention.service.js";
 import {
   isAdminOnline,
   isUserOnline,
@@ -99,11 +98,6 @@ export function registerWsRoutes(fastify: FastifyInstance): void {
       unsubscribe();
       if (!isUserOnline(conversation.id)) {
         publishToAdmins({ type: "user.presence", conversationId: conversation.id, online: false });
-        // Auto-delete mode "when the session disconnects": schedule a
-        // purge that cancels itself if the visitor reconnects in time.
-        if (conversation.autoDeleteMode === "DISCONNECT") {
-          scheduleDisconnectPurge(conversation.id);
-        }
       }
     });
   });

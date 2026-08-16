@@ -83,13 +83,6 @@ enum ProfileMediaKind {
   VIDEO
 }
 
-enum AutoDeleteMode {
-  OFF
-  DISCONNECT
-  BOTH_READ
-  AFTER_DAYS
-}
-
 model Conversation {
   id              String             @id @default(cuid())
   anonymousUserId String             @unique
@@ -112,14 +105,6 @@ model Conversation {
   disappearingEnabled  Boolean         @default(false)
   disappearingSeconds  Int?
   disappearingOnLogout Boolean         @default(false)
-
-  /// Automatic chat deletion. Both sides see and can change these - they
-  /// are plain metadata, not message content. DISCONNECT purges messages
-  /// shortly after the visitor's socket drops; BOTH_READ purges once every
-  /// message has been read by its recipient; AFTER_DAYS purges messages
-  /// older than autoDeleteDays.
-  autoDeleteMode AutoDeleteMode @default(OFF)
-  autoDeleteDays Int?
 
   messages   Message[]
   note       ConversationNote?

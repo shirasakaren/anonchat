@@ -100,7 +100,6 @@ export default function Chat() {
   const [incomingNote, setIncomingNote] = useState<ConversationNoteDto | null>(null);
   const [retention, setRetention] = useState<ConversationRetentionDto>({
     disappearing: { enabled: false, seconds: null, onLogout: false },
-    autoDelete: { mode: "OFF", days: null },
   });
   // The profile panel opens by default on desktop where it sits beside the
   // chat, but on small screens it replaces the chat entirely - so mobile

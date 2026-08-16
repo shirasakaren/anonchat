@@ -8,7 +8,6 @@ import { getStorageAdapter } from "../storage/index.js";
 import { Errors } from "../utils/errors.js";
 import { evictCachedBlob } from "../utils/blobCache.js";
 import { MESSAGE_INCLUDE, toMessageDto } from "../utils/dto.js";
-import { purgeAllMessages } from "./retention.service.js";
 
 const ANONYMOUS_USER_SELECT = {
   publicId: true,
@@ -47,10 +46,6 @@ export function toConversationDto(
         enabled: conversation.disappearingEnabled,
         seconds: conversation.disappearingSeconds,
         onLogout: conversation.disappearingOnLogout,
-      },
-      autoDelete: {
-        mode: conversation.autoDeleteMode,
-        days: conversation.autoDeleteDays,
       },
     },
   };
@@ -131,28 +126,7 @@ export async function markRead(
     readAt: readAt.toISOString(),
   });
 
-  // Auto-delete mode "after both read": once every message in the
-  // conversation has been read by its recipient, the history goes away.
-  void maybePurgeAfterBothRead(conversationId);
-
   return { upToMessageId, readAt: readAt.toISOString() };
-}
-
-async function maybePurgeAfterBothRead(conversationId: string): Promise<void> {
-  try {
-    const conversation = await prisma.conversation.findUnique({
-      where: { id: conversationId },
-      select: { autoDeleteMode: true },
-    });
-    if (!conversation || conversation.autoDeleteMode !== "BOTH_READ") return;
-    const [total, unread] = await Promise.all([
-      prisma.message.count({ where: { conversationId } }),
-      prisma.message.count({ where: { conversationId, readAt: null } }),
-    ]);
-    if (total > 0 && unread === 0) await purgeAllMessages(conversationId);
-  } catch {
-    // Best-effort cleanup - the periodic sweep is the backstop.
-  }
 }
 
 export async function listConversationsForAdmin(query: {
@@ -280,17 +254,16 @@ export async function setConversationAlias(
   return toAdminConversationDto(conversation, conversation.anonymousUser, unreadCount);
 }
 
-/** Applies a retention change (disappearing messages / auto-delete) set by
- *  either participant. Broadcasting the user-safe DTO keeps both clients
- *  in sync - the other side sees the new setting immediately. */
+/** Applies a disappearing-messages change set by either participant.
+ *  Broadcasting the user-safe DTO keeps both clients in sync - the other
+ *  side sees the new setting immediately and their own messages expire on
+ *  the same timer. */
 export async function setConversationRetention(
   conversationId: string,
   retention: {
     disappearingEnabled?: boolean;
     disappearingSeconds?: number | null;
     disappearingOnLogout?: boolean;
-    autoDeleteMode?: "OFF" | "DISCONNECT" | "BOTH_READ" | "AFTER_DAYS";
-    autoDeleteDays?: number | null;
   },
 ): Promise<ConversationDto> {
   const conversation = await prisma.conversation.update({
@@ -305,8 +278,6 @@ export async function setConversationRetention(
       ...(retention.disappearingOnLogout !== undefined
         ? { disappearingOnLogout: retention.disappearingOnLogout }
         : {}),
-      ...(retention.autoDeleteMode !== undefined ? { autoDeleteMode: retention.autoDeleteMode } : {}),
-      ...(retention.autoDeleteDays !== undefined ? { autoDeleteDays: retention.autoDeleteDays } : {}),
     },
     include: { anonymousUser: { select: ANONYMOUS_USER_SELECT } },
   });

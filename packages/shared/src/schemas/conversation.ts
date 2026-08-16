@@ -33,16 +33,16 @@ export const DISAPPEARING_OPTIONS_SECONDS = [86_400, 604_800, 7_776_000] as cons
 export type DisappearingSeconds = (typeof DISAPPEARING_OPTIONS_SECONDS)[number];
 
 /** Per-conversation message retention, configurable by either participant.
- *  Both fields are plain metadata (not content), so the server can apply
- *  them without breaking the E2EE property. */
+ *  Plain metadata (not content), so the server can apply it without
+ *  breaking the E2EE property. Either side's change applies to the whole
+ *  conversation - the admin uses the visitor's setting and can change it
+ *  themselves, and vice versa. */
 export const RetentionRequestSchema = z.object({
   disappearingEnabled: z.boolean().optional(),
   disappearingSeconds: z
     .union([z.literal(null), z.coerce.number().refine((n) => DISAPPEARING_OPTIONS_SECONDS.includes(n as DisappearingSeconds))])
     .optional(),
   disappearingOnLogout: z.boolean().optional(),
-  autoDeleteMode: z.enum(["OFF", "DISCONNECT", "BOTH_READ", "AFTER_DAYS"]).optional(),
-  autoDeleteDays: z.union([z.literal(null), z.coerce.number().int().min(1).max(365)]).optional(),
 });
 export type RetentionRequestInput = z.infer<typeof RetentionRequestSchema>;
 
@@ -51,10 +51,6 @@ export interface ConversationRetentionDto {
     enabled: boolean;
     seconds: number | null;
     onLogout: boolean;
-  };
-  autoDelete: {
-    mode: "OFF" | "DISCONNECT" | "BOTH_READ" | "AFTER_DAYS";
-    days: number | null;
   };
 }
 
