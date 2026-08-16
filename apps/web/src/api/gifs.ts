@@ -2,7 +2,7 @@ import type { GifResultDto } from "@anonchat/shared";
 import { api } from "./client.js";
 
 export function searchGifs(params: {
-  provider: "giphy" | "klipy";
+  provider: "giphy" | "klipy" | "all";
   mode: "trending" | "search";
   q?: string;
   limit?: number;

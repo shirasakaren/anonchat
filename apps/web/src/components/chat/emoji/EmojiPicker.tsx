@@ -18,6 +18,9 @@ interface Props {
    *  (Composer's own button, the reaction overlay's "more") each already
    *  dismiss on outside click themselves, this just adds the keyboard path. */
   onClose?: () => void;
+  /** Rendered inside the composer's Emoji/GIFs tabbed panel: the parent
+   *  owns the frame, this keeps only the inner chrome. */
+  embedded?: boolean;
 }
 
 /**
@@ -29,7 +32,7 @@ interface Props {
  * unlike emoji-picker-react's own binary light/dark Theme prop which had
  * no way to track a themed accent palette.
  */
-export function EmojiPicker({ onSelect, onClose }: Props) {
+export function EmojiPicker({ onSelect, onClose, embedded = false }: Props) {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState(EMOJI_CATEGORIES[0]!.id);
 
@@ -52,13 +55,20 @@ export function EmojiPicker({ onSelect, onClose }: Props) {
   return (
     <div
       onKeyDown={handleKeyDown}
-      className="flex h-[380px] w-[300px] flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] shadow-lg"
+      className={
+        embedded
+          ? "flex h-[380px] w-full flex-col overflow-hidden"
+          : "flex h-[380px] w-[300px] flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] shadow-lg"
+      }
     >
       <div className="border-b border-[var(--border)] p-2">
         <div className="flex items-center gap-1.5 rounded-lg border border-[var(--border-strong)] px-2 py-1.5">
           <Search size={14} className="shrink-0 text-[var(--text-muted)]" aria-hidden />
+          {/* Deliberately not auto-focused: on a phone, focusing the search
+              box would pop the virtual keyboard the moment the panel opens,
+              which is the opposite of what opening the emoji picker is for.
+              Tapping the box focuses it (and opens the keyboard) on demand. */}
           <input
-            autoFocus
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search emoji"

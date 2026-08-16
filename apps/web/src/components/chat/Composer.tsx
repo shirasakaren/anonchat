@@ -105,9 +105,11 @@ export function Composer({
   const { showToast } = useToast();
   const [markdown, setMarkdown] = useState(initialText ?? draftText ?? "");
   const [files, setFiles] = useState<PendingFile[]>([]);
-  const [showEmoji, setShowEmoji] = useState(false);
-  const [showGif, setShowGif] = useState(false);
-  const gifWrapperRef = useRef<HTMLDivElement>(null);
+  // One combined Emoji | GIFs panel: the emoji button toggles it, the tabs
+  // switch content. Opening it must never focus an input - on a phone that
+  // would pop the virtual keyboard and defeat the point of the panel.
+  const [showPanel, setShowPanel] = useState<"emoji" | "gifs" | null>(null);
+  const [panelTab, setPanelTab] = useState<"emoji" | "gifs">("emoji");
   const [shortcodeQuery, setShortcodeQuery] = useState<ActiveShortcode | null>(null);
   const [slashQuery, setSlashQuery] = useState<{ query: string } | null>(null);
   const [selectedSuggestion, setSelectedSuggestion] = useState(0);
@@ -243,15 +245,14 @@ export function Composer({
   }, [editor, initialText]);
 
   useEffect(() => {
-    if (!showEmoji && !showGif) return;
+    if (!showPanel) return;
     function handlePointerDown(e: MouseEvent) {
       const target = e.target as Node;
-      if (pickerWrapperRef.current && !pickerWrapperRef.current.contains(target)) setShowEmoji(false);
-      if (gifWrapperRef.current && !gifWrapperRef.current.contains(target)) setShowGif(false);
+      if (pickerWrapperRef.current && !pickerWrapperRef.current.contains(target)) setShowPanel(null);
     }
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [showEmoji, showGif]);
+  }, [showPanel]);
 
   // Starting a reply (or edit) moves the caret into the composer right
   // away - the person chose "Reply" on a specific message, so the next
@@ -584,68 +585,102 @@ export function Composer({
             }}
             onChange={handleFilePick}
           />
+          {/* Desktop keeps the attach button inside the input field; on
+              small screens it moves to the right beside Send so the left
+              side of the input holds only emoji (see the md:hidden label
+              next to the Send button). */}
           <label
             htmlFor={`attachment-input-${draftId ?? "message"}`}
-            className="mb-1 cursor-pointer rounded-lg p-2 hover:bg-[var(--surface-muted)]"
+            className="mb-1 hidden cursor-pointer rounded-lg p-2 hover:bg-[var(--surface-muted)] md:block"
             title="Attach file"
           >
             <Paperclip size={18} aria-hidden />
           </label>
 
-          {gifProviders && (gifProviders.giphy || gifProviders.klipy) && (
-            <div ref={gifWrapperRef} className="relative mb-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowGif((value) => !value);
-                  setShowEmoji(false);
-                }}
-                className="rounded-lg p-2 hover:bg-[var(--surface-muted)]"
-                title="GIF"
-                aria-label="Open GIF picker"
-                aria-expanded={showGif}
-              >
-                <Film size={18} aria-hidden />
-              </button>
-              {showGif && (
-                <GifPicker
-                  providers={gifProviders}
-                  onClose={() => setShowGif(false)}
-                  onSelect={(gifUrl) => {
-                    insertAtCursor(gifUrl);
-                    setShowGif(false);
-                  }}
-                />
-              )}
-            </div>
-          )}
-
           <div ref={pickerWrapperRef} className="relative mb-1">
             <button
               type="button"
-              onClick={() => setShowEmoji((value) => !value)}
+              onClick={() => {
+                setPanelTab("emoji");
+                setShowPanel((value) => (value ? null : "emoji"));
+              }}
               className="rounded-lg p-2 hover:bg-[var(--surface-muted)]"
-              title="Emoji"
-              aria-label="Open emoji picker"
-              aria-expanded={showEmoji}
+              title="Emoji and GIFs"
+              aria-label="Open emoji and GIF panel"
+              aria-expanded={showPanel !== null}
             >
               <Smile size={18} aria-hidden />
             </button>
-            {showEmoji && (
-              <div className="absolute bottom-full left-0 z-30 mb-2">
-                <EmojiPicker
-                  onClose={() => setShowEmoji(false)}
-                  onSelect={(emoji) => {
-                    insertAtCursor(emoji);
-                    setShowEmoji(false);
-                  }}
-                />
+            {showPanel && (
+              <div className="absolute bottom-full left-0 z-30 mb-2 w-[min(340px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] shadow-lg">
+                <div role="tablist" aria-label="Emoji or GIFs" className="flex gap-1 border-b border-[var(--border)] px-2 py-1.5">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={panelTab === "emoji"}
+                    onClick={() => setPanelTab("emoji")}
+                    className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${
+                      panelTab === "emoji"
+                        ? "bg-[var(--selected-bg)] text-[var(--text)]"
+                        : "text-[var(--text-muted)] hover:text-[var(--text)]"
+                    }`}
+                  >
+                    Emoji
+                  </button>
+                  {gifProviders && (gifProviders.giphy || gifProviders.klipy) && (
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={panelTab === "gifs"}
+                      onClick={() => setPanelTab("gifs")}
+                      className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold ${
+                        panelTab === "gifs"
+                          ? "bg-[var(--selected-bg)] text-[var(--text)]"
+                          : "text-[var(--text-muted)] hover:text-[var(--text)]"
+                      }`}
+                    >
+                      <Film size={13} aria-hidden />
+                      GIFs
+                    </button>
+                  )}
+                </div>
+                {panelTab === "emoji" ? (
+                  <EmojiPicker
+                    embedded
+                    onClose={() => setShowPanel(null)}
+                    onSelect={(emoji) => {
+                      insertAtCursor(emoji);
+                      setShowPanel(null);
+                    }}
+                  />
+                ) : gifProviders && (gifProviders.giphy || gifProviders.klipy) ? (
+                  <GifPicker
+                    embedded
+                    providers={gifProviders}
+                    onClose={() => setShowPanel(null)}
+                    onSelect={(gifUrl) => {
+                      insertAtCursor(gifUrl);
+                      setShowPanel(null);
+                    }}
+                  />
+                ) : null}
               </div>
             )}
           </div>
 
           <EditorContent editor={editor} className="min-w-0 flex-1" />
         </div>
+
+        {/* Mobile: attachments sit right beside Send; the input field keeps
+            only the emoji button on its left side. */}
+        <label
+          htmlFor={`attachment-input-${draftId ?? "message"}`}
+          className="mb-1 shrink-0 cursor-pointer rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)] md:hidden"
+          title="Attach file"
+          aria-label="Attach file"
+        >
+          <Paperclip size={18} aria-hidden />
+        </label>
 
         <button
           type="button"

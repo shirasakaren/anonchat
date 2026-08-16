@@ -88,15 +88,44 @@ async function searchKlipy(key: string, query: GifSearchQueryInput): Promise<Pro
 
 export async function searchGifs(query: GifSearchQueryInput): Promise<{ results: GifResultDto[]; error?: string }> {
   const settings = await getSiteSettings();
-  const key = query.provider === "giphy" ? settings.giphyApiKey : settings.klipyApiKey;
-  if (!key) return { results: [], error: `${query.provider.toUpperCase()} is not configured.` };
-  try {
-    const results = query.provider === "giphy" ? await searchGiphy(key, query) : await searchKlipy(key, query);
-    return { results };
-  } catch (error) {
-    return {
-      results: [],
-      error: error instanceof Error ? error.message : "The GIF provider could not be reached.",
-    };
+  const providers: Array<"giphy" | "klipy"> =
+    query.provider === "all" ? ["giphy", "klipy"] : [query.provider];
+
+  // "all" searches whichever providers are actually configured and merges
+  // the two result lists by interleaving, capped at the requested limit.
+  const configured = providers
+    .map((provider) => ({ provider, key: provider === "giphy" ? settings.giphyApiKey : settings.klipyApiKey }))
+    .filter((entry): entry is { provider: "giphy" | "klipy"; key: string } => Boolean(entry.key));
+
+  if (configured.length === 0) {
+    const names = providers.map((provider) => provider.toUpperCase()).join(" and ");
+    return { results: [], error: `${names} ${providers.length > 1 ? "are" : "is"} not configured.` };
   }
+
+  const perProviderLimit = query.provider === "all" ? Math.ceil(query.limit / configured.length) : query.limit;
+  const settled = await Promise.allSettled(
+    configured.map(({ provider, key }) => {
+      const providerQuery = { ...query, limit: perProviderLimit };
+      return provider === "giphy" ? searchGiphy(key, providerQuery) : searchKlipy(key, providerQuery);
+    }),
+  );
+
+  if (settled.every((result) => result.status === "rejected")) {
+    return { results: [], error: "The GIF providers could not be reached." };
+  }
+
+  // Interleave so one provider's results never crowd the other out.
+  const lists = settled.map((result) => (result.status === "fulfilled" ? result.value : []));
+  const merged: ProviderResult[] = [];
+  for (let i = 0; merged.length < query.limit; i++) {
+    let added = false;
+    for (const list of lists) {
+      if (i < list.length && merged.length < query.limit) {
+        merged.push(list[i]!);
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
+  return { results: merged };
 }
