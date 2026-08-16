@@ -1,6 +1,10 @@
 import { useEffect } from "react";
 
 interface Props {
+  /** Whether the viewer sent this message. Deleting for everyone is only
+   *  offered on the sender's own messages - for the other party's messages
+   *  the only local option is "Delete for me". */
+  isOwn: boolean;
   onDeleteForMe: () => void;
   onDeleteForEveryone: () => void;
   onCancel: () => void;
@@ -15,7 +19,7 @@ interface Props {
  * server-side concept of a per-participant hide for a message the other
  * side can still see.
  */
-export function DeleteMessageModal({ onDeleteForMe, onDeleteForEveryone, onCancel }: Props) {
+export function DeleteMessageModal({ isOwn, onDeleteForMe, onDeleteForEveryone, onCancel }: Props) {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") onCancel();
@@ -42,8 +46,17 @@ export function DeleteMessageModal({ onDeleteForMe, onDeleteForEveryone, onCance
             Delete message?
           </h2>
           <p className="mt-1 text-xs text-[var(--text-muted)]">
-            "Delete for me" only removes it from your own view on this device. "Delete for everyone" removes it for both
-            of you and can't be undone.
+            {isOwn ? (
+              <>
+                "Delete for me" only removes it from your own view on this device. "Delete for everyone" removes it
+                for both of you and can't be undone.
+              </>
+            ) : (
+              <>
+                This message stays visible to the other party - deleting it only hides it from your own view on this
+                device.
+              </>
+            )}
           </p>
         </div>
 
@@ -55,18 +68,15 @@ export function DeleteMessageModal({ onDeleteForMe, onDeleteForEveryone, onCance
           >
             Delete for me
           </button>
-          {/* Fixed Tailwind red (not a theme token) - same convention this
-              app already uses for other theme-independent semantic color
-              (e.g. the online-presence dot), so a destructive action reads
-              as unambiguously dangerous in every one of the 25 themes
-              rather than blending into an accent-tinted danger surface. */}
-          <button
-            type="button"
-            onClick={onDeleteForEveryone}
-            className="rounded-lg bg-red-600 px-3 py-2 text-left text-sm font-semibold text-white hover:bg-red-700"
-          >
-            Delete for everyone
-          </button>
+          {isOwn && (
+            <button
+              type="button"
+              onClick={onDeleteForEveryone}
+              className="rounded-lg bg-red-600 px-3 py-2 text-left text-sm font-semibold text-white hover:bg-red-700"
+            >
+              Delete for everyone
+            </button>
+          )}
           <button
             type="button"
             onClick={onCancel}

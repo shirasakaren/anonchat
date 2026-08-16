@@ -324,18 +324,19 @@ function MessageActions({
           <Pencil size={14} aria-hidden />
         </button>
       )}
-      {isOwn && (
-        <button
-          type="button"
-          title="Delete"
-          aria-label="Delete"
-          disabled={disableActions}
-          onClick={onDelete}
-          className="rounded p-1.5 text-xs hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-        >
-          <Trash2 size={14} aria-hidden />
-        </button>
-      )}
+      {/* Delete is offered on the other party's messages too - the modal
+          only exposes "Delete for me" there, since deleting for everyone
+          is reserved for the sender. */}
+      <button
+        type="button"
+        title="Delete"
+        aria-label="Delete"
+        disabled={disableActions}
+        onClick={onDelete}
+        className="rounded p-1.5 text-xs hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+      >
+        <Trash2 size={14} aria-hidden />
+      </button>
     </div>
   );
 }

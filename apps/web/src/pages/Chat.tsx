@@ -706,6 +706,7 @@ export default function Chat() {
 
       {deleteTarget && (
         <DeleteMessageModal
+          isOwn={deleteTarget.senderType === "USER"}
           onDeleteForMe={() => handleDeleteForMe(deleteTarget)}
           onDeleteForEveryone={() => void handleDeleteForEveryone(deleteTarget)}
           onCancel={() => setDeleteTarget(null)}

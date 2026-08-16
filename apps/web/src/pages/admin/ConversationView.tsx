@@ -744,6 +744,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
 
       {deleteTarget && (
         <DeleteMessageModal
+          isOwn={deleteTarget.senderType === "ADMIN"}
           onDeleteForMe={() => handleDeleteForMe(deleteTarget)}
           onDeleteForEveryone={() => void handleDeleteForEveryone(deleteTarget)}
           onCancel={() => setDeleteTarget(null)}
