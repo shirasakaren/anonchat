@@ -89,6 +89,11 @@ export default function Chat() {
       sessionStorage.getItem("anonchat.adminProfileHidden") !== "true",
   );
   const bottomRef = useRef<HTMLDivElement>(null);
+  // The messages pane is its own scroll container; nearBottomRef tracks
+  // whether the visitor is reading the latest messages so the view can be
+  // pinned to the bottom when the keyboard opens and the pane shrinks.
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const nearBottomRef = useRef(true);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pendingFilesRef = useRef<
     Map<
@@ -170,8 +175,38 @@ export default function Chat() {
   }, [loadAllMessages, decryptDto]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (nearBottomRef.current) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
+
+  // Mobile keyboards: keep the shell's height in sync with the visual
+  // viewport (the area the keyboard leaves visible). On iOS Safari the
+  // layout viewport never resizes for the keyboard, so this is the only
+  // way the composer ends up above the keyboard instead of under it. When
+  // the viewport shrinks, pin the thread to the latest message if the
+  // visitor was already reading from the bottom - preserving scrollTop
+  // alone would leave the newest messages below the fold, which is what
+  // made the conversation appear to "jump up" while typing.
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const update = () => {
+      document.documentElement.style.setProperty("--vvh", `${viewport.height}px`);
+      const scroller = scrollerRef.current;
+      if (nearBottomRef.current && scroller) scroller.scrollTop = scroller.scrollHeight;
+    };
+    viewport.addEventListener("resize", update);
+    update();
+    return () => {
+      viewport.removeEventListener("resize", update);
+      document.documentElement.style.removeProperty("--vvh");
+    };
+  }, []);
+
+  function handleThreadScroll() {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    nearBottomRef.current = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80;
+  }
 
   const handleWsEvent = useCallback(
     (event: ServerWsEvent) => {
@@ -358,6 +393,9 @@ export default function Chat() {
       pendingAttachments,
       transferProgress: files.length > 0 ? 0 : undefined,
     };
+    // Sending always returns the view to the newest message, even if the
+    // visitor had scrolled up while composing.
+    nearBottomRef.current = true;
     setMessages((prev) => [...prev, optimistic]);
     pendingFilesRef.current.set(localId, { text, files, replyToId, previews: pendingAttachments });
     setReplyTo(null);
@@ -449,7 +487,7 @@ export default function Chat() {
   };
 
   return (
-    <main className="flex h-screen overflow-hidden">
+    <main className="vvh-shell flex overflow-hidden">
       {profileOpen && <AdminProfilePanel site={site} onClose={hideProfile} />}
       <div className={profileOpen ? "hidden min-w-0 flex-1 flex-col sm:flex" : "flex min-w-0 flex-1 flex-col"}>
         <header className="flex items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 sm:px-4 sm:py-2.5">
@@ -529,7 +567,7 @@ export default function Chat() {
 
         <ConnectionBanner status={wsStatus} />
 
-        <div className="flex-1 overflow-y-auto px-4 py-4">
+        <div ref={scrollerRef} onScroll={handleThreadScroll} className="flex-1 overflow-y-auto px-4 py-4">
           {loadingHistory ? (
             <FullScreenLoader label="Loading your conversation…" />
           ) : messages.length === 0 ? (

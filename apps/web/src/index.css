@@ -81,6 +81,18 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ── Chat shell height under the mobile keyboard ──────────────────────
+   The chat page shell tracks the visual viewport so the composer sits
+   directly above the on-screen keyboard, WhatsApp-style. `dvh` covers
+   Android/desktop; `--vvh` (kept fresh by Chat.tsx) covers iOS Safari,
+   which never resizes the layout viewport for the keyboard. Each
+   declaration is a fallback for browsers that don't know the next one. */
+.vvh-shell {
+  height: 100vh;
+  height: 100dvh;
+  height: var(--vvh, 100dvh);
+}
+
 /* --border-strong (not --color-accent-500) because a contrast audit found
    the accent color falls below the 3:1 UI-component minimum against its
    own theme's surfaces in 5 of 25 themes (monochrome-dark - the default -
