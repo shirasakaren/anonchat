@@ -1,7 +1,9 @@
+import { randomBytes } from "node:crypto";
 import type { FastifyRequest } from "fastify";
 import { ENCRYPTED_BLOB_OVERHEAD_BYTES } from "@anonchat/crypto";
 import { EncryptedPayloadSchema, SendMessageRequestSchema, type EncryptedPayloadInput } from "@anonchat/shared";
 import type { PendingAttachment } from "../services/message.service.js";
+import { getStorageAdapter } from "../storage/index.js";
 import { Errors } from "./errors.js";
 
 /**
@@ -9,6 +11,13 @@ import { Errors } from "./errors.js";
  * (text + N encrypted attachment blobs, each preceded by its own encrypted
  * metadata envelope field). See docs/ARCHITECTURE.md for why attachments are
  * uploaded atomically with the message rather than pre-staged server-side.
+ *
+ * File parts are streamed straight into the storage adapter AS they are
+ * parsed - the multipart parser is strictly sequential, so a file part's
+ * stream must be fully consumed before the next part can be read. That
+ * constraint is exactly what makes this safe memory-wise too: no part ever
+ * buffers in the heap, and the parts iterator only advances once a part has
+ * been drained to disk/object storage.
  */
 export async function parseSendMessageBody(
   request: FastifyRequest,
@@ -25,6 +34,7 @@ export async function parseSendMessageBody(
   let clientIdRaw: string | undefined;
   let pendingMeta: EncryptedPayloadInput | null = null;
   const attachments: PendingAttachment[] = [];
+  const storage = getStorageAdapter();
 
   try {
     for await (const part of request.parts({
@@ -42,9 +52,10 @@ export async function parseSendMessageBody(
         if (attachments.length >= maxAttachments) {
           throw Errors.badRequest(`You can attach at most ${maxAttachments} files per message.`);
         }
-        // Stream the part instead of buffering it - the storage adapter
-        // writes it out as it arrives (see storage/types.ts).
-        attachments.push({ meta: pendingMeta, stream: part.file });
+        const storageKey = `attachments/${randomBytes(24).toString("hex")}`;
+        await storage.putStream(storageKey, part.file);
+        if (part.file.truncated) throw Errors.tooLarge(`Attachments must be ${maxAttachmentSizeMb} MB or smaller.`);
+        attachments.push({ meta: pendingMeta, storageKey, sizeBytes: part.file.bytesRead });
         pendingMeta = null;
       } else if (part.fieldname === "content") {
         contentRaw = String(part.value);
@@ -57,6 +68,8 @@ export async function parseSendMessageBody(
       }
     }
   } catch (error) {
+    // Parts already stored must not leak if a later part fails validation.
+    await Promise.allSettled(attachments.map((attachment) => storage.delete(attachment.storageKey)));
     if (error && typeof error === "object" && "code" in error && error.code === "FST_REQ_FILE_TOO_LARGE") {
       throw Errors.tooLarge(`Attachments must be ${maxAttachmentSizeMb} MB or smaller.`);
     }

@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import type { SenderType } from "@prisma/client";
 import type { EncryptedPayloadInput } from "@anonchat/shared";
 import { prisma } from "../db.js";
@@ -11,7 +10,10 @@ import { maybeSendReplyNotification } from "./replyNotification.service.js";
 
 export interface PendingAttachment {
   meta: EncryptedPayloadInput;
-  stream: import("node:stream").Readable;
+  /** Already written to storage by parseSendMessageBody (the multipart
+   *  parser must drain each file part before reading the next one). */
+  storageKey: string;
+  sizeBytes: number;
 }
 
 function toBuffer(payload: EncryptedPayloadInput) {
@@ -55,24 +57,9 @@ export async function createMessage(params: {
   const content = toBuffer(params.content);
   const storage = getStorageAdapter();
   const attachmentInputs = params.attachments ?? [];
-  const storageKeys: string[] = [];
-  const attachmentSizes: number[] = [];
+  const storageKeys = attachmentInputs.map((attachment) => attachment.storageKey);
 
   try {
-    for (const attachment of attachmentInputs) {
-      const key = `attachments/${randomBytes(24).toString("hex")}`;
-      // Streamed end-to-end: the multipart part is piped straight into the
-      // storage adapter without an in-memory copy (see multipartMessage.ts).
-      await storage.putStream(key, attachment.stream);
-      const stream = attachment.stream as import("node:stream").Readable & {
-        truncated?: boolean;
-        bytesRead?: number;
-      };
-      if (stream.truncated) throw Errors.tooLarge("An attachment exceeded the upload limit.");
-      attachmentSizes.push(stream.bytesRead ?? 0);
-      storageKeys.push(key);
-    }
-
     const message = await prisma.$transaction(async (tx) => {
       const created = await tx.message.create({
         data: {
@@ -92,10 +79,10 @@ export async function createMessage(params: {
             create: attachmentInputs.map((attachment, index) => {
               const metaBuf = toBuffer(attachment.meta);
               return {
-                storageKey: storageKeys[index]!,
+                storageKey: attachment.storageKey,
                 metaCiphertext: metaBuf.ciphertext,
                 metaNonce: metaBuf.nonce,
-                sizeBytes: attachmentSizes[index]!,
+                sizeBytes: attachment.sizeBytes,
               };
             }),
           },
