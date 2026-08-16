@@ -49,6 +49,7 @@ export function toMessageDto(message: MessageWithRelations): MessageDto {
     createdAt: message.createdAt.toISOString(),
     updatedAt: message.updatedAt.toISOString(),
     readAt: message.readAt ? message.readAt.toISOString() : null,
+    clientId: message.clientId,
   };
 }
 

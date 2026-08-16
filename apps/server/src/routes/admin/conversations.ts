@@ -59,7 +59,7 @@ export function registerAdminConversationRoutes(app: FastifyInstance): void {
     if (!checkRateLimit(`message:ADMIN:${admin.id}`, settings.rateLimitMessagesPerMinute, 60_000)) {
       throw Errors.rateLimited();
     }
-    const { content, replyToId, attachments } = await parseSendMessageBody(
+    const { content, replyToId, clientId, attachments } = await parseSendMessageBody(
       request,
       settings.maxAttachmentsPerMessage,
       settings.maxAttachmentSizeMb,
@@ -69,6 +69,7 @@ export function registerAdminConversationRoutes(app: FastifyInstance): void {
       senderType: "ADMIN",
       content,
       replyToId,
+      clientId,
       attachments,
     });
     reply.status(201).send(dto);

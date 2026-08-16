@@ -14,14 +14,15 @@ export async function parseSendMessageBody(
   request: FastifyRequest,
   maxAttachments: number,
   maxAttachmentSizeMb: number,
-): Promise<{ content: EncryptedPayloadInput; replyToId: string | null; attachments: PendingAttachment[] }> {
+): Promise<{ content: EncryptedPayloadInput; replyToId: string | null; clientId: string | null; attachments: PendingAttachment[] }> {
   if (!request.isMultipart()) {
     const body = SendMessageRequestSchema.parse(request.body);
-    return { content: body.content, replyToId: body.replyToId ?? null, attachments: [] };
+    return { content: body.content, replyToId: body.replyToId ?? null, clientId: body.clientId ?? null, attachments: [] };
   }
 
   let contentRaw: string | undefined;
   let replyToRaw: string | undefined;
+  let clientIdRaw: string | undefined;
   let pendingMeta: EncryptedPayloadInput | null = null;
   const attachments: PendingAttachment[] = [];
 
@@ -48,6 +49,8 @@ export async function parseSendMessageBody(
         contentRaw = String(part.value);
       } else if (part.fieldname === "replyToId") {
         replyToRaw = String(part.value);
+      } else if (part.fieldname === "clientId") {
+        clientIdRaw = String(part.value);
       } else if (part.fieldname === "attachmentMeta") {
         pendingMeta = EncryptedPayloadSchema.parse(JSON.parse(String(part.value)));
       }
@@ -61,5 +64,5 @@ export async function parseSendMessageBody(
 
   if (!contentRaw) throw Errors.badRequest("Message content is required.");
   const content = EncryptedPayloadSchema.parse(JSON.parse(contentRaw));
-  return { content, replyToId: replyToRaw || null, attachments };
+  return { content, replyToId: replyToRaw || null, clientId: clientIdRaw || null, attachments };
 }

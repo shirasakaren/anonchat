@@ -36,6 +36,7 @@ export async function createMessage(params: {
   senderType: SenderType;
   content: EncryptedPayloadInput;
   replyToId?: string | null;
+  clientId?: string | null;
   attachments?: PendingAttachment[];
 }) {
   const conversation = await prisma.conversation.findUnique({ where: { id: params.conversationId } });
@@ -71,6 +72,7 @@ export async function createMessage(params: {
           contentCiphertext: content.ciphertext,
           contentNonce: content.nonce,
           replyToId: params.replyToId ?? null,
+          clientId: params.clientId ?? null,
           attachments: {
             create: attachmentInputs.map((attachment, index) => {
               const metaBuf = toBuffer(attachment.meta);

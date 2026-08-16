@@ -160,6 +160,7 @@ export async function sendAdminMessage(
   params: {
     content: EncryptedPayload;
     replyToId?: string | null;
+    clientId?: string | null;
     attachments?: OutgoingAttachment[];
     onUploadProgress?: (progress: number) => void;
   },
@@ -168,11 +169,13 @@ export async function sendAdminMessage(
     return api.post<MessageDto>(`/admin/conversations/${conversationId}/messages`, {
       content: params.content,
       replyToId: params.replyToId ?? null,
+      ...(params.clientId ? { clientId: params.clientId } : {}),
     });
   }
   const form = new FormData();
   form.append("content", JSON.stringify(params.content));
   if (params.replyToId) form.append("replyToId", params.replyToId);
+  if (params.clientId) form.append("clientId", params.clientId);
   for (const attachment of params.attachments) {
     form.append("attachmentMeta", JSON.stringify(attachment.meta));
     form.append("attachment", attachment.blob);

@@ -6,6 +6,10 @@ export const SendMessageRequestSchema = z.object({
   content: EncryptedPayloadSchema,
   replyToId: CuidSchema.nullish(),
   attachmentIds: z.array(CuidSchema).max(10).optional(),
+  /// Client-generated id for the sender's optimistic bubble. Echoed back
+  /// on the REST response and the WebSocket broadcast so the optimistic
+  /// copy can be replaced in place instead of briefly rendering twice.
+  clientId: z.string().min(1).max(64).optional(),
 });
 export type SendMessageRequestInput = z.infer<typeof SendMessageRequestSchema>;
 
@@ -52,6 +56,7 @@ export interface MessageDto {
   createdAt: string;
   updatedAt: string;
   readAt: string | null;
+  clientId: string | null;
 }
 
 export interface ConversationDto {

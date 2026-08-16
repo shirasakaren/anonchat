@@ -221,6 +221,17 @@ export default function Chat() {
           const dto = decryptDto(event.message);
           setMessages((prev) => {
             if (prev.some((m) => m.id === dto.id)) return prev;
+            // Our own send's echo (the WS push can beat the REST response):
+            // swap the optimistic bubble out in place, keyed by clientId,
+            // so a sent message never flashes as two bubbles for a frame.
+            if (event.message.clientId) {
+              const optimistic = prev.find((m) => m.id === event.message.clientId && m.status === "sending");
+              if (optimistic) {
+                return prev
+                  .map((m) => (m.id === event.message.clientId ? dto : m))
+                  .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+              }
+            }
             return [...prev, dto].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
           });
           if (event.message.senderType === "ADMIN") markRead(event.message.id).catch(() => {});
@@ -316,6 +327,7 @@ export default function Chat() {
       const dto = await sendMessage({
         content: payload,
         replyToId,
+        clientId: localId,
         attachments,
         onUploadProgress: (progress) => {
           setMessages((prev) =>

@@ -218,6 +218,17 @@ export function ConversationView({ conversationId, onChanged }: Props) {
           setMessages((prev) => {
             const dto = decryptDto(event.message);
             if (prev.some((m) => m.id === dto.id)) return prev;
+            // Our own send's echo (the WS push can beat the REST response):
+            // swap the optimistic bubble out in place, keyed by clientId,
+            // so a sent message never flashes as two bubbles for a frame.
+            if (event.message.clientId) {
+              const optimistic = prev.find((m) => m.id === event.message.clientId && m.status === "sending");
+              if (optimistic) {
+                return prev
+                  .map((m) => (m.id === event.message.clientId ? dto : m))
+                  .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+              }
+            }
             return [...prev, dto].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
           });
           // Only bump the sidebar for genuinely new inbound messages - the
@@ -337,6 +348,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
       const dto = await sendAdminMessage(conversationId, {
         content: payload,
         replyToId,
+        clientId: localId,
         attachments,
         onUploadProgress: (progress) => {
           setMessages((prev) =>
