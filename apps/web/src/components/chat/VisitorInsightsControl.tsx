@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ShieldCheck, ShieldQuestion, X } from "lucide-react";
 import type { PublicSiteInfoDto, VisitorInsightsStatusDto } from "@anonchat/shared";
 import { consentToVisitorInsights, getVisitorInsightsStatus, revokeVisitorInsights } from "../../api/anonymous.js";
@@ -18,6 +18,9 @@ export function VisitorInsightsControl({ conversationId, config }: Props) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const primaryRef = useRef<HTMLButtonElement>(null);
+  const busyRef = useRef(busy);
+  busyRef.current = busy;
 
   useEffect(() => {
     if (!config.enabled) return;
@@ -28,6 +31,26 @@ export function VisitorInsightsControl({ conversationId, config }: Props) {
       })
       .catch(() => {});
   }, [config.enabled, conversationId]);
+
+  // Focus and Escape handling while the popup is open, matching the other
+  // dialogs in the app (focus the primary action, Escape dismisses, focus
+  // returns to whatever opened the popup on close).
+  useEffect(() => {
+    if (!open) return;
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    primaryRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !busyRef.current) {
+        event.preventDefault();
+        dismiss();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      previouslyFocused?.focus();
+    };
+  }, [open]);
 
   if (!config.enabled) return null;
 
@@ -80,11 +103,25 @@ export function VisitorInsightsControl({ conversationId, config }: Props) {
       </button>
 
       {open && (
-        <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center p-4 sm:justify-end">
-          <section className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface-raised)] p-4 shadow-xl">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onMouseDown={() => {
+            if (!busy) dismiss();
+          }}
+          role="presentation"
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="visitor-insights-title"
+            onMouseDown={(event) => event.stopPropagation()}
+            className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface-raised)] p-4 shadow-xl"
+          >
             <div className="mb-2 flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold">Share optional device diagnostics?</h2>
+                <h2 id="visitor-insights-title" className="text-sm font-semibold">
+                  Share optional device diagnostics?
+                </h2>
                 <p className="mt-1 text-xs text-[var(--text-muted)]">
                   This can help the site owner understand context and troubleshoot delivery. Chat content remains
                   end-to-end encrypted.
@@ -110,6 +147,7 @@ export function VisitorInsightsControl({ conversationId, config }: Props) {
             </p>
             {status?.consentedAt ? (
               <button
+                ref={primaryRef}
                 type="button"
                 onClick={() => void revoke()}
                 disabled={busy}
@@ -120,6 +158,7 @@ export function VisitorInsightsControl({ conversationId, config }: Props) {
             ) : (
               <div className="flex gap-2">
                 <button
+                  ref={primaryRef}
                   type="button"
                   onClick={() => void share()}
                   disabled={busy}
