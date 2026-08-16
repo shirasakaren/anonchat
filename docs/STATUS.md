@@ -1,9 +1,77 @@
 # Project status / handoff
 
-Last updated: 2026-08-15. Read this first if you're picking up this project
+Last updated: 2026-08-16. Read this first if you're picking up this project
 in a new session - it's the durable source of truth for what's done, what's
 verified, and what's next. (Don't rely solely on an in-session task list -
 this file is what's meant to survive across sessions.)
+
+## Chat fixes, retention features, GIF picker, and RAM pass (2026-08-16)
+
+Deployed to https://chatwith.ren (multi-arch image; see
+`railway_template_setup.md` memory for the deploy flow - plain `docker build`
+produces arm64-only images that Railway silently fails to deploy).
+
+Bug fixes:
+- Message links with markdown syntax (`[url](url)`, what Tiptap serializes
+  for autolinked URLs) no longer get double-linkified into a nested link
+  whose href was the raw markdown source - clicking used to navigate to a
+  mangled route like /admin/c/[url](url). Existing links are swapped out for
+  placeholders before the bare-URL pass.
+- Sent messages no longer flash as two bubbles: every send carries a
+  clientId, and the sender's own WebSocket echo replaces the optimistic
+  bubble in place.
+- Inbox previews fetch the single newest message (direction=desc, limit 1)
+  instead of reading the tail of the oldest page - conversations longer
+  than one page showed a stale preview forever.
+- Reopening a conversation lands on the first unseen message with a "New
+  messages" divider (per-device last-seen cursor in localStorage), never a
+  load-from-top + scroll-to-bottom.
+- Attachments are magic-byte sniffed client-side (the server only sees
+  ciphertext): a .zip renamed to .mp4/.jpg is measured against its real
+  type's limit, warns the sender, and stores the sniffed mimetype so it
+  renders as a plain download. The reverse (real image named .zip) renders
+  as media.
+- Reply previews are truncated to a single compact line; replying to
+  attachment-only messages shows "Photo · cat.jpg"-style labels; starting a
+  reply focuses the composer.
+- Delete is offered on the other party's messages (Delete for me only - it
+  stays visible to the sender). The admin insights icon only renders when
+  the visitor has an active diagnostics row.
+- iOS keyboard: the shell resets the focus pan (window scroll) on every
+  visual-viewport move so the header stays pinned; the admin dashboard uses
+  the same vvh-shell treatment.
+- YouTube embeds keep a fallback "Open on YouTube/Vimeo" link for videos
+  whose uploaders disabled embedding.
+
+Features:
+- Disappearing messages (off / 24h / 7d / 90d, plus optional wipe on
+  logout) and auto-delete chat (on visitor disconnect with a 60s grace,
+  after both sides read, or after N days) - a timer control in both chat
+  headers, applied server-side as conversation metadata. New messages get
+  an expiresAt TTL; a 10-minute sweep deletes expired rows and their
+  storage; deletions broadcast as one messages.deleted event.
+- GIF picker in the composer (GIPHY + KLIPY, Tenor-compatible API), backed
+  by a server-side /api/gifs/search proxy so API keys stay server-side;
+  keys configured in System settings, provider CDNs added to img-src.
+- Bulk inbox operations: Select mode with per-row checkboxes, select all,
+  and bulk Archive / Block / Delete via a bulk endpoint.
+- Profile media queues as local previews and uploads only on Save changes
+  (no more auto-save + refresh); unsaved previews block navigation.
+
+Performance:
+- Multipart file parts stream straight into the storage adapter (local
+  write stream / S3 lib-storage Upload) - each part must be consumed
+  before the parser advances, so storage writes happen inside the parse
+  loop. Downloads stream out with Content-Length. The Docker start command
+  caps the V8 heap at --max-old-space-size=512; the new Railway container
+  idles at ~68MB.
+
+Verification: 12/12 Playwright checks against the production-style
+localhost preview (send/dedupe, YouTube href+embed+fallback, spoofed
+files, retention persistence, reload persistence). Full suites pass:
+21 crypto, 21 shared, 117 server (integration included, against a
+throwaway Postgres), 143 web. Typecheck and lint clean, production build
+passes.
 
 ## Editor Enter semantics and .docx preview (2026-08-15)
 
