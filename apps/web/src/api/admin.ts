@@ -247,6 +247,13 @@ export function softDeleteConversation(id: string): Promise<void> {
   return api.delete<void>(`/admin/conversations/${id}`);
 }
 
+export function bulkConversationAction(
+  ids: string[],
+  action: "archive" | "delete" | "block" | "unarchive",
+): Promise<void> {
+  return api.post<void>("/admin/conversations/bulk", { ids, action });
+}
+
 export function permanentlyDeleteConversation(id: string): Promise<void> {
   return api.delete<void>(`/admin/conversations/${id}/permanent`);
 }

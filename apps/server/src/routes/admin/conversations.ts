@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import {
   AdminConversationsQuerySchema,
+  BulkConversationsRequestSchema,
   ConversationAliasRequestSchema,
   ConversationAttachmentParamsSchema,
   ConversationMessageParamsSchema,
@@ -38,6 +39,32 @@ export function registerAdminConversationRoutes(app: FastifyInstance): void {
   app.get("/admin/conversations", { preHandler: requireAdmin }, async (request) => {
     const query = AdminConversationsQuerySchema.parse(request.query);
     return listConversationsForAdmin(query);
+  });
+
+  // Bulk inbox operations: checkbox selection -> archive/delete/block many
+  // conversations in one request. Each status change still broadcasts its
+  // own conversation.updated event so open clients stay live.
+  app.post("/admin/conversations/bulk", { preHandler: requireAdmin }, async (request, reply) => {
+    const { admin } = request.adminAuth!;
+    const { ids, action } = BulkConversationsRequestSchema.parse(request.body);
+    for (const id of ids) {
+      switch (action) {
+        case "archive":
+          await setConversationStatus(id, "ARCHIVED");
+          break;
+        case "unarchive":
+          await setConversationStatus(id, "ACTIVE");
+          break;
+        case "block":
+          await setConversationStatus(id, "BLOCKED");
+          break;
+        case "delete":
+          await softDeleteConversation(id);
+          break;
+      }
+    }
+    await recordAudit(admin.id, "conversation.bulk_action", undefined, { action, count: ids.length });
+    reply.status(204).send();
   });
 
   app.get("/admin/conversations/:id", { preHandler: requireAdmin }, async (request) => {

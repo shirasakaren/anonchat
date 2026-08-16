@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Base64UrlSchema, PaginationQuerySchema, PublicKeysSchema } from "./common.js";
+import { Base64UrlSchema, CuidSchema, PaginationQuerySchema, PublicKeysSchema } from "./common.js";
 import type { ConversationStatus } from "../enums.js";
 import type { MessagingLimitsDto, ProfileMediaDto } from "./site.js";
 import { ABSOLUTE_MAX_ATTACHMENT_SIZE_MB, ABSOLUTE_MAX_ATTACHMENTS_PER_MESSAGE } from "../constants.js";
@@ -221,3 +221,9 @@ export interface SiteSettingsDto {
   adminDigestMinIntervalMinutes: number;
   replyEmailMinIntervalMinutes: number;
 }
+
+export const BulkConversationsRequestSchema = z.object({
+  ids: z.array(CuidSchema).min(1).max(100),
+  action: z.enum(["archive", "delete", "block", "unarchive"]),
+});
+export type BulkConversationsRequestInput = z.infer<typeof BulkConversationsRequestSchema>;
