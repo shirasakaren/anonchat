@@ -18,6 +18,7 @@ import { useAdminSession } from "../../context/AdminSessionContext.js";
 import { useUnreadCount } from "../../hooks/useUnreadCount.js";
 import { useKeyboardViewport } from "../../hooks/useKeyboardViewport.js";
 import { LaunchGuideModal } from "../../components/admin/LaunchGuideModal.js";
+import { ConfirmDialog } from "../../components/common/ConfirmDialog.js";
 import { useSite } from "../../context/SiteContext.js";
 
 const NAV_ITEMS = [
@@ -46,6 +47,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { admin, logout } = useAdminSession();
   const { site } = useSite();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true",
   );
@@ -144,7 +146,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <div className="flex-1 space-y-1">{renderNavLinks(sidebarCollapsed)}</div>
         <button
           type="button"
-          onClick={() => logout()}
+          onClick={() => setConfirmLogout(true)}
           aria-label={sidebarCollapsed ? "Logout" : undefined}
           className={clsx(
             "group relative flex items-center rounded-lg py-2 text-left text-sm text-[var(--text-muted)] hover:bg-[var(--surface-muted)]",
@@ -199,7 +201,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               type="button"
               onClick={() => {
                 closeMobileNav();
-                void logout();
+                setConfirmLogout(true);
               }}
               className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-[var(--text-muted)] hover:bg-[var(--surface-muted)]"
             >
@@ -211,6 +213,19 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       )}
       {showLaunchGuide && admin && (
         <LaunchGuideModal adminName={admin.displayName} onClose={() => setShowLaunchGuide(false)} />
+      )}
+      {confirmLogout && (
+        <ConfirmDialog
+          title="Log out?"
+          message="You'll need your password to sign back in - and, on a device that hasn't cached your encryption key, your recovery phrase too."
+          confirmLabel="Log out"
+          destructive
+          onConfirm={() => {
+            setConfirmLogout(false);
+            void logout();
+          }}
+          onCancel={() => setConfirmLogout(false)}
+        />
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, ChevronDown, ShieldCheck } from "lucide-react";
 import { useSite } from "../context/SiteContext.js";
 import { useAnonymousSession } from "../context/AnonymousSessionContext.js";
 import { listIdentities, type IdentitySummary } from "../crypto/identityStore.js";
@@ -17,6 +17,7 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
   const [displayName, setDisplayName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
     void listIdentities()
@@ -72,19 +73,6 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
           ))}
         <h1 className="text-2xl font-semibold">Message {ownerName} anonymously</h1>
         {site?.bio && <p className="mt-2 text-sm text-[var(--text-muted)]">{site.bio}</p>}
-        <p className={`${site?.bio ? "mt-1" : "mt-2"} text-sm text-[var(--text-muted)]`}>
-          No email. No account. No name required.
-        </p>
-        <p className="mt-3 flex items-start justify-center gap-1.5 text-xs text-[var(--text-muted)]">
-          <ShieldCheck size={14} className="mt-px shrink-0 text-[var(--link-fg)]" aria-hidden />
-          End-to-end encrypted - only your identity and {ownerName}'s key can decrypt these messages.
-        </p>
-        {site?.visitorInsights.collectsIpAddress && (
-          <p className="mt-2 text-xs text-[var(--text-muted)]">
-            This operator has enabled IP-address retention for abuse prevention.
-            {site.privacyPolicyUrl ? " See the privacy policy below for details." : " Ask the operator for details."}
-          </p>
-        )}
       </div>
 
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-raised)] p-6 shadow-sm">
@@ -214,12 +202,40 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
         )}
       </div>
 
+      {/* The privacy/security notes moved below the identity card and stay
+          tucked behind "Show details" so the create-identity box stays the
+          single focus of the screen. */}
+      <button
+        type="button"
+        onClick={() => setShowDetails((value) => !value)}
+        aria-expanded={showDetails}
+        className="mx-auto mt-5 flex items-center gap-1 text-center text-xs text-[var(--text-muted)] underline underline-offset-2 hover:text-[var(--text)]"
+      >
+        {showDetails ? "Hide details" : "Show details"}
+        <ChevronDown size={12} aria-hidden className={`transition-transform ${showDetails ? "rotate-180" : ""}`} />
+      </button>
+      {showDetails && (
+        <div className="mt-3 space-y-2 text-center">
+          <p className="text-sm text-[var(--text-muted)]">No email. No account. No name required.</p>
+          <p className="flex items-start justify-center gap-1.5 text-xs text-[var(--text-muted)]">
+            <ShieldCheck size={14} className="mt-px shrink-0 text-[var(--link-fg)]" aria-hidden />
+            End-to-end encrypted - only your identity and {ownerName}'s key can decrypt these messages.
+          </p>
+          {site?.visitorInsights.collectsIpAddress && (
+            <p className="text-xs text-[var(--text-muted)]">
+              This operator has enabled IP-address retention for abuse prevention.
+              {site.privacyPolicyUrl ? " See the privacy policy below for details." : " Ask the operator for details."}
+            </p>
+          )}
+        </div>
+      )}
+
       {site?.privacyPolicyUrl && (
         <a
           href={site.privacyPolicyUrl}
           target="_blank"
           rel="noreferrer"
-          className="mt-5 text-center text-xs text-[var(--text-muted)] underline underline-offset-2 hover:text-[var(--text)]"
+          className="mt-4 text-center text-xs text-[var(--text-muted)] underline underline-offset-2 hover:text-[var(--text)]"
         >
           Privacy policy
         </a>

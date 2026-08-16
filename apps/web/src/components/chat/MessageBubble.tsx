@@ -1,7 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import clsx from "clsx";
 import { format } from "date-fns";
-import { AlertTriangle, SmilePlus, Reply, Pencil, Trash2, Paperclip } from "lucide-react";
+import { AlertTriangle, SmilePlus, Reply, Pencil, Trash2, Paperclip, X } from "lucide-react";
 import { decryptAttachmentMeta, decryptReaction } from "../../crypto/conversationCrypto.js";
 import { renderMessageMarkdown } from "./markdown.js";
 import { AttachmentPreview, previewKind } from "./AttachmentPreview.js";
@@ -13,6 +21,7 @@ import { isGifUrl } from "./embeds/gifEmbedDetection.js";
 import { GifEmbed } from "./embeds/GifEmbed.js";
 import { LinkPreviewCard } from "./embeds/LinkPreviewCard.js";
 import { ReactionOverlay } from "./ReactionOverlay.js";
+import { EmojiPicker } from "./emoji/EmojiPicker.js";
 import type { DisplayMessage } from "./types.js";
 import { PendingAttachmentTransfer } from "./PendingAttachmentTransfer.js";
 import { buildReplyPreviewInfo } from "./replyPreview.js";
@@ -20,6 +29,18 @@ import { buildReplyPreviewInfo } from "./replyPreview.js";
 /** Slack/Discord-style: a message can carry a few link embeds/previews,
  *  not an unbounded wall of them if someone pastes a long list of URLs. */
 const MAX_EMBEDS_PER_MESSAGE = 3;
+
+/** The quick-react strip shown in the long-press menu (WhatsApp's set). */
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+
+/** Hold this long (without moving) to open the iOS-style action menu. */
+const LONG_PRESS_MS = 450;
+/** Movement beyond this cancels the long-press and can start a swipe. */
+const SWIPE_START_PX = 12;
+/** Swiping right past this distance arms a reply. */
+const SWIPE_REPLY_PX = 64;
+/** The bubble tracks the finger up to this offset while swiping. */
+const SWIPE_MAX_PX = 96;
 
 interface Props {
   message: DisplayMessage;
@@ -64,6 +85,33 @@ export function MessageBubble({
   const [reactionAnchor, setReactionAnchor] = useState<DOMRect | null>(null);
   const [reactionExpanded, setReactionExpanded] = useState(false);
 
+  // iOS-style long-press menu: dims + blurs the chat behind an enlarged
+  // copy of the pressed bubble, with the quick-react strip and the message
+  // actions below it. Replaces the always-visible mobile action buttons.
+  const [actionMenu, setActionMenu] = useState(false);
+  const [menuFullPicker, setMenuFullPicker] = useState(false);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const longPressTimer = useRef<number | null>(null);
+  const swipeState = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    horizontal: boolean | null;
+    dx: number;
+    touch: boolean;
+  } | null>(null);
+  const actionMenuRef = useRef(actionMenu);
+  actionMenuRef.current = actionMenu;
+
+  useEffect(() => {
+    if (!actionMenu) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setActionMenu(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [actionMenu]);
+
   useEffect(() => {
     if (!reactionAnchor) return;
     function handlePointerDown(e: MouseEvent) {
@@ -78,6 +126,77 @@ export function MessageBubble({
   function toggleReactionPicker(rect: DOMRect) {
     setReactionAnchor((prev) => (prev ? null : rect));
     setReactionExpanded(false);
+  }
+
+  function clearLongPress() {
+    if (longPressTimer.current !== null) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }
+
+  function handlePressStart(e: ReactPointerEvent<HTMLDivElement>) {
+    if (disableActions || message.deleted || message.decryptionError) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    clearLongPress();
+    swipeState.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      horizontal: null,
+      dx: 0,
+      touch: e.pointerType !== "mouse",
+    };
+    longPressTimer.current = window.setTimeout(() => {
+      longPressTimer.current = null;
+      swipeState.current = null;
+      navigator.vibrate?.(10);
+      setActionMenu(true);
+    }, LONG_PRESS_MS);
+  }
+
+  function handlePressMove(e: ReactPointerEvent<HTMLDivElement>) {
+    const state = swipeState.current;
+    if (!state || e.pointerId !== state.pointerId) return;
+    const dx = e.clientX - state.startX;
+    const dy = e.clientY - state.startY;
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
+    if (state.horizontal === null && (absDx > SWIPE_START_PX || absDy > SWIPE_START_PX)) {
+      // Any real movement cancels the long-press (a hold is stationary).
+      clearLongPress();
+      state.horizontal = absDx > absDy;
+    }
+    if (state.horizontal && state.touch && !isOwn) {
+      // Swipe right on the other party's message: the bubble tracks the
+      // finger and, released past the threshold, enters reply mode.
+      state.dx = Math.max(0, Math.min(dx, SWIPE_MAX_PX));
+      setSwipeOffset(state.dx);
+    }
+  }
+
+  // A completed swipe must not turn into a click on whatever the finger
+  // happened to land on (e.g. an attachment's expand button).
+  const suppressClickRef = useRef(false);
+
+  function handlePressEnd() {
+    clearLongPress();
+    const state = swipeState.current;
+    swipeState.current = null;
+    if (state?.horizontal && state.touch && !isOwn && state.dx >= SWIPE_REPLY_PX) {
+      onReply();
+    }
+    setSwipeOffset(0);
+    if (state?.horizontal) {
+      suppressClickRef.current = true;
+    }
+  }
+
+  function handleClickCapture(e: ReactMouseEvent<HTMLDivElement>) {
+    if (!suppressClickRef.current) return;
+    suppressClickRef.current = false;
+    e.preventDefault();
+    e.stopPropagation();
   }
 
   const decryptedReactions = useMemo(
@@ -95,6 +214,11 @@ export function MessageBubble({
   function pickReaction(emoji: string) {
     onReact(myReaction?.emoji === emoji ? null : emoji);
     setReactionAnchor(null);
+  }
+
+  function closeMenu() {
+    setActionMenu(false);
+    setMenuFullPicker(false);
   }
 
   const html = message.deleted || message.decryptionError ? null : renderMessageMarkdown(message.text);
@@ -131,8 +255,35 @@ export function MessageBubble({
   );
   const showReplyPreview = replyInfo.kind !== "empty" && !message.deleted;
 
+  // Shared pointer wiring: a stationary hold opens the action menu, a
+  // horizontal drag on the other party's message swipes it right toward a
+  // reply. touch-action pan-y keeps vertical scrolling native.
+  const pressHandlers = {
+    onPointerDown: handlePressStart,
+    onPointerMove: handlePressMove,
+    onPointerUp: handlePressEnd,
+    onPointerCancel: handlePressEnd,
+    onPointerLeave: clearLongPress,
+    onClickCapture: handleClickCapture,
+    // The native iOS long-press callout (text selection / link menu) must
+    // not appear on top of the in-app menu. This only fires after the
+    // long-press timer has already opened the menu; a quick desktop
+    // right-click never sets actionMenu, so its native menu is untouched.
+    onContextMenu: (e: ReactMouseEvent<HTMLDivElement>) => {
+      if (actionMenuRef.current) e.preventDefault();
+    },
+  };
+
   return (
-    <div className={clsx("group flex flex-col gap-1", isOwn ? "items-end" : "items-start")}>
+    <div
+      className={clsx("group flex flex-col gap-1 [touch-action:pan-y]", isOwn ? "items-end" : "items-start")}
+      style={
+        swipeOffset > 0
+          ? { transform: `translateX(${swipeOffset}px)`, transition: "none", opacity: 1 - swipeOffset / 220 }
+          : { transform: "translateX(0)", transition: "transform 150ms ease-out, opacity 150ms ease-out" }
+      }
+      {...pressHandlers}
+    >
       {showReplyPreview && (
         <div
           className={clsx(
@@ -321,7 +472,135 @@ export function MessageBubble({
           onClose={() => setReactionAnchor(null)}
         />
       )}
+
+      {/* iOS-style long-press menu: the chat dims and blurs behind an
+          enlarged copy of the pressed bubble, with the quick-react strip
+          and Reply / Edit / Delete / Cancel underneath. */}
+      {actionMenu && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/50 p-4 backdrop-blur-md"
+          onPointerDown={closeMenu}
+          role="presentation"
+        >
+          <div
+            role="dialog"
+            aria-label="Message actions"
+            onPointerDown={(e) => e.stopPropagation()}
+            className={clsx(
+              "max-h-[42vh] w-full max-w-md overflow-y-auto rounded-2xl px-3.5 py-2 text-sm shadow-xl",
+              isOwn
+                ? "bg-[var(--bubble-user)] text-[var(--bubble-user-text)]"
+                : "bg-[var(--bubble-admin)] text-[var(--bubble-admin-text)]",
+            )}
+            style={{ transform: "scale(1.08)" }}
+          >
+            {message.deleted ? (
+              <p className="italic opacity-70">Message deleted</p>
+            ) : (
+              <>
+                {message.attachments.length > 0 && (
+                  <div className="mb-2 min-w-0 max-w-full space-y-2 overflow-hidden">
+                    {message.attachments.map((a) => (
+                      <AttachmentPreview
+                        key={`menu-${a.id}`}
+                        attachment={a}
+                        conversationKey={conversationKey}
+                        downloadUrl={attachmentUrlFor(a.id)}
+                        standalone={imageOnly}
+                      />
+                    ))}
+                  </div>
+                )}
+                {html && <ExpandableProse html={html} />}
+              </>
+            )}
+          </div>
+
+          <div onPointerDown={(e) => e.stopPropagation()} className="flex max-w-full flex-col items-center gap-3">
+            {menuFullPicker ? (
+              <div className="max-h-[52vh] w-[min(320px,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] shadow-xl">
+                <EmojiPicker
+                  embedded
+                  onClose={() => setMenuFullPicker(false)}
+                  onSelect={(emoji) => {
+                    pickReaction(emoji);
+                    closeMenu();
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {QUICK_REACTIONS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    aria-label={`React ${emoji}`}
+                    onClick={() => {
+                      pickReaction(emoji);
+                      closeMenu();
+                    }}
+                    className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-raised)] text-2xl leading-none shadow-lg hover:scale-105"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  aria-label="More reactions"
+                  onClick={() => setMenuFullPicker(true)}
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-raised)] shadow-lg hover:scale-105"
+                >
+                  <SmilePlus size={20} aria-hidden />
+                </button>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <MenuAction
+                icon={<Reply size={15} aria-hidden />}
+                label="Reply"
+                onClick={() => {
+                  closeMenu();
+                  onReply();
+                }}
+              />
+              {isOwn && canEdit && (
+                <MenuAction
+                  icon={<Pencil size={15} aria-hidden />}
+                  label="Edit"
+                  onClick={() => {
+                    closeMenu();
+                    onEdit();
+                  }}
+                />
+              )}
+              <MenuAction
+                icon={<Trash2 size={15} aria-hidden />}
+                label="Delete"
+                onClick={() => {
+                  closeMenu();
+                  onDelete();
+                }}
+              />
+              <MenuAction icon={<X size={15} aria-hidden />} label="Cancel" onClick={closeMenu} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function MenuAction({ icon, label, onClick }: { icon: ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-1.5 rounded-full bg-[var(--surface-raised)] px-3.5 py-2 text-xs font-semibold shadow-lg hover:bg-[var(--surface-muted)]"
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
 
@@ -345,13 +624,13 @@ function MessageActions({
   onDelete: () => void;
 }) {
   return (
-    // Always visible below md: opacity-0/group-hover has no touch equivalent,
-    // so a hover-only reveal made these unreachable on phones/tablets. At
-    // md+ (mouse-primary) it still hides until hover OR keyboard focus
-    // lands on one of the buttons (group-focus-within), which also fixes
-    // the earlier keyboard trap where a focused-but-invisible button had no
-    // visible focus indicator.
-    <div className="flex gap-0.5 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+    // Desktop-only: hidden below md entirely - on touch screens the
+    // long-press menu (see above) replaces these buttons, so a hover-only
+    // reveal no longer decides what a phone can reach. At md+ they hide
+    // until hover OR keyboard focus lands on one of the buttons
+    // (group-focus-within), which also fixes the earlier keyboard trap
+    // where a focused-but-invisible button had no visible focus indicator.
+    <div className="hidden gap-0.5 transition-opacity md:flex md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
       <button
         type="button"
         data-reaction-trigger

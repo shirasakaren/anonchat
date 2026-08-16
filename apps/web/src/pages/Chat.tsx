@@ -35,6 +35,7 @@ import { UnreadDivider } from "../components/chat/UnreadDivider.js";
 import { computeUnreadAnchor, getLastSeen, setLastSeen } from "../components/chat/lastSeen.js";
 import { DeleteMessageModal } from "../components/chat/DeleteMessageModal.js";
 import { DeleteIdentityModal } from "../components/chat/DeleteIdentityModal.js";
+import { ConfirmDialog } from "../components/common/ConfirmDialog.js";
 import { getLocallyDeletedMessageIds, hideMessageLocally } from "../components/chat/locallyDeletedMessages.js";
 import { MessageBubble } from "../components/chat/MessageBubble.js";
 import { NotificationEmailPrompt } from "../components/chat/NotificationEmailPrompt.js";
@@ -87,6 +88,7 @@ export default function Chat() {
   const [editing, setEditing] = useState<DisplayMessage | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DisplayMessage | null>(null);
   const [deleteIdentityOpen, setDeleteIdentityOpen] = useState(false);
+  const [confirmSwitch, setConfirmSwitch] = useState(false);
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => getLocallyDeletedMessageIds(session.conversationId));
   // First message the visitor hasn't seen yet on this device - the thread
   // renders an unread divider above it and opens scrolled to it instead of
@@ -638,7 +640,7 @@ export default function Chat() {
             </span>
             <button
               type="button"
-              onClick={() => logout()}
+              onClick={() => setConfirmSwitch(true)}
               title="Switch identity"
               aria-label="Switch identity"
               className="flex items-center gap-1.5 rounded-lg p-1.5 text-xs text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
@@ -759,6 +761,19 @@ export default function Chat() {
       )}
       {deleteIdentityOpen && (
         <DeleteIdentityModal onDelete={deleteIdentity} onCancel={() => setDeleteIdentityOpen(false)} />
+      )}
+      {confirmSwitch && (
+        <ConfirmDialog
+          title="Switch identity?"
+          message={`You're about to log out of ${session.displayName ? `${session.displayName} · ` : ""}#${session.publicId}. You can come back to this identity later with its recovery key - make sure you still have it.`}
+          confirmLabel="Switch identity"
+          destructive
+          onConfirm={() => {
+            setConfirmSwitch(false);
+            void logout();
+          }}
+          onCancel={() => setConfirmSwitch(false)}
+        />
       )}
       {noteOpen && (
         <Suspense fallback={null}>

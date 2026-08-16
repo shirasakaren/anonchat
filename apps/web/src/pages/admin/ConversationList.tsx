@@ -334,23 +334,13 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
               {f.label}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={toggleBulkMode}
-            aria-pressed={bulkMode}
-            className={clsx(
-              "ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors",
-              bulkMode
-                ? "bg-[var(--btn-bg)] text-[var(--btn-fg)]"
-                : "bg-[var(--surface-muted)] text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]",
-            )}
-          >
-            <CheckSquare size={13} aria-hidden />
-            {bulkMode ? "Cancel" : "Select"}
-          </button>
         </div>
       </div>
 
+      {/* Select mode lives behind each row's dropdown ("Select" in the
+          chevron menu), not in the filter bar. The bar below shows the
+          running selection and the bulk actions, with Cancel in line with
+          Archive / Block / Delete. */}
       {bulkMode && (
         <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border)] px-3 py-2">
           <button
@@ -365,10 +355,9 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
               <Square size={14} aria-hidden />
             )}
             {selectedIds.size === conversations.length && conversations.length > 0
-              ? "Clear selection"
-              : "Select all"}
+              ? `Clear selection (${selectedIds.size} selected)`
+              : `Select all (${selectedIds.size} selected)`}
           </button>
-          <span className="text-xs text-[var(--text-muted)]">{selectedIds.size} selected</span>
           <div className="ml-auto flex items-center gap-1.5">
             <button
               type="button"
@@ -402,6 +391,13 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
               className="rounded-md bg-red-600 px-2 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-40"
             >
               Delete
+            </button>
+            <button
+              type="button"
+              onClick={toggleBulkMode}
+              className="rounded-md border border-[var(--border)] px-2 py-1.5 text-xs hover:bg-[var(--surface-muted)]"
+            >
+              Cancel
             </button>
           </div>
         </div>
@@ -439,25 +435,31 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                     selectedId === conv.id ? "bg-[var(--selected-bg)]" : "hover:bg-[var(--row-hover)]",
                   )}
                 >
-                  {bulkMode && (
-                    <span
-                      aria-hidden
-                      className={clsx(
-                        "absolute left-3 top-1/2 -translate-y-1/2",
-                        selectedIds.has(conv.id) ? "text-[var(--link-fg)]" : "text-[var(--text-muted)]",
-                      )}
-                    >
-                      {selectedIds.has(conv.id) ? <CheckSquare size={16} /> : <Square size={16} />}
-                    </span>
-                  )}
-                  <div className={clsx("flex items-start justify-between gap-2", bulkMode && "pl-7")}>
+                  <div className="flex items-start justify-between gap-2">
                     <span
                       className={clsx(
-                        "flex min-w-0 items-center truncate text-sm",
+                        "flex min-w-0 items-center gap-1.5 truncate text-sm",
                         unread ? "font-semibold" : "font-normal",
                       )}
                     >
-                      {conv.adminAlias || conv.anonymousDisplayName || `Anonymous #${conv.publicId}`}
+                      {/* In selection mode the checkbox sits on the sender's
+                          name line (not vertically centered against the
+                          whole row), and the preview line below indents by
+                          the same amount so name and preview stay aligned. */}
+                      {bulkMode && (
+                        <span
+                          aria-hidden
+                          className={clsx(
+                            "shrink-0",
+                            selectedIds.has(conv.id) ? "text-[var(--link-fg)]" : "text-[var(--text-muted)]",
+                          )}
+                        >
+                          {selectedIds.has(conv.id) ? <CheckSquare size={16} /> : <Square size={16} />}
+                        </span>
+                      )}
+                      <span className="min-w-0 truncate">
+                        {conv.adminAlias || conv.anonymousDisplayName || `Anonymous #${conv.publicId}`}
+                      </span>
                     </span>
                     {conv.lastMessageAt && (
                       <span className="shrink-0 text-[11px] text-[var(--text-muted)]">
@@ -468,6 +470,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                   <div
                     className={clsx(
                       "flex min-w-0 items-center gap-1.5 text-xs",
+                      bulkMode && "pl-[22px]",
                       unread ? "font-medium text-[var(--text)]" : "text-[var(--text-muted)]",
                     )}
                   >
@@ -566,6 +569,19 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
                               className="fixed z-[100] w-40 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] py-1 shadow-xl"
                               style={{ top: openMenu.top, left: openMenu.left }}
                             >
+                              <RowMenuItem
+                                icon={<CheckSquare size={14} aria-hidden />}
+                                onClick={() => {
+                                  // "Select" starts selection mode with this
+                                  // conversation already checked.
+                                  setOpenMenu(null);
+                                  setBulkMode(true);
+                                  setSelectedIds(new Set([conv.id]));
+                                }}
+                              >
+                                Select
+                              </RowMenuItem>
+                              <div className="my-1 h-px bg-[var(--border)]" role="separator" />
                               <RowMenuItem onClick={() => runRowAction(conv, "archive")}>
                                 {conv.status === "ARCHIVED" ? "Unarchive" : "Archive"}
                               </RowMenuItem>
@@ -615,10 +631,12 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
 function RowMenuItem({
   children,
   destructive = false,
+  icon,
   onClick,
 }: {
   children: React.ReactNode;
   destructive?: boolean;
+  icon?: React.ReactNode;
   onClick: () => void;
 }) {
   return (
@@ -630,10 +648,11 @@ function RowMenuItem({
         onClick();
       }}
       className={clsx(
-        "block w-full px-3 py-1.5 text-left text-sm transition-colors",
+        "flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors",
         destructive ? "text-[var(--danger-fg)] hover:bg-[var(--danger-bg)]" : "hover:bg-[var(--surface-muted)]",
       )}
     >
+      {icon && <span className="shrink-0 opacity-70">{icon}</span>}
       {children}
     </button>
   );
