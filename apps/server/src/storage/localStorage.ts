@@ -33,8 +33,8 @@ export class LocalStorageAdapter implements StorageAdapter {
     await pipeline(stream, createWriteStream(path));
   }
 
-  async getStream(key: string): Promise<Readable> {
-    return createReadStream(this.resolve(key));
+  getStream(key: string): Promise<Readable> {
+    return Promise.resolve(createReadStream(this.resolve(key)));
   }
 
   async delete(key: string): Promise<void> {

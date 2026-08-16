@@ -76,7 +76,7 @@ export async function createMessage(params: {
             ? { expiresAt: new Date(Date.now() + conversation.disappearingSeconds * 1000) }
             : {}),
           attachments: {
-            create: attachmentInputs.map((attachment, index) => {
+            create: attachmentInputs.map((attachment) => {
               const metaBuf = toBuffer(attachment.meta);
               return {
                 storageKey: attachment.storageKey,

@@ -14,15 +14,18 @@ function linkify(raw: string): string {
   // mangled relative route like /admin/c/[url](url). Swap existing links
   // out for placeholders, linkify everything else, then restore them.
   const preserved: string[] = [];
+  // \uE000 (private-use area) is the placeholder delimiter - not a control
+  // character (keeps the linter's no-control-regex happy) and vanishingly
+  // unlikely to appear in a message.
   const withPlaceholders = raw.replace(/\[[^[\]]*\]\([^()\n]*\)/g, (match) => {
     preserved.push(match);
-    return `\u0000ANONCHAT_LINK_${preserved.length - 1}\u0000`;
+    return `\uE000ANONCHAT_LINK_${preserved.length - 1}\uE000`;
   });
   const linked = withPlaceholders.replace(
     new RegExp(BARE_URL_RE.source, "g"),
     (match, lead: string, url: string) => `${lead}[${url}](${url})`,
   );
-  return linked.replace(/\u0000ANONCHAT_LINK_(\d+)\u0000/g, (_, index: string) => preserved[Number(index)]!);
+  return linked.replace(/\uE000ANONCHAT_LINK_(\d+)\uE000/g, (_, index: string) => preserved[Number(index)]!);
 }
 
 const renderer = new marked.Renderer();

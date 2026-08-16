@@ -41,7 +41,7 @@ async function deleteMessagesWithStorage(rows: MessageRow[]): Promise<string[]> 
   return rows.map((m) => m.id);
 }
 
-async function publishDeleted(conversationId: string, messageIds: string[]): Promise<void> {
+function publishDeleted(conversationId: string, messageIds: string[]): void {
   if (messageIds.length === 0) return;
   publishToConversation(conversationId, { type: "messages.deleted", conversationId, messageIds });
 }
@@ -55,7 +55,7 @@ export async function purgeAllMessages(conversationId: string): Promise<void> {
     select: { id: true, attachments: { select: { storageKey: true } } },
   });
   const deletedIds = await deleteMessagesWithStorage(rows);
-  await publishDeleted(conversationId, deletedIds);
+  publishDeleted(conversationId, deletedIds);
 }
 
 /** Sweeps one conversation according to its current retention settings and
@@ -82,7 +82,7 @@ export async function sweepConversation(conversationId: string): Promise<number>
     select: { id: true, attachments: { select: { storageKey: true } } },
   });
   const deletedIds = await deleteMessagesWithStorage(rows);
-  await publishDeleted(conversationId, deletedIds);
+  publishDeleted(conversationId, deletedIds);
   return deletedIds.length;
 }
 
