@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import clsx from "clsx";
 import {
   Download,
@@ -251,9 +252,14 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl, st
               <ZoomIn size={14} aria-hidden />
             </span>
           </button>
-          {lightboxOpen && (
-            <ImageLightbox url={state.url} filename={meta.filename} onClose={() => setLightboxOpen(false)} />
-          )}
+          {/* Portaled to document.body: inside the bubble, the bubble's own
+              pressed-state transform (and any ancestor) would move/contain
+              a position:fixed viewer, breaking its close button mid-press. */}
+          {lightboxOpen &&
+            createPortal(
+              <ImageLightbox url={state.url} filename={meta.filename} onClose={() => setLightboxOpen(false)} />,
+              document.body,
+            )}
         </>
       );
     }
@@ -269,14 +275,16 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl, st
             onError={showVideoError}
           />
           <PreviewFooter filename={meta.filename} size={meta.size} url={state.url} />
-          {lightboxOpen && (
-            <VideoLightbox
-              url={state.url}
-              filename={meta.filename}
-              onClose={() => setLightboxOpen(false)}
-              onError={showVideoError}
-            />
-          )}
+          {lightboxOpen &&
+            createPortal(
+              <VideoLightbox
+                url={state.url}
+                filename={meta.filename}
+                onClose={() => setLightboxOpen(false)}
+                onError={showVideoError}
+              />,
+              document.body,
+            )}
         </div>
       );
     }
@@ -306,9 +314,11 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl, st
             <Maximize2 size={16} aria-hidden />
           </button>
           <PreviewFooter filename={meta.filename} size={meta.size} url={state.url} />
-          {documentOpen && (
-            <DocumentLightbox filename={meta.filename} url={state.url} pdf onClose={() => setDocumentOpen(false)} />
-          )}
+          {documentOpen &&
+            createPortal(
+              <DocumentLightbox filename={meta.filename} url={state.url} pdf onClose={() => setDocumentOpen(false)} />,
+              document.body,
+            )}
         </div>
       );
     }
@@ -324,17 +334,19 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl, st
             onClick={() => setDocumentOpen(true)}
           />
           <PreviewFooter filename={meta.filename} size={meta.size} url={state.url} />
-          {documentOpen && (
-            <DocumentLightbox filename={meta.filename} url={state.url} onClose={() => setDocumentOpen(false)}>
-              <DocumentPreviewContent
-                kind={kind}
-                bytes={state.bytes}
-                mimetype={state.mimetype}
-                filename={meta.filename}
-                fullScreen
-              />
-            </DocumentLightbox>
-          )}
+          {documentOpen &&
+            createPortal(
+              <DocumentLightbox filename={meta.filename} url={state.url} onClose={() => setDocumentOpen(false)}>
+                <DocumentPreviewContent
+                  kind={kind}
+                  bytes={state.bytes}
+                  mimetype={state.mimetype}
+                  filename={meta.filename}
+                  fullScreen
+                />
+              </DocumentLightbox>,
+              document.body,
+            )}
         </div>
       );
     }

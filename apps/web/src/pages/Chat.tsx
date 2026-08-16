@@ -38,6 +38,7 @@ import { DeleteIdentityModal } from "../components/chat/DeleteIdentityModal.js";
 import { ConfirmDialog } from "../components/common/ConfirmDialog.js";
 import { getLocallyDeletedMessageIds, hideMessageLocally } from "../components/chat/locallyDeletedMessages.js";
 import { MessageBubble } from "../components/chat/MessageBubble.js";
+import { TapMessageHint, useTapMessageHint } from "../components/chat/TapMessageHint.js";
 import { NotificationEmailPrompt } from "../components/chat/NotificationEmailPrompt.js";
 import { NotificationPreferencesButton } from "../components/chat/NotificationPreferencesButton.js";
 import { VisitorInsightsControl } from "../components/chat/VisitorInsightsControl.js";
@@ -111,6 +112,7 @@ export default function Chat() {
       window.matchMedia("(min-width: 640px)").matches &&
       sessionStorage.getItem("anonchat.adminProfileHidden") !== "true",
   );
+  const { showHint: showTapHint, dismissHint } = useTapMessageHint();
   const bottomRef = useRef<HTMLDivElement>(null);
   // The messages pane is its own scroll container; nearBottomRef tracks
   // whether the visitor is reading the latest messages so the view can be
@@ -721,6 +723,7 @@ export default function Chat() {
                     onDelete={() => setDeleteTarget(item.message)}
                     onReact={(emoji) => handleReact(item.message, emoji)}
                     onRetry={() => handleRetry(item.message)}
+                    onFirstInteraction={dismissHint}
                   />
                   </div>
                 ),
@@ -728,6 +731,7 @@ export default function Chat() {
             </div>
           )}
           {adminTyping && <TypingIndicator label={`${site.displayName} is typing…`} />}
+          {showTapHint && messages.length > 0 && <TapMessageHint />}
           <div ref={bottomRef} />
         </div>
 

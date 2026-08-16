@@ -6,9 +6,20 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { format } from "date-fns";
-import { AlertTriangle, ChevronDown, SmilePlus, Reply, Pencil, Trash2, Paperclip, X } from "lucide-react";
+import {
+  AlertTriangle,
+  Copy,
+  EllipsisVertical,
+  Paperclip,
+  Pencil,
+  Reply,
+  SmilePlus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { decryptAttachmentMeta, decryptReaction } from "../../crypto/conversationCrypto.js";
 import { renderMessageMarkdown } from "./markdown.js";
 import { AttachmentPreview, previewKind } from "./AttachmentPreview.js";
@@ -24,14 +35,19 @@ import { EmojiPicker } from "./emoji/EmojiPicker.js";
 import type { DisplayMessage } from "./types.js";
 import { PendingAttachmentTransfer } from "./PendingAttachmentTransfer.js";
 import { buildReplyPreviewInfo } from "./replyPreview.js";
+import { useToast } from "../../context/ToastContext.js";
 
 /** Slack/Discord-style: a message can carry a few link embeds/previews,
  *  not an unbounded wall of them if someone pastes a long list of URLs. */
 const MAX_EMBEDS_PER_MESSAGE = 3;
 
-/** The quick-react strip shown in the message options menu. */
-const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+/** The quick-react strip shown above the selected message. */
+const QUICK_REACTIONS = ["😄", "❤️", "👍", "😂", "😮"];
 
+/** Hold this long (without moving) to select a message - a fallback for
+ *  photos, where a tap opens the full-screen viewer. Never the only way:
+ *  tapping text bubbles selects them directly. */
+const LONG_PRESS_MS = 500;
 /** Movement beyond this switches the touch gesture from a tap to a swipe. */
 const SWIPE_START_PX = 12;
 /** Swiping right past this distance arms a reply. */
@@ -59,6 +75,10 @@ interface Props {
   onDelete: () => void;
   onReact: (emoji: string | null) => void;
   onRetry?: () => void;
+  /** Called the first time the person interacts with any message - the
+   *  parent uses it to dismiss the one-time "Tap a message for more
+   *  options" hint. */
+  onFirstInteraction?: () => void;
 }
 
 export function MessageBubble({
@@ -75,20 +95,22 @@ export function MessageBubble({
   onDelete,
   onReact,
   onRetry,
+  onFirstInteraction,
 }: Props) {
+  const { showToast } = useToast();
   // The React button's own rect (captured on click), not just a boolean -
   // that's what lets the overlay float directly above whichever button was
   // actually clicked (see ReactionOverlay) instead of a fixed spot.
   const [reactionAnchor, setReactionAnchor] = useState<DOMRect | null>(null);
   const [reactionExpanded, setReactionExpanded] = useState(false);
 
-  // Message options menu (quick reactions + reply/edit/delete), opened by
-  // the mobile chevron next to the bubble: dims + blurs the chat behind an
-  // enlarged copy of the bubble. Replaces the long-press trigger, which
-  // fights the browser's own touch gestures on mobile web.
-  const [actionMenu, setActionMenu] = useState(false);
-  const [menuFullPicker, setMenuFullPicker] = useState(false);
+  // Tap-to-select: a normal tap on a bubble highlights it, floats the
+  // quick-react strip above it, and opens the action sheet. Tapping
+  // anywhere else dismisses it.
+  const [selected, setSelected] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
+  const groupRef = useRef<HTMLDivElement>(null);
   const swipeState = useRef<{
     pointerId: number;
     startX: number;
@@ -97,15 +119,30 @@ export function MessageBubble({
     dx: number;
     touch: boolean;
   } | null>(null);
+  const longPressTimer = useRef<number | null>(null);
+  const suppressClickRef = useRef(false);
 
   useEffect(() => {
-    if (!actionMenu) return;
+    if (!selected) return;
+    function handleDown(e: MouseEvent) {
+      const target = e.target as Element | null;
+      // The sheet is portaled to document.body: clicks on it carry the
+      // marker below and must not dismiss the selection.
+      if (target?.closest("[data-message-sheet]")) return;
+      if (groupRef.current && !groupRef.current.contains(target)) setSelected(false);
+    }
+    document.addEventListener("mousedown", handleDown);
+    return () => document.removeEventListener("mousedown", handleDown);
+  }, [selected]);
+
+  useEffect(() => {
+    if (!selected) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setActionMenu(false);
+      if (event.key === "Escape") setSelected(false);
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [actionMenu]);
+  }, [selected]);
 
   useEffect(() => {
     if (!reactionAnchor) return;
@@ -123,6 +160,24 @@ export function MessageBubble({
     setReactionExpanded(false);
   }
 
+  function clearLongPress() {
+    if (longPressTimer.current !== null) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }
+
+  function select() {
+    setSelected(true);
+    setPickerOpen(false);
+    onFirstInteraction?.();
+  }
+
+  function dismiss() {
+    setSelected(false);
+    setPickerOpen(false);
+  }
+
   function handlePressStart(e: ReactPointerEvent<HTMLDivElement>) {
     if (disableActions || message.deleted || message.decryptionError) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
@@ -134,6 +189,17 @@ export function MessageBubble({
       dx: 0,
       touch: e.pointerType !== "mouse",
     };
+    // Long-press selects too (the fallback for photos, whose tap opens the
+    // full-screen viewer). Any movement cancels it. When it fires, the
+    // trailing click (delivered on pointer-up) must be swallowed - on a
+    // photo it would open the full-screen viewer right on top of the
+    // action sheet the long-press just opened.
+    longPressTimer.current = window.setTimeout(() => {
+      longPressTimer.current = null;
+      navigator.vibrate?.(10);
+      suppressClickRef.current = true;
+      select();
+    }, LONG_PRESS_MS);
   }
 
   function handlePressMove(e: ReactPointerEvent<HTMLDivElement>) {
@@ -144,6 +210,7 @@ export function MessageBubble({
     const absDx = Math.abs(dx);
     const absDy = Math.abs(dy);
     if (state.horizontal === null && (absDx > SWIPE_START_PX || absDy > SWIPE_START_PX)) {
+      clearLongPress();
       state.horizontal = absDx > absDy;
     }
     if (state.horizontal && state.touch) {
@@ -156,12 +223,50 @@ export function MessageBubble({
   }
 
   function handlePressEnd() {
+    clearLongPress();
     const state = swipeState.current;
     swipeState.current = null;
-    if (state?.horizontal && state.touch && state.dx >= SWIPE_REPLY_PX) {
+    const wasReplySwipe = Boolean(state?.horizontal && state.touch && state.dx >= SWIPE_REPLY_PX);
+    if (wasReplySwipe) {
       onReply();
+      // A finished swipe must not deliver a click to the bubble (which
+      // would immediately select it, or open a viewer inside it).
+      suppressClickRef.current = true;
     }
     setSwipeOffset(0);
+  }
+
+  function handleTap(e: React.MouseEvent<HTMLDivElement>) {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    if (disableActions || message.deleted || message.decryptionError) return;
+    // Links, attachment cards, and embed controls keep their own behavior.
+    const target = e.target as Element | null;
+    if (target?.closest("a, button, video, iframe, [contenteditable]")) return;
+    select();
+  }
+
+  // Capture-phase suppressor: a click that follows a long-press (or a
+  // completed reply-swipe) is swallowed before ANY descendant handler
+  // sees it - otherwise long-pressing a photo would open its full-screen
+  // viewer on top of the action sheet.
+  function handleClickCapture(e: React.MouseEvent<HTMLDivElement>) {
+    if (!suppressClickRef.current) return;
+    suppressClickRef.current = false;
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  async function copyText() {
+    try {
+      await navigator.clipboard.writeText(message.text);
+      showToast({ title: "Copied", message: "" });
+    } catch {
+      showToast({ title: "Copy failed", message: "Your browser blocked clipboard access." });
+    }
+    dismiss();
   }
 
   const decryptedReactions = useMemo(
@@ -179,11 +284,7 @@ export function MessageBubble({
   function pickReaction(emoji: string) {
     onReact(myReaction?.emoji === emoji ? null : emoji);
     setReactionAnchor(null);
-  }
-
-  function closeMenu() {
-    setActionMenu(false);
-    setMenuFullPicker(false);
+    dismiss();
   }
 
   const html = message.deleted || message.decryptionError ? null : renderMessageMarkdown(message.text);
@@ -220,43 +321,119 @@ export function MessageBubble({
   );
   const showReplyPreview = replyInfo.kind !== "empty" && !message.deleted;
 
-  // Shared pointer wiring for swipe-to-reply. touch-action pan-y keeps
-  // vertical scrolling native while horizontal drags reach these handlers.
+  // Shared pointer wiring for swipe-to-reply + long-press-select.
+  // touch-action pan-y keeps vertical scrolling native while horizontal
+  // drags reach these handlers.
   const pressHandlers = {
     onPointerDown: handlePressStart,
     onPointerMove: handlePressMove,
     onPointerUp: handlePressEnd,
     onPointerCancel: handlePressEnd,
+    onClickCapture: handleClickCapture,
   };
 
+  const canShowActions = !disableActions && !message.deleted && !message.decryptionError;
+
+  const quickReactBar = selected && canShowActions && (
+    <div
+      data-message-sheet
+      className={clsx(
+        "absolute bottom-full z-[60] mb-1.5 flex items-center gap-0.5 rounded-full border border-[var(--border)] bg-[var(--surface-raised)] px-1.5 py-1 shadow-lg",
+        isOwn ? "right-0" : "left-0",
+      )}
+    >
+      {QUICK_REACTIONS.map((emoji) => (
+        <button
+          key={emoji}
+          type="button"
+          aria-label={`React ${emoji}`}
+          onClick={() => pickReaction(emoji)}
+          className="flex h-9 w-9 items-center justify-center rounded-full text-xl leading-none hover:bg-[var(--surface-muted)]"
+        >
+          {emoji}
+        </button>
+      ))}
+      <button
+        type="button"
+        aria-label="More reactions"
+        onClick={() => setPickerOpen(true)}
+        className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--surface-muted)]"
+      >
+        <SmilePlus size={18} aria-hidden />
+      </button>
+    </div>
+  );
+
   const messageActionsProps = {
-    canEdit,
-    isOwn,
     disableActions,
     reactionActive: reactionAnchor !== null,
     onToggleReaction: toggleReactionPicker,
     onReply,
-    onEdit,
-    onDelete,
+    onOpenMenu: select,
   };
 
-  /** Mobile-only options trigger: sits OUTSIDE the bubble - to its right
-   *  when the other party sent it, to its left when it's your own - and
-   *  opens the action menu. Desktop keeps the hover-revealed buttons. */
-  const chevronButton = (side: "left" | "right") => (
-    <button
-      type="button"
-      aria-label="Message options"
-      onClick={() => setActionMenu(true)}
-      className="mb-1 shrink-0 rounded-full p-1 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)] md:hidden"
-      data-side={side}
-    >
-      <ChevronDown size={16} aria-hidden />
-    </button>
-  );
+  const actionSheet =
+    selected &&
+    canShowActions &&
+    createPortal(
+      <div
+        data-message-sheet
+        className="pointer-events-none fixed inset-0 z-50 md:flex md:items-center md:justify-center md:p-4"
+        role="presentation"
+      >
+        {/* The whole overlay is pointer-events-none so taps fall straight
+            through: tapping another message dismisses this selection AND
+            selects the tapped one in a single tap (the document mousedown
+            listener handles the dismissal), and the dimmed backdrop is
+            purely visual. Only the panel below re-enables pointer events. */}
+        <div className="pointer-events-none absolute inset-0 bg-black/40 md:bg-black/50 md:backdrop-blur-sm" />
+        <section
+          role="dialog"
+          aria-label="Message actions"
+          className={clsx(
+            "pointer-events-auto absolute inset-x-0 bottom-0 rounded-t-2xl border-t border-[var(--border)] bg-[var(--surface-raised)] p-2 pb-[max(env(safe-area-inset-bottom),0.75rem)] shadow-xl",
+            "md:relative md:inset-auto md:w-72 md:rounded-2xl md:border md:pb-2",
+          )}
+        >
+          {pickerOpen ? (
+            <div className="mx-auto max-h-[52vh] w-[min(340px,100%)] overflow-y-auto md:max-h-[60vh]">
+              <EmojiPicker
+                embedded
+                onClose={() => setPickerOpen(false)}
+                onSelect={(emoji) => {
+                  pickReaction(emoji);
+                  dismiss();
+                }}
+              />
+            </div>
+          ) : (
+            <>
+              <SheetAction icon={<Reply size={18} aria-hidden />} label="Reply" onClick={() => { dismiss(); onReply(); }} />
+              {message.text.trim().length > 0 && (
+                <SheetAction icon={<Copy size={18} aria-hidden />} label="Copy" onClick={() => void copyText()} />
+              )}
+              {isOwn && canEdit && (
+                <SheetAction icon={<Pencil size={18} aria-hidden />} label="Edit" onClick={() => { dismiss(); onEdit(); }} />
+              )}
+              {/* Delete is offered on the other party's messages too - the
+                  modal only exposes "Delete for me" there. */}
+              <SheetAction
+                icon={<Trash2 size={18} aria-hidden />}
+                label="Delete"
+                destructive
+                onClick={() => { dismiss(); onDelete(); }}
+              />
+              <SheetAction icon={<X size={18} aria-hidden />} label="Cancel" onClick={dismiss} />
+            </>
+          )}
+        </section>
+      </div>,
+      document.body,
+    );
 
   return (
     <div
+      ref={groupRef}
       className={clsx("group flex flex-col gap-1 [touch-action:pan-y]", isOwn ? "items-end" : "items-start")}
       // A transform is applied ONLY while the finger is actually swiping.
       // An always-present (even identity) transform makes this div the
@@ -287,10 +464,12 @@ export function MessageBubble({
 
       {imageOnly ? (
         <div className="min-w-0 max-w-[80%]">
-          <div className="flex min-w-0 max-w-full items-end gap-1">
-            {isOwn && <MessageActions {...messageActionsProps} />}
-            {isOwn && chevronButton("left")}
-            <div className="min-w-0 max-w-full space-y-2">
+          <div className={clsx("relative flex min-w-0 max-w-full items-end gap-1", selected && canShowActions && "rounded-2xl ring-2 ring-[var(--color-accent-500)]")}>
+            {isOwn && <HoverActions {...messageActionsProps} />}
+            <div
+              className={clsx("min-w-0 max-w-full space-y-2", selected && canShowActions && "rounded-2xl")}
+              onClick={handleTap}
+            >
               {message.attachments.map((a) => (
                 <AttachmentPreview
                   key={a.id}
@@ -301,8 +480,8 @@ export function MessageBubble({
                 />
               ))}
             </div>
-            {!isOwn && chevronButton("right")}
-            {!isOwn && <MessageActions {...messageActionsProps} />}
+            {!isOwn && <HoverActions {...messageActionsProps} />}
+            {quickReactBar}
           </div>
           {/* Timestamp under the photos (below the frames, like the Read
               receipt on text messages) instead of inside a shared bubble. */}
@@ -319,11 +498,11 @@ export function MessageBubble({
         </div>
       ) : (
         <>
-          <div className="flex min-w-0 max-w-[80%] items-end gap-1">
-            {isOwn && <MessageActions {...messageActionsProps} />}
-            {isOwn && chevronButton("left")}
+          <div className="relative flex min-w-0 max-w-[80%] items-end gap-1">
+            {isOwn && <HoverActions {...messageActionsProps} />}
 
             <div
+              onClick={handleTap}
               className={clsx(
                 // min-w-0: this is a flex item (the row above is `flex`), and a
                 // flex item's default min-width is `auto` - i.e. it refuses to
@@ -331,7 +510,8 @@ export function MessageBubble({
                 // long unbroken string overrides max-w-[80%] entirely instead
                 // of wrapping, since the bubble never gets small enough for
                 // .prose-message's own overflow-wrap to kick in.
-                "min-w-0 max-w-full overflow-hidden rounded-2xl px-3.5 py-2 text-sm shadow-sm",
+                "min-w-0 max-w-full cursor-pointer overflow-hidden rounded-2xl px-3.5 py-2 text-sm shadow-sm transition-transform active:scale-[0.98]",
+                selected && canShowActions && "ring-2 ring-[var(--color-accent-500)]",
                 isOwn
                   ? "bg-[var(--bubble-user)] text-[var(--bubble-user-text)] text-right"
                   : "bg-[var(--bubble-admin)] text-[var(--bubble-admin-text)]",
@@ -397,8 +577,8 @@ export function MessageBubble({
               )}
             </div>
 
-            {!isOwn && chevronButton("right")}
-            {!isOwn && <MessageActions {...messageActionsProps} />}
+            {!isOwn && <HoverActions {...messageActionsProps} />}
+            {quickReactBar}
           </div>
 
           {/* Read receipt: the one piece that lives OUTSIDE the bubble, and
@@ -447,163 +627,56 @@ export function MessageBubble({
         />
       )}
 
-      {/* Message options menu (opened by the mobile chevron): the chat dims
-          and blurs behind an enlarged copy of the bubble, with the
-          quick-react strip and Reply / Edit / Delete / Cancel underneath. */}
-      {actionMenu && (
-        <div
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/50 p-4 backdrop-blur-md"
-          onPointerDown={closeMenu}
-          role="presentation"
-        >
-          <div
-            role="dialog"
-            aria-label="Message actions"
-            onPointerDown={(e) => e.stopPropagation()}
-            className={clsx(
-              "max-h-[42vh] w-full max-w-md overflow-y-auto rounded-2xl px-3.5 py-2 text-sm shadow-xl",
-              isOwn
-                ? "bg-[var(--bubble-user)] text-[var(--bubble-user-text)]"
-                : "bg-[var(--bubble-admin)] text-[var(--bubble-admin-text)]",
-            )}
-            style={{ transform: "scale(1.08)" }}
-          >
-            {message.deleted ? (
-              <p className="italic opacity-70">Message deleted</p>
-            ) : (
-              <>
-                {message.attachments.length > 0 && (
-                  <div className="mb-2 min-w-0 max-w-full space-y-2 overflow-hidden">
-                    {message.attachments.map((a) => (
-                      <AttachmentPreview
-                        key={`menu-${a.id}`}
-                        attachment={a}
-                        conversationKey={conversationKey}
-                        downloadUrl={attachmentUrlFor(a.id)}
-                        standalone={imageOnly}
-                      />
-                    ))}
-                  </div>
-                )}
-                {html && <ExpandableProse html={html} />}
-              </>
-            )}
-          </div>
-
-          <div onPointerDown={(e) => e.stopPropagation()} className="flex max-w-full flex-col items-center gap-3">
-            {menuFullPicker ? (
-              <div className="max-h-[52vh] w-[min(320px,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] shadow-xl">
-                <EmojiPicker
-                  embedded
-                  onClose={() => setMenuFullPicker(false)}
-                  onSelect={(emoji) => {
-                    pickReaction(emoji);
-                    closeMenu();
-                  }}
-                />
-              </div>
-            ) : (
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                {QUICK_REACTIONS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    aria-label={`React ${emoji}`}
-                    onClick={() => {
-                      pickReaction(emoji);
-                      closeMenu();
-                    }}
-                    className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-raised)] text-2xl leading-none shadow-lg hover:scale-105"
-                  >
-                    {emoji}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  aria-label="More reactions"
-                  onClick={() => setMenuFullPicker(true)}
-                  className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-raised)] shadow-lg hover:scale-105"
-                >
-                  <SmilePlus size={20} aria-hidden />
-                </button>
-              </div>
-            )}
-
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <MenuAction
-                icon={<Reply size={15} aria-hidden />}
-                label="Reply"
-                onClick={() => {
-                  closeMenu();
-                  onReply();
-                }}
-              />
-              {isOwn && canEdit && (
-                <MenuAction
-                  icon={<Pencil size={15} aria-hidden />}
-                  label="Edit"
-                  onClick={() => {
-                    closeMenu();
-                    onEdit();
-                  }}
-                />
-              )}
-              <MenuAction
-                icon={<Trash2 size={15} aria-hidden />}
-                label="Delete"
-                onClick={() => {
-                  closeMenu();
-                  onDelete();
-                }}
-              />
-              <MenuAction icon={<X size={15} aria-hidden />} label="Cancel" onClick={closeMenu} />
-            </div>
-          </div>
-        </div>
-      )}
+      {actionSheet}
     </div>
   );
 }
 
-function MenuAction({ icon, label, onClick }: { icon: ReactNode; label: string; onClick: () => void }) {
+function SheetAction({
+  icon,
+  label,
+  destructive = false,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  destructive?: boolean;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-1.5 rounded-full bg-[var(--surface-raised)] px-3.5 py-2 text-xs font-semibold shadow-lg hover:bg-[var(--surface-muted)]"
+      className={clsx(
+        "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium hover:bg-[var(--surface-muted)]",
+        destructive ? "text-[var(--danger-fg)]" : "text-[var(--text)]",
+      )}
     >
-      {icon}
+      <span className="shrink-0 opacity-80">{icon}</span>
       {label}
     </button>
   );
 }
 
-function MessageActions({
-  canEdit,
-  isOwn,
+/**
+ * Desktop hover actions: React (floating quick-react overlay), Reply, and
+ * the overflow menu that opens the same action sheet a tap opens on
+ * mobile. Hidden below md - touch screens use tap-to-select instead.
+ */
+function HoverActions({
   disableActions,
   reactionActive,
   onToggleReaction,
   onReply,
-  onEdit,
-  onDelete,
+  onOpenMenu,
 }: {
-  canEdit: boolean;
-  isOwn: boolean;
   disableActions: boolean;
   reactionActive: boolean;
   onToggleReaction: (rect: DOMRect) => void;
   onReply: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
+  onOpenMenu: () => void;
 }) {
   return (
-    // Desktop-only: hidden below md entirely - on touch screens the chevron
-    // next to the bubble opens the options menu instead, so a hover-only
-    // reveal no longer decides what a phone can reach. At md+ they hide
-    // until hover OR keyboard focus lands on one of the buttons
-    // (group-focus-within), which also fixes the earlier keyboard trap
-    // where a focused-but-invisible button had no visible focus indicator.
     <div className="hidden gap-0.5 transition-opacity md:flex md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
       <button
         type="button"
@@ -626,30 +699,15 @@ function MessageActions({
       >
         <Reply size={14} aria-hidden />
       </button>
-      {isOwn && canEdit && (
-        <button
-          type="button"
-          title="Edit"
-          aria-label="Edit"
-          disabled={disableActions}
-          onClick={onEdit}
-          className="rounded p-1.5 text-xs hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-        >
-          <Pencil size={14} aria-hidden />
-        </button>
-      )}
-      {/* Delete is offered on the other party's messages too - the modal
-          only exposes "Delete for me" there, since deleting for everyone
-          is reserved for the sender. */}
       <button
         type="button"
-        title="Delete"
-        aria-label="Delete"
+        title="More options"
+        aria-label="More options"
         disabled={disableActions}
-        onClick={onDelete}
+        onClick={onOpenMenu}
         className="rounded p-1.5 text-xs hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
       >
-        <Trash2 size={14} aria-hidden />
+        <EllipsisVertical size={14} aria-hidden />
       </button>
     </div>
   );

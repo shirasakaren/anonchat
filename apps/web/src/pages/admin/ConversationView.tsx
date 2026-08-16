@@ -40,6 +40,7 @@ import { computeUnreadAnchor, getLastSeen, setLastSeen } from "../../components/
 import { DeleteMessageModal } from "../../components/chat/DeleteMessageModal.js";
 import { getLocallyDeletedMessageIds, hideMessageLocally } from "../../components/chat/locallyDeletedMessages.js";
 import { MessageBubble } from "../../components/chat/MessageBubble.js";
+import { TapMessageHint, useTapMessageHint } from "../../components/chat/TapMessageHint.js";
 import { buildReplyPreviewInfo } from "../../components/chat/replyPreview.js";
 import { RetentionPopover } from "../../components/chat/RetentionPopover.js";
 import { TypingIndicator } from "../../components/chat/TypingIndicator.js";
@@ -74,6 +75,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   const { site } = useSite();
   const [conversation, setConversation] = useState<AdminConversationDto | null>(null);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
+  const { showHint: showTapHint, dismissHint } = useTapMessageHint();
   const [loading, setLoading] = useState(true);
   const [replyTo, setReplyTo] = useState<DisplayMessage | null>(null);
   const [editing, setEditing] = useState<DisplayMessage | null>(null);
@@ -735,6 +737,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
                   onDelete={() => setDeleteTarget(item.message)}
                   onReact={(emoji) => handleReact(item.message, emoji)}
                   onRetry={() => handleRetry(item.message)}
+                  onFirstInteraction={dismissHint}
                 />
                 </div>
               ),
@@ -742,6 +745,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
           </div>
         )}
         {userTyping && <TypingIndicator label="Typing…" />}
+        {showTapHint && messages.length > 0 && <TapMessageHint />}
         <div ref={bottomRef} />
       </div>
 
