@@ -27,6 +27,7 @@ import { EmojiShortcutOverlay } from "./EmojiShortcutOverlay.js";
 import { CannedReplySlashOverlay } from "./CannedReplySlashOverlay.js";
 import { EmojiPicker } from "./emoji/EmojiPicker.js";
 import { maxAttachmentSizeMbForFile } from "./preview/textFileTypes.js";
+import { hasSpoofedMediaClaim, resolveFileMimetypeWithBytes } from "./preview/fileSniffing.js";
 import { useToast } from "../../context/ToastContext.js";
 import { CodeBlockWithCopy } from "../editor/CodeBlockWithCopy.js";
 import { IsolatedHeading } from "../editor/IsolatedHeading.js";
@@ -300,7 +301,7 @@ export function Composer({
     setSlashQuery(null);
   }
 
-  function addFiles(newFiles: File[]) {
+  async function addFiles(newFiles: File[]) {
     const available = Math.max(0, maxAttachments - files.length);
     if (available === 0) {
       showToast({
@@ -318,23 +319,36 @@ export function Composer({
       });
     }
 
-    const accepted: File[] = [];
+    const accepted: { file: File; mimetype: string }[] = [];
     for (const file of newFiles.slice(0, available)) {
-      const { category, limitMb } = maxAttachmentSizeMbForFile(attachmentLimits, file.type, file.name);
+      // Read only the first bytes - enough for magic-byte sniffing and
+      // cheap even for very large files. A renamed file (.zip posing as
+      // .mp4/.jpg) is measured against its real type's upload limit and
+      // never gets a media preview.
+      const head = new Uint8Array(await file.slice(0, 32).arrayBuffer());
+      const effectiveMime = resolveFileMimetypeWithBytes(file.type, file.name, head);
+      const { category, limitMb } = maxAttachmentSizeMbForFile(attachmentLimits, effectiveMime, file.name);
       if (file.size > limitMb * 1024 * 1024) {
         showToast({
           title: `${file.name} is too large`,
           message: `The ${category} upload limit is ${limitMb} MB. Choose a smaller file or ask the site owner to increase it.`,
         });
-      } else {
-        accepted.push(file);
+        continue;
       }
+      const spoofed = hasSpoofedMediaClaim(file.type, file.name, head);
+      if (spoofed) {
+        showToast({
+          title: `${file.name} doesn't match its extension`,
+          message: `The file's content looks like ${spoofed.actual}, not ${spoofed.claimed}. It will be sent as a regular file.`,
+        });
+      }
+      accepted.push({ file, mimetype: effectiveMime });
     }
 
     setFiles((prev) => {
-      const additions = accepted.map((file) => ({
+      const additions = accepted.map(({ file, mimetype }) => ({
         file,
-        previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
+        previewUrl: mimetype.startsWith("image/") ? URL.createObjectURL(file) : null,
       }));
       return [...prev, ...additions];
     });
@@ -453,17 +467,17 @@ export function Composer({
       .filter((file): file is File => file !== null);
     if (pasted.length === 0) return;
     e.preventDefault();
-    addFiles(pasted);
+    void addFiles(pasted);
   }
 
   function handleDrop(e: DragEvent<HTMLDivElement>) {
     if (e.dataTransfer.files.length === 0) return;
     e.preventDefault();
-    addFiles(Array.from(e.dataTransfer.files));
+    void addFiles(Array.from(e.dataTransfer.files));
   }
 
   function handleFilePick(e: ChangeEvent<HTMLInputElement>) {
-    if (e.target.files) addFiles(Array.from(e.target.files));
+    if (e.target.files) void addFiles(Array.from(e.target.files));
   }
 
   const overLimit = markdown.length > maxLength;

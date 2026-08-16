@@ -51,7 +51,7 @@ import {
   toBlobPart,
 } from "../../crypto/conversationCrypto.js";
 import type { DisplayMessage } from "../../components/chat/types.js";
-import { resolveFileMimetype } from "../../components/chat/preview/textFileTypes.js";
+import { resolveFileMimetypeWithBytes } from "../../components/chat/preview/fileSniffing.js";
 import {
   createPendingAttachmentPreviews,
   revokePendingAttachmentPreviews,
@@ -400,7 +400,9 @@ export function ConversationView({ conversationId, onChanged }: Props) {
           const encryptedBlob = encryptBlob(conversationKey!, bytes);
           const meta = encryptAttachmentMeta(conversationKey!, {
             filename: file.name,
-            mimetype: resolveFileMimetype(file.type, file.name),
+            // Magic-byte sniffed: a .zip renamed to .mp4/.jpg is stored as
+            // its real type and renders as a plain download, never media.
+            mimetype: resolveFileMimetypeWithBytes(file.type, file.name, bytes),
             size: file.size,
           });
           return { meta, blob: new Blob([toBlobPart(encryptedBlob)]) };
