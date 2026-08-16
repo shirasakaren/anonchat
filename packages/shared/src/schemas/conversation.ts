@@ -87,6 +87,11 @@ export interface AdminConversationDto extends ConversationDto {
   mutedAt: string | null;
   /** Whether the anonymous user currently has a live WebSocket connected. */
   userOnline: boolean;
+  /** Whether this visitor has an active (consented) diagnostics row. The
+   *  admin chat only shows the insights entry point when this is true -
+   *  visitors who never opted in shouldn't see a dead icon pointing at
+   *  nothing. */
+  visitorInsightsActive: boolean;
 }
 
 export interface MessagePage {

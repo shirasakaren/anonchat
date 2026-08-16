@@ -338,6 +338,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
                   adminAlias: prev.adminAlias,
                   mutedAt: prev.mutedAt,
                   userOnline: prev.userOnline,
+                  visitorInsightsActive: prev.visitorInsightsActive,
                 }
               : prev,
           );
@@ -648,15 +649,20 @@ export function ConversationView({ conversationId, onChanged }: Props) {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setInsightsOpen(true)}
-            title="View visitor insights"
-            aria-label="View visitor insights"
-            className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
-          >
-            <Info size={18} aria-hidden />
-          </button>
+          {/* Only visitors who explicitly opted into diagnostics have a row
+              to look at - don't show an info icon that opens an empty
+              drawer for everyone else. */}
+          {conversation.visitorInsightsActive && (
+            <button
+              type="button"
+              onClick={() => setInsightsOpen(true)}
+              title="View visitor insights"
+              aria-label="View visitor insights"
+              className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
+            >
+              <Info size={18} aria-hidden />
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setNoteOpen(true)}

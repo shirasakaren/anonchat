@@ -8,7 +8,12 @@ import { getStorageAdapter } from "../storage/index.js";
 import { Errors } from "../utils/errors.js";
 import { MESSAGE_INCLUDE, toMessageDto } from "../utils/dto.js";
 
-const ANONYMOUS_USER_SELECT = { publicId: true, displayName: true, exchangePublicKey: true } as const;
+const ANONYMOUS_USER_SELECT = {
+  publicId: true,
+  displayName: true,
+  exchangePublicKey: true,
+  visitorInsight: { select: { id: true } },
+} as const;
 
 function otherSender(viewer: SenderType): SenderType {
   return viewer === "ADMIN" ? "USER" : "ADMIN";
@@ -44,7 +49,12 @@ export function toConversationDto(
  *  anonymous user's client. */
 export function toAdminConversationDto(
   conversation: Conversation,
-  anonymousUser: { publicId: string; displayName: string | null; exchangePublicKey: Uint8Array },
+  anonymousUser: {
+    publicId: string;
+    displayName: string | null;
+    exchangePublicKey: Uint8Array;
+    visitorInsight?: { id: string } | null;
+  },
   unreadCount: number,
 ): AdminConversationDto {
   return {
@@ -52,6 +62,7 @@ export function toAdminConversationDto(
     adminAlias: conversation.adminAlias,
     mutedAt: conversation.mutedAt ? conversation.mutedAt.toISOString() : null,
     userOnline: isUserOnline(conversation.id),
+    visitorInsightsActive: Boolean(anonymousUser.visitorInsight),
   };
 }
 
