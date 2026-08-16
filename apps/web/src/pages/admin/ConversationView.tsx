@@ -28,6 +28,7 @@ import { useAdminSession } from "../../context/AdminSessionContext.js";
 import { useSite } from "../../context/SiteContext.js";
 import { useRealtimeSocket } from "../../hooks/useRealtimeSocket.js";
 import { useEncryptedDraft } from "../../hooks/useEncryptedDraft.js";
+import { useKeyboardViewport } from "../../hooks/useKeyboardViewport.js";
 import { Composer } from "../../components/chat/Composer.js";
 import { ConnectionBanner } from "../../components/chat/ConnectionBanner.js";
 import { DateSeparator } from "../../components/chat/DateSeparator.js";
@@ -83,6 +84,8 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   const [noteOpen, setNoteOpen] = useState(false);
   const [incomingNote, setIncomingNote] = useState<ConversationNoteDto | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const nearBottomRef = useRef(true);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pendingRef = useRef<
     Map<
@@ -206,6 +209,20 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
+
+  function handleThreadScroll() {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    nearBottomRef.current = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80;
+  }
+
+  // Same mobile-keyboard treatment as the visitor chat: the admin shell
+  // shrinks to the visual viewport, and the thread stays pinned to the
+  // newest message if that's where the admin was already reading.
+  useKeyboardViewport(() => {
+    const scroller = scrollerRef.current;
+    if (nearBottomRef.current && scroller) scroller.scrollTop = scroller.scrollHeight;
+  });
 
   const handleWsEvent = useCallback(
     (event: ServerWsEvent) => {
@@ -607,7 +624,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
 
       <ConnectionBanner status={wsStatus} />
 
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div ref={scrollerRef} onScroll={handleThreadScroll} className="flex-1 overflow-y-auto px-4 py-4">
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">
             No messages yet.

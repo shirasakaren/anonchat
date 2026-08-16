@@ -18,6 +18,7 @@ import { useSite } from "../context/SiteContext.js";
 import { useTheme } from "../context/ThemeContext.js";
 import { useRealtimeSocket } from "../hooks/useRealtimeSocket.js";
 import { useEncryptedDraft } from "../hooks/useEncryptedDraft.js";
+import { useKeyboardViewport } from "../hooks/useKeyboardViewport.js";
 import { Composer } from "../components/chat/Composer.js";
 import { ConnectionBanner } from "../components/chat/ConnectionBanner.js";
 import { DateSeparator } from "../components/chat/DateSeparator.js";
@@ -186,27 +187,13 @@ export default function Chat() {
   // the viewport shrinks, pin the thread to the latest message if the
   // visitor was already reading from the bottom - preserving scrollTop
   // alone would leave the newest messages below the fold, which is what
-  // made the conversation appear to "jump up" while typing.
-  useEffect(() => {
-    const viewport = window.visualViewport;
-    if (!viewport) return;
-    const update = () => {
-      document.documentElement.style.setProperty("--vvh", `${viewport.height}px`);
-      // Pin after the next layout: the resize event fires before the
-      // browser has reflowed the shrunken shell, so scrollHeight read
-      // synchronously would still describe the old (taller) pane.
-      requestAnimationFrame(() => {
-        const scroller = scrollerRef.current;
-        if (nearBottomRef.current && scroller) scroller.scrollTop = scroller.scrollHeight;
-      });
-    };
-    viewport.addEventListener("resize", update);
-    update();
-    return () => {
-      viewport.removeEventListener("resize", update);
-      document.documentElement.style.removeProperty("--vvh");
-    };
-  }, []);
+  // made the conversation appear to "jump up" while typing. The hook also
+  // resets iOS's focus pan (see useKeyboardViewport.ts), which is what
+  // shifted the whole shell - header included - up off-screen.
+  useKeyboardViewport(() => {
+    const scroller = scrollerRef.current;
+    if (nearBottomRef.current && scroller) scroller.scrollTop = scroller.scrollHeight;
+  });
 
   function handleThreadScroll() {
     const scroller = scrollerRef.current;

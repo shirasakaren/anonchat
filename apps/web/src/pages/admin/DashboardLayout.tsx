@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useAdminSession } from "../../context/AdminSessionContext.js";
 import { useUnreadCount } from "../../hooks/useUnreadCount.js";
+import { useKeyboardViewport } from "../../hooks/useKeyboardViewport.js";
 import { LaunchGuideModal } from "../../components/admin/LaunchGuideModal.js";
 import { useSite } from "../../context/SiteContext.js";
 
@@ -108,8 +109,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     });
   }
 
+  // The admin shell tracks the visual viewport the same way the visitor
+  // chat does - on iOS the composer must sit above the keyboard instead of
+  // under it, and the whole app must not stay panned upward when the
+  // keyboard focuses the composer.
+  useKeyboardViewport();
+
   return (
-    <div className="flex h-screen">
+    <div className="vvh-shell flex overflow-hidden">
       {/* Desktop sidebar (md and up). */}
       <nav
         className={clsx(
