@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { Clock, TimerOff } from "lucide-react";
+import { Check, ChevronDown, Clock, TimerOff } from "lucide-react";
 import type { ConversationRetentionDto, RetentionRequestInput } from "@anonchat/shared";
 
 const DISAPPEARING_OPTIONS: { label: string; seconds: number }[] = [
@@ -28,11 +28,15 @@ interface Props {
  */
 export function RetentionPopover({ retention, who, onChange }: Props) {
   const [open, setOpen] = useState(false);
+  const [choicesOpen, setChoicesOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setChoicesOpen(false);
+      return;
+    }
     function handlePointerDown(e: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setOpen(false);
     }
@@ -43,11 +47,14 @@ export function RetentionPopover({ retention, who, onChange }: Props) {
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        if (choicesOpen) setChoicesOpen(false);
+        else setOpen(false);
+      }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open]);
+  }, [open, choicesOpen]);
 
   const active = retention.disappearing.enabled;
 
@@ -61,7 +68,15 @@ export function RetentionPopover({ retention, who, onChange }: Props) {
   }
 
   const visitorWord = who === "USER" ? "you" : "the visitor";
-  const selected = retention.disappearing.enabled ? String(retention.disappearing.seconds) : "off";
+  const selectedLabel = retention.disappearing.enabled
+    ? (DISAPPEARING_OPTIONS.find((option) => option.seconds === retention.disappearing.seconds)?.label ?? "…")
+    : "Off";
+
+  function pickDisappearing(value: "off" | number) {
+    setChoicesOpen(false);
+    if (value === "off") void apply({ disappearingEnabled: false, disappearingSeconds: null });
+    else void apply({ disappearingEnabled: true, disappearingSeconds: value });
+  }
 
   return (
     <div ref={wrapperRef} className="relative">
@@ -101,24 +116,48 @@ export function RetentionPopover({ retention, who, onChange }: Props) {
               New messages from either side vanish after the chosen time. Only messages sent after this is enabled
               expire.
             </p>
-            <select
-              value={selected}
+            {/* Custom dropdown instead of a native <select>: on some desktop
+                browsers the native popup's own events escape the panel's
+                click handling and dismiss it, so opening the choices closed
+                the whole popover. A controlled list has no native popup to
+                leak events. */}
+            <button
+              type="button"
               disabled={busy}
-              onChange={(event) => {
-                const value = event.target.value;
-                if (value === "off") void apply({ disappearingEnabled: false, disappearingSeconds: null });
-                else void apply({ disappearingEnabled: true, disappearingSeconds: Number(value) });
-              }}
+              aria-haspopup="listbox"
+              aria-expanded={choicesOpen}
               aria-label="Disappearing messages timer"
-              className="mt-2 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-2.5 py-2 text-sm text-[var(--text)] disabled:opacity-50"
+              onClick={() => setChoicesOpen((value) => !value)}
+              className="mt-2 flex w-full items-center justify-between gap-2 rounded-lg border border-[var(--border-strong)] px-2.5 py-2 text-sm text-[var(--text)] disabled:opacity-50"
             >
-              <option value="off">Off</option>
-              {DISAPPEARING_OPTIONS.map((option) => (
-                <option key={option.seconds} value={option.seconds}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              <span>{selectedLabel}</span>
+              <ChevronDown
+                size={16}
+                aria-hidden
+                className={`shrink-0 transition-transform ${choicesOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+            {choicesOpen && (
+              <ul
+                role="listbox"
+                aria-label="Disappearing messages timer choices"
+                className="mt-1 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] py-1 shadow-lg"
+              >
+                <DropdownChoice
+                  label="Off"
+                  selected={!retention.disappearing.enabled}
+                  onClick={() => pickDisappearing("off")}
+                />
+                {DISAPPEARING_OPTIONS.map((option) => (
+                  <DropdownChoice
+                    key={option.seconds}
+                    label={option.label}
+                    selected={retention.disappearing.enabled && retention.disappearing.seconds === option.seconds}
+                    onClick={() => pickDisappearing(option.seconds)}
+                  />
+                ))}
+              </ul>
+            )}
             <label className="mt-3 flex items-start gap-2 text-xs">
               <input
                 type="checkbox"
@@ -133,5 +172,30 @@ export function RetentionPopover({ retention, who, onChange }: Props) {
         </div>
       )}
     </div>
+  );
+}
+
+function DropdownChoice({
+  label,
+  selected,
+  onClick,
+}: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        role="option"
+        aria-selected={selected}
+        onClick={onClick}
+        className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm hover:bg-[var(--surface-muted)]"
+      >
+        <span className={selected ? "font-semibold" : ""}>{label}</span>
+        {selected && <Check size={14} aria-hidden className="text-[var(--link-fg)]" />}
+      </button>
+    </li>
   );
 }

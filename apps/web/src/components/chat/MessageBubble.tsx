@@ -3,13 +3,12 @@ import {
   useMemo,
   useRef,
   useState,
-  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
 import clsx from "clsx";
 import { format } from "date-fns";
-import { AlertTriangle, SmilePlus, Reply, Pencil, Trash2, Paperclip, X } from "lucide-react";
+import { AlertTriangle, ChevronDown, SmilePlus, Reply, Pencil, Trash2, Paperclip, X } from "lucide-react";
 import { decryptAttachmentMeta, decryptReaction } from "../../crypto/conversationCrypto.js";
 import { renderMessageMarkdown } from "./markdown.js";
 import { AttachmentPreview, previewKind } from "./AttachmentPreview.js";
@@ -30,12 +29,10 @@ import { buildReplyPreviewInfo } from "./replyPreview.js";
  *  not an unbounded wall of them if someone pastes a long list of URLs. */
 const MAX_EMBEDS_PER_MESSAGE = 3;
 
-/** The quick-react strip shown in the long-press menu (WhatsApp's set). */
+/** The quick-react strip shown in the message options menu. */
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
-/** Hold this long (without moving) to open the iOS-style action menu. */
-const LONG_PRESS_MS = 450;
-/** Movement beyond this cancels the long-press and can start a swipe. */
+/** Movement beyond this switches the touch gesture from a tap to a swipe. */
 const SWIPE_START_PX = 12;
 /** Swiping right past this distance arms a reply. */
 const SWIPE_REPLY_PX = 64;
@@ -85,13 +82,13 @@ export function MessageBubble({
   const [reactionAnchor, setReactionAnchor] = useState<DOMRect | null>(null);
   const [reactionExpanded, setReactionExpanded] = useState(false);
 
-  // iOS-style long-press menu: dims + blurs the chat behind an enlarged
-  // copy of the pressed bubble, with the quick-react strip and the message
-  // actions below it. Replaces the always-visible mobile action buttons.
+  // Message options menu (quick reactions + reply/edit/delete), opened by
+  // the mobile chevron next to the bubble: dims + blurs the chat behind an
+  // enlarged copy of the bubble. Replaces the long-press trigger, which
+  // fights the browser's own touch gestures on mobile web.
   const [actionMenu, setActionMenu] = useState(false);
   const [menuFullPicker, setMenuFullPicker] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
-  const longPressTimer = useRef<number | null>(null);
   const swipeState = useRef<{
     pointerId: number;
     startX: number;
@@ -100,8 +97,6 @@ export function MessageBubble({
     dx: number;
     touch: boolean;
   } | null>(null);
-  const actionMenuRef = useRef(actionMenu);
-  actionMenuRef.current = actionMenu;
 
   useEffect(() => {
     if (!actionMenu) return;
@@ -128,17 +123,9 @@ export function MessageBubble({
     setReactionExpanded(false);
   }
 
-  function clearLongPress() {
-    if (longPressTimer.current !== null) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  }
-
   function handlePressStart(e: ReactPointerEvent<HTMLDivElement>) {
     if (disableActions || message.deleted || message.decryptionError) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
-    clearLongPress();
     swipeState.current = {
       pointerId: e.pointerId,
       startX: e.clientX,
@@ -147,12 +134,6 @@ export function MessageBubble({
       dx: 0,
       touch: e.pointerType !== "mouse",
     };
-    longPressTimer.current = window.setTimeout(() => {
-      longPressTimer.current = null;
-      swipeState.current = null;
-      navigator.vibrate?.(10);
-      setActionMenu(true);
-    }, LONG_PRESS_MS);
   }
 
   function handlePressMove(e: ReactPointerEvent<HTMLDivElement>) {
@@ -163,40 +144,24 @@ export function MessageBubble({
     const absDx = Math.abs(dx);
     const absDy = Math.abs(dy);
     if (state.horizontal === null && (absDx > SWIPE_START_PX || absDy > SWIPE_START_PX)) {
-      // Any real movement cancels the long-press (a hold is stationary).
-      clearLongPress();
       state.horizontal = absDx > absDy;
     }
-    if (state.horizontal && state.touch && !isOwn) {
-      // Swipe right on the other party's message: the bubble tracks the
-      // finger and, released past the threshold, enters reply mode.
+    if (state.horizontal && state.touch) {
+      // Swipe right on any message - the other party's or your own - and
+      // the bubble tracks the finger; released past the threshold, it
+      // enters reply mode for that message.
       state.dx = Math.max(0, Math.min(dx, SWIPE_MAX_PX));
       setSwipeOffset(state.dx);
     }
   }
 
-  // A completed swipe must not turn into a click on whatever the finger
-  // happened to land on (e.g. an attachment's expand button).
-  const suppressClickRef = useRef(false);
-
   function handlePressEnd() {
-    clearLongPress();
     const state = swipeState.current;
     swipeState.current = null;
-    if (state?.horizontal && state.touch && !isOwn && state.dx >= SWIPE_REPLY_PX) {
+    if (state?.horizontal && state.touch && state.dx >= SWIPE_REPLY_PX) {
       onReply();
     }
     setSwipeOffset(0);
-    if (state?.horizontal) {
-      suppressClickRef.current = true;
-    }
-  }
-
-  function handleClickCapture(e: ReactMouseEvent<HTMLDivElement>) {
-    if (!suppressClickRef.current) return;
-    suppressClickRef.current = false;
-    e.preventDefault();
-    e.stopPropagation();
   }
 
   const decryptedReactions = useMemo(
@@ -255,24 +220,40 @@ export function MessageBubble({
   );
   const showReplyPreview = replyInfo.kind !== "empty" && !message.deleted;
 
-  // Shared pointer wiring: a stationary hold opens the action menu, a
-  // horizontal drag on the other party's message swipes it right toward a
-  // reply. touch-action pan-y keeps vertical scrolling native.
+  // Shared pointer wiring for swipe-to-reply. touch-action pan-y keeps
+  // vertical scrolling native while horizontal drags reach these handlers.
   const pressHandlers = {
     onPointerDown: handlePressStart,
     onPointerMove: handlePressMove,
     onPointerUp: handlePressEnd,
     onPointerCancel: handlePressEnd,
-    onPointerLeave: clearLongPress,
-    onClickCapture: handleClickCapture,
-    // The native iOS long-press callout (text selection / link menu) must
-    // not appear on top of the in-app menu. This only fires after the
-    // long-press timer has already opened the menu; a quick desktop
-    // right-click never sets actionMenu, so its native menu is untouched.
-    onContextMenu: (e: ReactMouseEvent<HTMLDivElement>) => {
-      if (actionMenuRef.current) e.preventDefault();
-    },
   };
+
+  const messageActionsProps = {
+    canEdit,
+    isOwn,
+    disableActions,
+    reactionActive: reactionAnchor !== null,
+    onToggleReaction: toggleReactionPicker,
+    onReply,
+    onEdit,
+    onDelete,
+  };
+
+  /** Mobile-only options trigger: sits OUTSIDE the bubble - to its right
+   *  when the other party sent it, to its left when it's your own - and
+   *  opens the action menu. Desktop keeps the hover-revealed buttons. */
+  const chevronButton = (side: "left" | "right") => (
+    <button
+      type="button"
+      aria-label="Message options"
+      onClick={() => setActionMenu(true)}
+      className="mb-1 shrink-0 rounded-full p-1 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)] md:hidden"
+      data-side={side}
+    >
+      <ChevronDown size={16} aria-hidden />
+    </button>
+  );
 
   return (
     <div
@@ -301,16 +282,22 @@ export function MessageBubble({
 
       {imageOnly ? (
         <div className="min-w-0 max-w-[80%]">
-          <div className="min-w-0 max-w-full space-y-2">
-            {message.attachments.map((a) => (
-              <AttachmentPreview
-                key={a.id}
-                attachment={a}
-                conversationKey={conversationKey}
-                downloadUrl={attachmentUrlFor(a.id)}
-                standalone
-              />
-            ))}
+          <div className="flex min-w-0 max-w-full items-end gap-1">
+            {isOwn && <MessageActions {...messageActionsProps} />}
+            {isOwn && chevronButton("left")}
+            <div className="min-w-0 max-w-full space-y-2">
+              {message.attachments.map((a) => (
+                <AttachmentPreview
+                  key={a.id}
+                  attachment={a}
+                  conversationKey={conversationKey}
+                  downloadUrl={attachmentUrlFor(a.id)}
+                  standalone
+                />
+              ))}
+            </div>
+            {!isOwn && chevronButton("right")}
+            {!isOwn && <MessageActions {...messageActionsProps} />}
           </div>
           {/* Timestamp under the photos (below the frames, like the Read
               receipt on text messages) instead of inside a shared bubble. */}
@@ -328,18 +315,8 @@ export function MessageBubble({
       ) : (
         <>
           <div className="flex min-w-0 max-w-[80%] items-end gap-1">
-            {isOwn && (
-              <MessageActions
-                canEdit={canEdit}
-                isOwn={isOwn}
-                disableActions={disableActions}
-                reactionActive={reactionAnchor !== null}
-                onToggleReaction={toggleReactionPicker}
-                onReply={onReply}
-                onEdit={onEdit}
-                onDelete={onDelete}
-              />
-            )}
+            {isOwn && <MessageActions {...messageActionsProps} />}
+            {isOwn && chevronButton("left")}
 
             <div
               className={clsx(
@@ -395,44 +372,36 @@ export function MessageBubble({
                       })}
                     </div>
                   )}
-                  {/* The other party's timestamp stays anchored inside their
-                      bubble (WhatsApp-style); the sender's own meta row
-                      lives below the bubble so the Read receipt never
-                      shifts the bubble's contents around. */}
-                  {!isOwn && (
-                    <div className="mt-1 flex items-center justify-end gap-1 text-[10px] leading-none opacity-70">
-                      <span>{format(new Date(message.createdAt), "p")}</span>
-                      {message.edited && <span>· edited</span>}
-                    </div>
-                  )}
+                  {/* Timestamp stays inside the bubble: right-aligned on the
+                      sender's own messages, left-aligned on the other
+                      party's - i.e. anchored to the side the message came
+                      from, so no row separates the bubbles vertically. The
+                      Read receipt alone lives outside, at the very bottom
+                      of the sent messages. */}
+                  <div
+                    className={clsx(
+                      "mt-1 flex items-center gap-1 text-[10px] leading-none opacity-70",
+                      isOwn ? "justify-end" : "justify-start",
+                    )}
+                  >
+                    <span>{format(new Date(message.createdAt), "p")}</span>
+                    {message.edited && <span>· edited</span>}
+                    {isOwn && message.status === "sending" && <span>· Sending…</span>}
+                  </div>
                 </>
               )}
             </div>
 
-            {!isOwn && (
-              <MessageActions
-                canEdit={canEdit}
-                isOwn={isOwn}
-                disableActions={disableActions}
-                reactionActive={reactionAnchor !== null}
-                onToggleReaction={toggleReactionPicker}
-                onReply={onReply}
-                onEdit={onEdit}
-                onDelete={onDelete}
-              />
-            )}
+            {!isOwn && chevronButton("right")}
+            {!isOwn && <MessageActions {...messageActionsProps} />}
           </div>
 
-          {/* Own-message meta row: time / edited / sending / Read, below the
-              bubble and outside it. Read stays at the very bottom of the
-              sender's own messages instead of moving around inside the
-              bubble as content changes. */}
-          {isOwn && (
+          {/* Read receipt: the one piece that lives OUTSIDE the bubble, and
+              only on the very last read own-message (showReadReceipt is
+              computed by the parent across the whole thread). */}
+          {isOwn && showReadReceipt && (
             <div className="flex items-center justify-end gap-1 pr-1 text-[10px] leading-none text-[var(--text-muted)] opacity-70">
-              <span>{format(new Date(message.createdAt), "p")}</span>
-              {message.edited && !message.deleted && <span>· edited</span>}
-              {message.status === "sending" && <span>· Sending…</span>}
-              {showReadReceipt && <span>· Read</span>}
+              <span>Read</span>
             </div>
           )}
         </>
@@ -473,9 +442,9 @@ export function MessageBubble({
         />
       )}
 
-      {/* iOS-style long-press menu: the chat dims and blurs behind an
-          enlarged copy of the pressed bubble, with the quick-react strip
-          and Reply / Edit / Delete / Cancel underneath. */}
+      {/* Message options menu (opened by the mobile chevron): the chat dims
+          and blurs behind an enlarged copy of the bubble, with the
+          quick-react strip and Reply / Edit / Delete / Cancel underneath. */}
       {actionMenu && (
         <div
           className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/50 p-4 backdrop-blur-md"
@@ -624,8 +593,8 @@ function MessageActions({
   onDelete: () => void;
 }) {
   return (
-    // Desktop-only: hidden below md entirely - on touch screens the
-    // long-press menu (see above) replaces these buttons, so a hover-only
+    // Desktop-only: hidden below md entirely - on touch screens the chevron
+    // next to the bubble opens the options menu instead, so a hover-only
     // reveal no longer decides what a phone can reach. At md+ they hide
     // until hover OR keyboard focus lands on one of the buttons
     // (group-focus-within), which also fixes the earlier keyboard trap
