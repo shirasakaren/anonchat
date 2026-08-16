@@ -191,8 +191,13 @@ export default function Chat() {
     if (!viewport) return;
     const update = () => {
       document.documentElement.style.setProperty("--vvh", `${viewport.height}px`);
-      const scroller = scrollerRef.current;
-      if (nearBottomRef.current && scroller) scroller.scrollTop = scroller.scrollHeight;
+      // Pin after the next layout: the resize event fires before the
+      // browser has reflowed the shrunken shell, so scrollHeight read
+      // synchronously would still describe the old (taller) pane.
+      requestAnimationFrame(() => {
+        const scroller = scrollerRef.current;
+        if (nearBottomRef.current && scroller) scroller.scrollTop = scroller.scrollHeight;
+      });
     };
     viewport.addEventListener("resize", update);
     update();
