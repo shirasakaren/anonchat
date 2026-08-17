@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import {
   AlertTriangle,
   Copy,
+  Download,
   EllipsisVertical,
   Paperclip,
   Pencil,
@@ -37,6 +38,7 @@ import { PendingAttachmentTransfer } from "./PendingAttachmentTransfer.js";
 import { buildReplyPreviewInfo } from "./replyPreview.js";
 import { useToast } from "../../context/ToastContext.js";
 import { useTouchUi } from "./TapMessageHint.js";
+import type { ViewerActions } from "./preview/LightboxActionsMenu.js";
 
 /** Slack/Discord-style: a message can carry a few link embeds/previews,
  *  not an unbounded wall of them if someone pastes a long list of URLs. */
@@ -114,6 +116,10 @@ export function MessageBubble({
   const [selected, setSelected] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
+  // Attachment id → monotonically increasing request counter. The sheet's
+  // Download row bumps it; AttachmentPreview watches its own counter and
+  // decrypts + downloads while showing its progress card.
+  const [downloadRequests, setDownloadRequests] = useState<Record<string, number>>({});
   const [swipeOffset, setSwipeOffset] = useState(0);
   const groupRef = useRef<HTMLDivElement>(null);
   const swipeState = useRef<{
@@ -314,13 +320,20 @@ export function MessageBubble({
   // to take the widest image's width and draw that rectangle around every
   // photo, so a portrait image next to a panorama looked like it was
   // stretched into the panorama's box.
-  const attachmentKinds = useMemo(
+  const attachmentInfos = useMemo(
     () =>
       message.attachments.map((a) => {
         const meta = decryptAttachmentMeta(conversationKey, a.meta);
-        return meta ? previewKind(meta.mimetype, meta.filename) : "binary";
+        return { attachment: a, meta, kind: meta ? previewKind(meta.mimetype, meta.filename) : "binary" };
       }),
     [message.attachments, conversationKey],
+  );
+  const attachmentKinds = attachmentInfos.map((info) => info.kind);
+  // Files (as opposed to visuals) get a Download row in the action sheet -
+  // on touch their cards are inert, so the sheet is the only way to fetch
+  // them.
+  const downloadableAttachments = attachmentInfos.filter(
+    (info) => info.kind !== "image" && info.kind !== "video" && info.kind !== "audio",
   );
   const imageOnly =
     !message.deleted &&
@@ -354,11 +367,20 @@ export function MessageBubble({
 
   const canShowActions = !disableActions && !message.deleted && !message.decryptionError;
 
+  // Full-screen viewers get their own ⋯ menu with the same actions, so a
+  // preview never inherits the bubble's tap-to-select.
+  const viewerActions: ViewerActions | undefined = canShowActions
+    ? { canEdit: isOwn && canEdit, onReply, onEdit, onDelete, onReact }
+    : undefined;
+
   const quickReactBar = selected && canShowActions && (
     <div
       data-message-sheet
+      // Below the bubble, not above: the action sheet now covers the top
+      // of the screen, so an above-the-bubble bar on a high message would
+      // be hidden under it.
       className={clsx(
-        "absolute bottom-full z-[60] mb-1.5 flex items-center gap-0.5 rounded-full border border-[var(--border)] bg-[var(--surface-raised)] px-1.5 py-1 shadow-lg",
+        "absolute top-full z-[60] mt-1.5 flex items-center gap-0.5 rounded-full border border-[var(--border)] bg-[var(--surface-raised)] px-1.5 py-1 shadow-lg",
         isOwn ? "right-0" : "left-0",
       )}
     >
@@ -393,6 +415,35 @@ export function MessageBubble({
     onOpenMenu: (rect: DOMRect) => setMenuRect((prev) => (prev ? null : rect)),
   };
 
+  // One list drives both renderings: an icon-only row on touch (over the
+  // conversation navbar) and the labeled vertical list on pointer devices.
+  const sheetItems: SheetItem[] = [
+    { key: "reply", icon: <Reply size={18} aria-hidden />, label: "Reply", onClick: () => { dismiss(); onReply(); } },
+    ...(message.text.trim().length > 0
+      ? [{ key: "copy", icon: <Copy size={18} aria-hidden />, label: "Copy", onClick: () => void copyText() }]
+      : []),
+    ...downloadableAttachments.map(({ attachment, meta }) => ({
+      key: `download-${attachment.id}`,
+      icon: <Download size={18} aria-hidden />,
+      label: `Download ${meta?.filename ?? "file"}`,
+      onClick: () => {
+        setDownloadRequests((prev) => ({ ...prev, [attachment.id]: (prev[attachment.id] ?? 0) + 1 }));
+        dismiss();
+      },
+    })),
+    ...(isOwn && canEdit
+      ? [{ key: "edit", icon: <Pencil size={18} aria-hidden />, label: "Edit", onClick: () => { dismiss(); onEdit(); } }]
+      : []),
+    {
+      key: "delete",
+      icon: <Trash2 size={18} aria-hidden />,
+      label: "Delete",
+      destructive: true,
+      onClick: () => { dismiss(); onDelete(); },
+    },
+    { key: "cancel", icon: <X size={18} aria-hidden />, label: "Cancel", onClick: dismiss },
+  ];
+
   const actionSheet =
     selected &&
     canShowActions &&
@@ -412,8 +463,11 @@ export function MessageBubble({
           role="dialog"
           aria-label="Message actions"
           className={clsx(
-            "pointer-events-auto absolute inset-x-0 bottom-0 rounded-t-2xl border-t border-[var(--border)] bg-[var(--surface-raised)] p-2 pb-[max(env(safe-area-inset-bottom),0.75rem)] shadow-xl",
-            "md:relative md:inset-auto md:w-72 md:rounded-2xl md:border md:pb-2",
+            // Touch: pinned to the TOP, covering the conversation navbar -
+            // a bottom drawer used to cover messages near the bottom of
+            // the thread. Icons only, one horizontal row.
+            "pointer-events-auto absolute inset-x-0 top-0 border-b border-[var(--border)] bg-[var(--surface-raised)] pt-[env(safe-area-inset-top)] shadow-xl",
+            "md:relative md:inset-auto md:w-72 md:rounded-2xl md:border md:pt-0",
           )}
         >
           {pickerOpen ? (
@@ -429,22 +483,34 @@ export function MessageBubble({
             </div>
           ) : (
             <>
-              <SheetAction icon={<Reply size={18} aria-hidden />} label="Reply" onClick={() => { dismiss(); onReply(); }} />
-              {message.text.trim().length > 0 && (
-                <SheetAction icon={<Copy size={18} aria-hidden />} label="Copy" onClick={() => void copyText()} />
-              )}
-              {isOwn && canEdit && (
-                <SheetAction icon={<Pencil size={18} aria-hidden />} label="Edit" onClick={() => { dismiss(); onEdit(); }} />
-              )}
-              {/* Delete is offered on the other party's messages too - the
-                  modal only exposes "Delete for me" there. */}
-              <SheetAction
-                icon={<Trash2 size={18} aria-hidden />}
-                label="Delete"
-                destructive
-                onClick={() => { dismiss(); onDelete(); }}
-              />
-              <SheetAction icon={<X size={18} aria-hidden />} label="Cancel" onClick={dismiss} />
+              <div className="flex items-center gap-0.5 overflow-x-auto px-2 py-1.5 md:hidden">
+                {sheetItems.map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    aria-label={item.label}
+                    title={item.label}
+                    onClick={item.onClick}
+                    className={clsx(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl hover:bg-[var(--surface-muted)]",
+                      item.destructive ? "text-[var(--danger-fg)]" : "text-[var(--text)]",
+                    )}
+                  >
+                    {item.icon}
+                  </button>
+                ))}
+              </div>
+              <div className="hidden p-2 md:block">
+                {sheetItems.map((item) => (
+                  <SheetAction
+                    key={item.key}
+                    icon={item.icon}
+                    label={item.label}
+                    destructive={item.destructive}
+                    onClick={item.onClick}
+                  />
+                ))}
+              </div>
             </>
           )}
         </section>
@@ -488,7 +554,11 @@ export function MessageBubble({
           <div className={clsx("relative flex min-w-0 max-w-full items-end gap-1", selected && canShowActions && "rounded-2xl ring-2 ring-[var(--color-accent-500)]")}>
             {isOwn && <HoverActions {...messageActionsProps} />}
             <div
-              className={clsx("min-w-0 max-w-full space-y-2", selected && canShowActions && "rounded-2xl")}
+              className={clsx(
+                "min-w-0 max-w-full space-y-2",
+                touchUi && "cursor-pointer active:ring-2 active:ring-[var(--color-accent-500)]",
+                selected && canShowActions && "rounded-2xl",
+              )}
               onClick={touchUi ? handleTap : undefined}
             >
               {message.attachments.map((a) => (
@@ -498,6 +568,8 @@ export function MessageBubble({
                   conversationKey={conversationKey}
                   downloadUrl={attachmentUrlFor(a.id)}
                   standalone
+                  downloadRequest={downloadRequests[a.id] ?? 0}
+                  viewerActions={viewerActions}
                 />
               ))}
             </div>
@@ -537,6 +609,9 @@ export function MessageBubble({
                 // .prose-message's own overflow-wrap to kick in.
                 "min-w-0 max-w-full overflow-hidden rounded-2xl px-3.5 py-2 text-sm shadow-sm",
                 touchUi && "cursor-pointer transition-transform active:scale-[0.98]",
+                // The ring lights up the instant the finger lands on the
+                // bubble (active), and stays while the message is selected.
+                touchUi && "active:ring-2 active:ring-[var(--color-accent-500)]",
                 selected && canShowActions && "ring-2 ring-[var(--color-accent-500)]",
                 isOwn
                   ? "bg-[var(--bubble-user)] text-[var(--bubble-user-text)] text-right"
@@ -569,6 +644,8 @@ export function MessageBubble({
                           attachment={a}
                           conversationKey={conversationKey}
                           downloadUrl={attachmentUrlFor(a.id)}
+                          downloadRequest={downloadRequests[a.id] ?? 0}
+                          viewerActions={viewerActions}
                         />
                       ))}
                     </div>
@@ -687,6 +764,14 @@ export function MessageBubble({
 }
 
 interface DropdownItemSpec {
+  icon: ReactNode;
+  label: string;
+  destructive?: boolean;
+  onClick: () => void;
+}
+
+interface SheetItem {
+  key: string;
   icon: ReactNode;
   label: string;
   destructive?: boolean;
