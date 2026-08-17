@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type WheelEvent } from "react";
 import { X, ZoomIn, ZoomOut, RotateCcw, Download } from "lucide-react";
+import { LightboxActionsMenu, type ViewerActions } from "./LightboxActionsMenu.js";
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 5;
@@ -17,6 +18,9 @@ interface Props {
   url: string;
   filename: string;
   onClose: () => void;
+  /** Reply/react/edit/delete for the message, shown under the header's ⋯.
+   *  When absent (e.g. the message was deleted) the ⋯ is hidden. */
+  actions?: ViewerActions;
 }
 
 /**
@@ -28,7 +32,7 @@ interface Props {
  * zoomed in. Pan resets whenever zoom returns to 1x, since there's nothing
  * to pan around at the image's natural size.
  */
-export function ImageLightbox({ url, filename, onClose }: Props) {
+export function ImageLightbox({ url, filename, onClose, actions }: Props) {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const dragState = useRef<{ startX: number; startY: number; panX: number; panY: number; dragged: boolean } | null>(
@@ -124,6 +128,7 @@ export function ImageLightbox({ url, filename, onClose }: Props) {
           >
             <Download size={18} aria-hidden />
           </a>
+          {actions && <LightboxActionsMenu actions={actions} onCloseViewer={onClose} />}
           <button
             type="button"
             onClick={onClose}

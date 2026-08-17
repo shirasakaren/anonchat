@@ -1,16 +1,19 @@
 import { useEffect, useRef } from "react";
 import { Download, X } from "lucide-react";
+import { LightboxActionsMenu, type ViewerActions } from "./LightboxActionsMenu.js";
 
 interface Props {
   url: string;
   filename: string;
   onClose: () => void;
   onError?: () => void;
+  /** Reply/react/edit/delete for the message, shown under the header's ⋯. */
+  actions?: ViewerActions;
 }
 
 /** Full-screen video player. Playback only starts after the profile tile is
  * selected, and clicking the empty area around the player closes the view. */
-export function VideoLightbox({ url, filename, onClose, onError }: Props) {
+export function VideoLightbox({ url, filename, onClose, onError, actions }: Props) {
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -50,6 +53,7 @@ export function VideoLightbox({ url, filename, onClose, onError }: Props) {
           >
             <Download size={18} aria-hidden />
           </a>
+          {actions && <LightboxActionsMenu actions={actions} onCloseViewer={onClose} />}
           <button
             ref={closeRef}
             type="button"
