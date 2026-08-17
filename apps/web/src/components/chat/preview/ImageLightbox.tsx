@@ -35,9 +35,15 @@ interface Props {
 export function ImageLightbox({ url, filename, onClose, actions }: Props) {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  // While the ⋯ menu (or the emoji picker inside it) is open, the image
+  // and the backdrop stay inert: an outside tap closes only the menu.
+  const [menuOpen, setMenuOpen] = useState(false);
   const dragState = useRef<{ startX: number; startY: number; panX: number; panY: number; dragged: boolean } | null>(
     null,
   );
+  // Set when a press lands while the ⋯ menu is open: that press only
+  // dismisses the menu, and its release must not toggle zoom too.
+  const suppressNextClickRef = useRef(false);
 
   function clampZoom(z: number): number {
     return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
@@ -50,6 +56,7 @@ export function ImageLightbox({ url, filename, onClose, actions }: Props) {
   }
 
   function handleWheel(e: WheelEvent<HTMLDivElement>) {
+    if (menuOpen) return;
     e.preventDefault();
     applyZoom(zoom + (e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
   }
@@ -58,6 +65,10 @@ export function ImageLightbox({ url, filename, onClose, actions }: Props) {
     // Stops here, not just at the container level - clicking the image
     // itself must never close the viewer, only the space around it should.
     e.stopPropagation();
+    if (menuOpen) {
+      suppressNextClickRef.current = true;
+      return;
+    }
     dragState.current = { startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y, dragged: false };
   }
 
@@ -72,8 +83,15 @@ export function ImageLightbox({ url, filename, onClose, actions }: Props) {
 
   function handlePointerUp() {
     const wasClick = !dragState.current?.dragged;
+    const suppressed = suppressNextClickRef.current;
+    suppressNextClickRef.current = false;
     dragState.current = null;
-    if (wasClick) applyZoom(zoom > MIN_ZOOM ? MIN_ZOOM : CLICK_ZOOM_LEVEL);
+    // Tap-to-zoom is a mouse convention - on touch screens a tap on the
+    // image must do nothing at all (the toolbar +/- still zoom there) -
+    // and the release that closed the ⋯ menu never zooms either.
+    if (wasClick && !suppressed && window.matchMedia("(pointer: fine)").matches) {
+      applyZoom(zoom > MIN_ZOOM ? MIN_ZOOM : CLICK_ZOOM_LEVEL);
+    }
   }
 
   function cancelDrag() {
@@ -89,7 +107,19 @@ export function ImageLightbox({ url, filename, onClose, actions }: Props) {
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/90" onMouseDown={onClose} role="presentation">
+    <div
+      className="fixed inset-0 z-50 flex flex-col bg-black/90"
+      // Any click inside the viewer stops HERE - portaled as it is, the
+      // click would otherwise keep bubbling through the React tree to the
+      // message bubble's tap-to-select and open the action sheet on top
+      // of the viewer.
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={() => {
+        if (menuOpen) return; // outside taps close only the menu
+        onClose();
+      }}
+      role="presentation"
+    >
       <div className="flex items-center justify-between gap-2 p-3" onMouseDown={(e) => e.stopPropagation()}>
         <p className="truncate text-sm text-white/80">{filename}</p>
         <div className="flex shrink-0 items-center gap-1">
@@ -128,7 +158,9 @@ export function ImageLightbox({ url, filename, onClose, actions }: Props) {
           >
             <Download size={18} aria-hidden />
           </a>
-          {actions && <LightboxActionsMenu actions={actions} onCloseViewer={onClose} />}
+          {actions && (
+            <LightboxActionsMenu actions={actions} onCloseViewer={onClose} onMenuOpenChange={setMenuOpen} />
+          )}
           <button
             type="button"
             onClick={onClose}

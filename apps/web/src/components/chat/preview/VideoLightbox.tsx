@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Download, X } from "lucide-react";
 import { LightboxActionsMenu, type ViewerActions } from "./LightboxActionsMenu.js";
 
@@ -15,6 +15,9 @@ interface Props {
  * selected, and clicking the empty area around the player closes the view. */
 export function VideoLightbox({ url, filename, onClose, onError, actions }: Props) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  // While the ⋯ menu is open, the backdrop stays inert so an outside tap
+  // closes only the menu, not the whole viewer.
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -40,7 +43,14 @@ export function VideoLightbox({ url, filename, onClose, onError, actions }: Prop
       aria-modal="true"
       aria-label={`View video ${filename}`}
       className="fixed inset-0 z-50 flex flex-col bg-black/90"
-      onMouseDown={onClose}
+      // Same portaling fix as the image viewer: clicks stay inside the
+      // viewer instead of bubbling through the React tree to the message
+      // bubble's tap-to-select.
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={() => {
+        if (menuOpen) return;
+        onClose();
+      }}
     >
       <header className="flex items-center justify-between gap-2 p-3" onMouseDown={(event) => event.stopPropagation()}>
         <p className="min-w-0 truncate text-sm text-white/80">{filename}</p>
@@ -53,7 +63,9 @@ export function VideoLightbox({ url, filename, onClose, onError, actions }: Prop
           >
             <Download size={18} aria-hidden />
           </a>
-          {actions && <LightboxActionsMenu actions={actions} onCloseViewer={onClose} />}
+          {actions && (
+            <LightboxActionsMenu actions={actions} onCloseViewer={onClose} onMenuOpenChange={setMenuOpen} />
+          )}
           <button
             ref={closeRef}
             type="button"
