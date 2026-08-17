@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -135,6 +136,11 @@ export function MessageBubble({
   } | null>(null);
   const longPressTimer = useRef<number | null>(null);
   const suppressClickRef = useRef(false);
+  // The quick-react bar floats below the bubble - unless the bubble is the
+  // very last thing in the thread, where a below-bar would fall past the
+  // scroller's content edge and be clipped away entirely; then it flips
+  // above the bubble instead.
+  const [barAbove, setBarAbove] = useState(false);
 
   useEffect(() => {
     if (!selected) return;
@@ -182,6 +188,26 @@ export function MessageBubble({
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
+  }, [selected]);
+
+  // Measured before the first paint of the selection: the bar (~44px tall
+  // plus its 6px offset) must fit below the bubble INSIDE the messages
+  // scroller. The scroller clips absolutely-positioned descendants at its
+  // visible bottom edge regardless of scroll position, so anything past
+  // that edge is off-screen and the bar flips above the bubble instead.
+  useLayoutEffect(() => {
+    if (!selected) return;
+    const group = groupRef.current;
+    if (!group) return;
+    const row = group.querySelector<HTMLElement>("div.relative");
+    let scroller: HTMLElement | null = group.parentElement;
+    while (scroller && !/(auto|scroll)/.test(getComputedStyle(scroller).overflowY)) {
+      scroller = scroller.parentElement;
+    }
+    const rowRect = row?.getBoundingClientRect();
+    const scrollerRect = scroller?.getBoundingClientRect();
+    if (!rowRect || !scrollerRect) return;
+    setBarAbove(rowRect.bottom + 52 > scrollerRect.bottom);
   }, [selected]);
 
   useEffect(() => {
@@ -405,11 +431,12 @@ export function MessageBubble({
   const quickReactBar = selected && canShowActions && (
     <div
       data-message-sheet
-      // Below the bubble, not above: the action sheet now covers the top
-      // of the screen, so an above-the-bubble bar on a high message would
-      // be hidden under it.
+      // Below the bubble normally; flips above when the bubble sits at the
+      // very bottom of the thread and a below-bar would be clipped off
+      // the end of the scrollable content.
       className={clsx(
-        "absolute top-full z-[60] mt-1.5 flex items-center gap-0.5 rounded-full border border-[var(--border)] bg-[var(--surface-raised)] px-1.5 py-1 shadow-lg",
+        "absolute z-[60] flex items-center gap-0.5 rounded-full border border-[var(--border)] bg-[var(--surface-raised)] px-1.5 py-1 shadow-lg",
+        barAbove ? "bottom-full mb-1.5" : "top-full mt-1.5",
         isOwn ? "right-0" : "left-0",
       )}
     >
@@ -512,11 +539,25 @@ export function MessageBubble({
             </div>
           ) : (
             <>
-              {/* Touch: the action icons cluster on the left (generous
-                  spacing), the X alone on the far right - never mixed in
-                  with the actions it cancels. */}
+              {/* Touch: the X alone on the LEFT, the action icons clustered
+                  on the RIGHT with generous spacing. */}
               <div className="flex items-center overflow-x-auto px-2 py-1.5 md:hidden">
-                <div className="flex shrink-0 items-center gap-2">
+                {(() => {
+                  const cancel = sheetItems.find((item) => item.key === "cancel");
+                  if (!cancel) return null;
+                  return (
+                    <button
+                      type="button"
+                      aria-label={cancel.label}
+                      title={cancel.label}
+                      onClick={cancel.onClick}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--text)] hover:bg-[var(--surface-muted)]"
+                    >
+                      {cancel.icon}
+                    </button>
+                  );
+                })()}
+                <div className="ml-auto flex shrink-0 items-center gap-2">
                   {sheetItems
                     .filter((item) => item.key !== "cancel")
                     .map((item) => (
@@ -535,21 +576,6 @@ export function MessageBubble({
                       </button>
                     ))}
                 </div>
-                {(() => {
-                  const cancel = sheetItems.find((item) => item.key === "cancel");
-                  if (!cancel) return null;
-                  return (
-                    <button
-                      type="button"
-                      aria-label={cancel.label}
-                      title={cancel.label}
-                      onClick={cancel.onClick}
-                      className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--text)] hover:bg-[var(--surface-muted)]"
-                    >
-                      {cancel.icon}
-                    </button>
-                  );
-                })()}
               </div>
               <div className="hidden p-2 md:block">
                 {sheetItems.map((item) => (
