@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 import {
@@ -30,6 +30,7 @@ import { detectTextLanguage, DOCX_MIMETYPE, isCsv, isMarkdown, resolveFileMimety
 import { useToast } from "../../context/ToastContext.js";
 import { VideoPreviewTile } from "../common/VideoPreviewTile.js";
 import { useTouchUi } from "./TapMessageHint.js";
+import type { ViewerActions } from "./preview/LightboxActionsMenu.js";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -71,6 +72,12 @@ interface Props {
    *  bubble wrapper - the standalone layout gives each photo its own
    *  rounded frame instead of one rectangle around the whole group. */
   standalone?: boolean;
+  /** The message action sheet's Download row bumps this counter - the
+   *  attachment then decrypts and triggers the browser download, showing
+   *  its own progress card while it works. */
+  downloadRequest?: number;
+  /** Reply/react/edit/delete, shown in the full-screen viewers' ⋯ menu. */
+  viewerActions?: ViewerActions;
 }
 
 type LoadState =
@@ -100,6 +107,7 @@ function CompactFileCard({
   action,
   onClick,
   disabled = false,
+  inert = false,
 }: {
   mimetype: string;
   filename: string;
@@ -107,7 +115,26 @@ function CompactFileCard({
   action: string;
   onClick: () => void;
   disabled?: boolean;
+  /** Touch screens render the card as a plain div: the tap must fall
+   *  through to the bubble's tap-to-select instead of being swallowed by
+   *  a button (which the bubble's tap handler ignores). */
+  inert?: boolean;
 }) {
+  const body = (
+    <>
+      <IconForMime mimetype={mimetype} filename={filename} />
+      <span className="min-w-0 flex-1 truncate">{filename}</span>
+      <span className="shrink-0 text-xs opacity-70">{formatBytes(size)}</span>
+      {!inert && <span className="shrink-0 text-xs underline">{action}</span>}
+    </>
+  );
+  if (inert) {
+    return (
+      <div className="flex w-full min-w-0 max-w-full items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-left text-sm">
+        {body}
+      </div>
+    );
+  }
   return (
     <button
       type="button"
@@ -115,10 +142,7 @@ function CompactFileCard({
       disabled={disabled}
       className="flex w-full min-w-0 max-w-full items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-left text-sm hover:ring-1 hover:ring-inset hover:ring-[var(--border-strong)] disabled:opacity-60"
     >
-      <IconForMime mimetype={mimetype} filename={filename} />
-      <span className="min-w-0 flex-1 truncate">{filename}</span>
-      <span className="shrink-0 text-xs opacity-70">{formatBytes(size)}</span>
-      <span className="shrink-0 text-xs underline">{action}</span>
+      {body}
     </button>
   );
 }
@@ -148,11 +172,18 @@ function DocumentPreviewContent({
   );
 }
 
-export function AttachmentPreview({ attachment, conversationKey, downloadUrl, standalone = false }: Props) {
+export function AttachmentPreview({
+  attachment,
+  conversationKey,
+  downloadUrl,
+  standalone = false,
+  downloadRequest = 0,
+  viewerActions,
+}: Props) {
   const { showToast } = useToast();
-  // On touch/small screens the lightbox panes for documents are cramped
-  // and buggy, so every non-visual format downloads directly instead -
-  // only images/videos (and audio, which is a plain player) preview.
+  // On touch/small screens the file cards are inert: tapping them selects
+  // the message (the bubble's own tap target) and the action sheet offers
+  // Download per file - no viewer, no auto-download from the card itself.
   const touchUi = useTouchUi();
   const [state, setState] = useState<LoadState>({ kind: "idle" });
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -236,8 +267,23 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl, st
   );
 
   useEffect(() => {
-    if (meta && kind !== "binary" && !isTextDocument && state.kind === "idle") void load();
-  }, [kind, isTextDocument, load, meta, state.kind]);
+    // Images, videos, and audio preview everywhere; other kinds eager-load
+    // only on desktop, where their cards actually open something. On touch
+    // those cards are inert until a Download action asks for the bytes.
+    const visual = kind === "image" || kind === "video" || kind === "audio";
+    if (meta && kind !== "binary" && !isTextDocument && (visual || !touchUi) && state.kind === "idle") void load();
+  }, [kind, isTextDocument, load, meta, state.kind, touchUi]);
+
+  // The sheet's Download action for this attachment: decrypt and hand the
+  // file to the browser. The ref guards against the effect re-firing on a
+  // load() identity change and downloading the same request twice.
+  const handledDownloadRequest = useRef(0);
+  useEffect(() => {
+    if (downloadRequest > 0 && downloadRequest !== handledDownloadRequest.current) {
+      handledDownloadRequest.current = downloadRequest;
+      void load(true);
+    }
+  }, [downloadRequest, load]);
 
   const loadedUrl = state.kind === "loaded" ? state.url : null;
   useEffect(
@@ -283,7 +329,12 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl, st
               a position:fixed viewer, breaking its close button mid-press. */}
           {lightboxOpen &&
             createPortal(
-              <ImageLightbox url={state.url} filename={meta.filename} onClose={() => setLightboxOpen(false)} />,
+              <ImageLightbox
+                url={state.url}
+                filename={meta.filename}
+                actions={viewerActions}
+                onClose={() => setLightboxOpen(false)}
+              />,
               document.body,
             )}
         </>
@@ -306,6 +357,7 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl, st
               <VideoLightbox
                 url={state.url}
                 filename={meta.filename}
+                actions={viewerActions}
                 onClose={() => setLightboxOpen(false)}
                 onError={showVideoError}
               />,
@@ -327,20 +379,30 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl, st
     if (kind === "pdf") {
       return (
         <div>
-          <button
-            type="button"
-            onClick={() => (touchUi ? void load(true) : setDocumentOpen(true))}
-            className="flex w-full items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-left text-[var(--text)] hover:ring-1 hover:ring-inset hover:ring-[var(--border-strong)]"
-          >
-            <FileText size={28} aria-hidden />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-semibold">{meta.filename}</span>
-              <span className="block text-xs text-[var(--text-muted)]">
-                {touchUi ? "PDF document · Tap to download" : "PDF document · Open full preview"}
+          {touchUi ? (
+            // Inert on touch: the tap selects the message, Download lives
+            // in the action sheet.
+            <div className="flex w-full items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-left text-[var(--text)]">
+              <FileText size={28} aria-hidden />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold">{meta.filename}</span>
+                <span className="block text-xs text-[var(--text-muted)]">PDF document</span>
               </span>
-            </span>
-            {touchUi ? <Download size={16} aria-hidden /> : <Maximize2 size={16} aria-hidden />}
-          </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setDocumentOpen(true)}
+              className="flex w-full items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-left text-[var(--text)] hover:ring-1 hover:ring-inset hover:ring-[var(--border-strong)]"
+            >
+              <FileText size={28} aria-hidden />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold">{meta.filename}</span>
+                <span className="block text-xs text-[var(--text-muted)]">PDF document · Open full preview</span>
+              </span>
+              <Maximize2 size={16} aria-hidden />
+            </button>
+          )}
           <PreviewFooter filename={meta.filename} size={meta.size} url={state.url} />
           {documentOpen &&
             createPortal(
@@ -358,10 +420,11 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl, st
             mimetype={state.mimetype}
             filename={meta.filename}
             size={meta.size}
-            // Touch/small screens skip the viewer entirely for documents:
-            // the tap downloads the decrypted file straight away.
-            action={touchUi ? "Download" : "Preview"}
-            onClick={() => (touchUi ? void load(true) : setDocumentOpen(true))}
+            action="Preview"
+            // Inert on touch: the tap selects the message instead, and
+            // the action sheet's Download row fetches the file.
+            inert={touchUi}
+            onClick={() => setDocumentOpen(true)}
           />
           <PreviewFooter filename={meta.filename} size={meta.size} url={state.url} />
           {documentOpen &&
@@ -442,10 +505,11 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl, st
       mimetype={meta.mimetype}
       filename={meta.filename}
       size={meta.size}
-      // Binary files always download; documents download on touch/small
-      // screens (no viewer there) and preview on desktop.
-      action={state.kind === "error" ? "Retry" : kind === "binary" || touchUi ? "Download" : "Preview"}
-      onClick={() => void load(kind === "binary" || touchUi, isTextDocument && !touchUi)}
+      // Desktop: binary files download, documents preview. Touch: the card
+      // is inert and the action sheet offers Download instead.
+      action={state.kind === "error" ? "Retry" : kind === "binary" ? "Download" : "Preview"}
+      inert={touchUi}
+      onClick={() => void load(kind === "binary", isTextDocument)}
       disabled={state.kind === "loading"}
     />
   );
