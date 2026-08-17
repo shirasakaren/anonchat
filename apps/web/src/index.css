@@ -178,6 +178,19 @@ select:disabled {
   word-break: break-word;
 }
 
+/* The sender's own bubble anchors its text right, but that must never leak
+   into structured content: right-aligning a list would pin its marker to
+   the left while shoving the item text to the right, scattering the two
+   apart. WhatsApp/Discord keep list items, blockquotes, and code
+   left-aligned in every bubble - the bubble itself still shrinks to the
+   longest item and wraps instead of stretching. */
+.prose-message ul,
+.prose-message ol,
+.prose-message blockquote,
+.prose-message pre {
+  text-align: left;
+}
+
 .prose-message a {
   /* Links render on the message bubble's own background (user or admin),
      which is a different color per-theme and not guaranteed to contrast
