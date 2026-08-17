@@ -1,6 +1,35 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const TAP_HINT_KEY = "anonchat:tapMessageHintDismissed";
+
+function detectTouchUi(): boolean {
+  return (
+    window.matchMedia("(pointer: coarse)").matches || !window.matchMedia("(min-width: 768px)").matches
+  );
+}
+
+/**
+ * Tap-to-select is a touch/small-screen pattern only. Desktop (mouse,
+ * wide window) keeps the bubble inert - ordinary selectable text - and
+ * uses the hover buttons plus the anchored dropdown instead. Detected via
+ * the coarse-pointer media query OR the sub-md width, and kept reactive
+ * for window resizes / dev-tools device emulation.
+ */
+export function useTouchUi(): boolean {
+  const [touchUi, setTouchUi] = useState(detectTouchUi);
+  useEffect(() => {
+    const coarse = window.matchMedia("(pointer: coarse)");
+    const narrow = window.matchMedia("(max-width: 767px)");
+    const update = () => setTouchUi(coarse.matches || narrow.matches);
+    coarse.addEventListener("change", update);
+    narrow.addEventListener("change", update);
+    return () => {
+      coarse.removeEventListener("change", update);
+      narrow.removeEventListener("change", update);
+    };
+  }, []);
+  return touchUi;
+}
 
 /**
  * One-time discoverability hint for the tap-a-message interaction: shown

@@ -36,6 +36,7 @@ import type { DisplayMessage } from "./types.js";
 import { PendingAttachmentTransfer } from "./PendingAttachmentTransfer.js";
 import { buildReplyPreviewInfo } from "./replyPreview.js";
 import { useToast } from "../../context/ToastContext.js";
+import { useTouchUi } from "./TapMessageHint.js";
 
 /** Slack/Discord-style: a message can carry a few link embeds/previews,
  *  not an unbounded wall of them if someone pastes a long list of URLs. */
@@ -106,9 +107,13 @@ export function MessageBubble({
 
   // Tap-to-select: a normal tap on a bubble highlights it, floats the
   // quick-react strip above it, and opens the action sheet. Tapping
-  // anywhere else dismisses it.
+  // anywhere else dismisses it. TOUCH/SMALL SCREENS ONLY - on desktop the
+  // bubble stays inert selectable text and the hover ⋯ opens an anchored
+  // dropdown instead.
+  const touchUi = useTouchUi();
   const [selected, setSelected] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
   const [swipeOffset, setSwipeOffset] = useState(0);
   const groupRef = useRef<HTMLDivElement>(null);
   const swipeState = useRef<{
@@ -155,6 +160,19 @@ export function MessageBubble({
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [reactionAnchor]);
 
+  // The desktop ⋯ dropdown closes on any outside mousedown; clicking the
+  // same trigger again toggles it (the trigger is excluded below).
+  useEffect(() => {
+    if (!menuRect) return;
+    function handleDown(e: MouseEvent) {
+      const target = e.target as Element | null;
+      if (target?.closest("[data-message-dropdown]") || target?.closest("[data-message-menu-trigger]")) return;
+      setMenuRect(null);
+    }
+    document.addEventListener("mousedown", handleDown);
+    return () => document.removeEventListener("mousedown", handleDown);
+  }, [menuRect]);
+
   function toggleReactionPicker(rect: DOMRect) {
     setReactionAnchor((prev) => (prev ? null : rect));
     setReactionExpanded(false);
@@ -190,10 +208,12 @@ export function MessageBubble({
       touch: e.pointerType !== "mouse",
     };
     // Long-press selects too (the fallback for photos, whose tap opens the
-    // full-screen viewer). Any movement cancels it. When it fires, the
+    // full-screen viewer) - touch screens only; a mouse hold on desktop
+    // must never select. Any movement cancels it. When it fires, the
     // trailing click (delivered on pointer-up) must be swallowed - on a
     // photo it would open the full-screen viewer right on top of the
     // action sheet the long-press just opened.
+    if (!touchUi) return;
     longPressTimer.current = window.setTimeout(() => {
       longPressTimer.current = null;
       navigator.vibrate?.(10);
@@ -367,9 +387,10 @@ export function MessageBubble({
   const messageActionsProps = {
     disableActions,
     reactionActive: reactionAnchor !== null,
+    menuOpen: menuRect !== null,
     onToggleReaction: toggleReactionPicker,
     onReply,
-    onOpenMenu: select,
+    onOpenMenu: (rect: DOMRect) => setMenuRect((prev) => (prev ? null : rect)),
   };
 
   const actionSheet =
@@ -468,7 +489,7 @@ export function MessageBubble({
             {isOwn && <HoverActions {...messageActionsProps} />}
             <div
               className={clsx("min-w-0 max-w-full space-y-2", selected && canShowActions && "rounded-2xl")}
-              onClick={handleTap}
+              onClick={touchUi ? handleTap : undefined}
             >
               {message.attachments.map((a) => (
                 <AttachmentPreview
@@ -502,7 +523,11 @@ export function MessageBubble({
             {isOwn && <HoverActions {...messageActionsProps} />}
 
             <div
-              onClick={handleTap}
+              // On touch/small screens the whole bubble is the tap target;
+              // on desktop it stays an inert, fully selectable text block
+              // (no cursor-pointer, no press animation) so text can be
+              // dragged and copied like anywhere else.
+              onClick={touchUi ? handleTap : undefined}
               className={clsx(
                 // min-w-0: this is a flex item (the row above is `flex`), and a
                 // flex item's default min-width is `auto` - i.e. it refuses to
@@ -510,7 +535,8 @@ export function MessageBubble({
                 // long unbroken string overrides max-w-[80%] entirely instead
                 // of wrapping, since the bubble never gets small enough for
                 // .prose-message's own overflow-wrap to kick in.
-                "min-w-0 max-w-full cursor-pointer overflow-hidden rounded-2xl px-3.5 py-2 text-sm shadow-sm transition-transform active:scale-[0.98]",
+                "min-w-0 max-w-full overflow-hidden rounded-2xl px-3.5 py-2 text-sm shadow-sm",
+                touchUi && "cursor-pointer transition-transform active:scale-[0.98]",
                 selected && canShowActions && "ring-2 ring-[var(--color-accent-500)]",
                 isOwn
                   ? "bg-[var(--bubble-user)] text-[var(--bubble-user-text)] text-right"
@@ -628,7 +654,108 @@ export function MessageBubble({
       )}
 
       {actionSheet}
+
+      {/* Desktop ⋯ dropdown: anchored to the button that opened it, no
+          backdrop, no blur - opens downward unless it would run off the
+          bottom of the screen, in which case it opens upward. */}
+      {menuRect &&
+        canShowActions &&
+        createPortal(
+          <MessageDropdown
+            anchorRect={menuRect}
+            items={[
+              { icon: <Reply size={15} aria-hidden />, label: "Reply", onClick: () => { setMenuRect(null); onReply(); } },
+              ...(message.text.trim().length > 0
+                ? [{ icon: <Copy size={15} aria-hidden />, label: "Copy", onClick: () => { setMenuRect(null); void copyText(); } }]
+                : []),
+              ...(isOwn && canEdit
+                ? [{ icon: <Pencil size={15} aria-hidden />, label: "Edit", onClick: () => { setMenuRect(null); onEdit(); } }]
+                : []),
+              {
+                icon: <Trash2 size={15} aria-hidden />,
+                label: "Delete",
+                destructive: true,
+                onClick: () => { setMenuRect(null); onDelete(); },
+              },
+            ]}
+            onClose={() => setMenuRect(null)}
+          />,
+          document.body,
+        )}
     </div>
+  );
+}
+
+interface DropdownItemSpec {
+  icon: ReactNode;
+  label: string;
+  destructive?: boolean;
+  onClick: () => void;
+}
+
+const DROPDOWN_WIDTH_PX = 184;
+const DROPDOWN_ITEM_HEIGHT_PX = 38;
+const DROPDOWN_PADDING_PX = 8;
+
+/**
+ * Small anchored action menu for the desktop hover ⋯ button. Clamped
+ * horizontally inside the viewport and flipped upward automatically when
+ * there isn't enough room below the anchor.
+ */
+function MessageDropdown({
+  anchorRect,
+  items,
+  onClose,
+}: {
+  anchorRect: DOMRect;
+  items: DropdownItemSpec[];
+  onClose: () => void;
+}) {
+  // +1 row for the Cancel entry at the bottom.
+  const estimatedHeight = (items.length + 1) * DROPDOWN_ITEM_HEIGHT_PX + DROPDOWN_PADDING_PX;
+  const left = Math.min(
+    Math.max(8, anchorRect.right - DROPDOWN_WIDTH_PX),
+    window.innerWidth - DROPDOWN_WIDTH_PX - 8,
+  );
+  const opensDown = anchorRect.bottom + 8 + estimatedHeight <= window.innerHeight;
+  const top = opensDown ? anchorRect.bottom + 8 : Math.max(8, anchorRect.top - estimatedHeight - 8);
+
+  return createPortal(
+    <div
+      data-message-dropdown
+      role="menu"
+      aria-label="Message actions"
+      className="fixed z-50 w-[184px] overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] py-1 shadow-xl"
+      style={{ top, left }}
+    >
+      {items.map((item) => (
+        <button
+          key={item.label}
+          type="button"
+          role="menuitem"
+          onClick={item.onClick}
+          className={clsx(
+            "flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-[var(--surface-muted)]",
+            item.destructive ? "text-[var(--danger-fg)]" : "text-[var(--text)]",
+          )}
+        >
+          <span className="shrink-0 opacity-80">{item.icon}</span>
+          {item.label}
+        </button>
+      ))}
+      <button
+        type="button"
+        role="menuitem"
+        onClick={onClose}
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-[var(--text-muted)] hover:bg-[var(--surface-muted)]"
+      >
+        <span className="shrink-0 opacity-80">
+          <X size={15} aria-hidden />
+        </span>
+        Cancel
+      </button>
+    </div>,
+    document.body,
   );
 }
 
@@ -666,15 +793,17 @@ function SheetAction({
 function HoverActions({
   disableActions,
   reactionActive,
+  menuOpen,
   onToggleReaction,
   onReply,
   onOpenMenu,
 }: {
   disableActions: boolean;
   reactionActive: boolean;
+  menuOpen: boolean;
   onToggleReaction: (rect: DOMRect) => void;
   onReply: () => void;
-  onOpenMenu: () => void;
+  onOpenMenu: (rect: DOMRect) => void;
 }) {
   return (
     <div className="hidden gap-0.5 transition-opacity md:flex md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
@@ -701,10 +830,12 @@ function HoverActions({
       </button>
       <button
         type="button"
+        data-message-menu-trigger
         title="More options"
         aria-label="More options"
+        aria-expanded={menuOpen}
         disabled={disableActions}
-        onClick={onOpenMenu}
+        onClick={(e) => onOpenMenu(e.currentTarget.getBoundingClientRect())}
         className="rounded p-1.5 text-xs hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
       >
         <EllipsisVertical size={14} aria-hidden />
