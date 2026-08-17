@@ -16,7 +16,7 @@ import {
 import { decryptBlob, XCHACHA_NONCE_BYTES } from "@anonchat/crypto";
 import type { AttachmentDto } from "@anonchat/shared";
 import { decryptAttachmentMeta, toBlobPart } from "../../crypto/conversationCrypto.js";
-import { getCachedAttachment, putCachedAttachment } from "../../crypto/attachmentCache.js";
+import { deleteCachedAttachments, getCachedAttachment, putCachedAttachment } from "../../crypto/attachmentCache.js";
 import { CsvPreview } from "./preview/CsvPreview.js";
 import { DocumentLightbox } from "./preview/DocumentLightbox.js";
 import { DocxPreview } from "./preview/DocxPreview.js";
@@ -29,6 +29,7 @@ import { readResponseBytes } from "./preview/readResponseBytes.js";
 import { detectTextLanguage, DOCX_MIMETYPE, isCsv, isMarkdown, resolveFileMimetype } from "./preview/textFileTypes.js";
 import { useToast } from "../../context/ToastContext.js";
 import { VideoPreviewTile } from "../common/VideoPreviewTile.js";
+import { useTouchUi } from "./TapMessageHint.js";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -149,6 +150,10 @@ function DocumentPreviewContent({
 
 export function AttachmentPreview({ attachment, conversationKey, downloadUrl, standalone = false }: Props) {
   const { showToast } = useToast();
+  // On touch/small screens the lightbox panes for documents are cramped
+  // and buggy, so every non-visual format downloads directly instead -
+  // only images/videos (and audio, which is a plain player) preview.
+  const touchUi = useTouchUi();
   const [state, setState] = useState<LoadState>({ kind: "idle" });
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [documentOpen, setDocumentOpen] = useState(false);
@@ -157,35 +162,57 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl, st
     [attachment.meta, conversationKey],
   );
   const kind = meta ? previewKind(meta.mimetype, meta.filename) : "binary";
+  const isTextDocument = kind === "docx" || kind === "csv" || kind === "markdown" || kind === "text";
 
   const load = useCallback(
     async (downloadAfterLoad = false, openDocumentAfterLoad = false) => {
       if (!meta) return;
       setState({ kind: "loading", progress: 0 });
       try {
-        // The ciphertext cache (see attachmentCache.ts) serves repeat views
-        // from disk - no network round trip, no download rate limit.
-        const cached = await getCachedAttachment(attachment.id, attachment.sizeBytes);
-        let raw: Uint8Array<ArrayBuffer>;
-        if (cached) {
-          raw = cached;
-        } else {
+        const fetchRaw = async (): Promise<Uint8Array<ArrayBuffer>> => {
           const response = await fetch(downloadUrl, { credentials: "include" });
           if (response.status === 429) {
             throw new Error("Too many attachments were downloaded at once. Wait a moment and try again.");
           }
+          if (response.status === 404) {
+            throw new Error("This attachment is no longer stored on the server.");
+          }
           if (!response.ok) {
             throw new Error(`The server returned HTTP ${response.status} while downloading this file.`);
           }
-          raw = await readResponseBytes(response, attachment.sizeBytes, (progress) => {
+          const raw = await readResponseBytes(response, attachment.sizeBytes, (progress) => {
             setState({ kind: "loading", progress });
           });
           if (raw.byteLength < XCHACHA_NONCE_BYTES) {
             throw new Error("The stored file for this attachment is empty or damaged and cannot be decrypted.");
           }
           void putCachedAttachment(attachment.id, attachment.sizeBytes, raw);
+          return raw;
+        };
+        const decrypt = (raw: Uint8Array<ArrayBuffer>) => toBlobPart(decryptBlob(conversationKey, raw));
+
+        // The ciphertext cache (see attachmentCache.ts) serves repeat views
+        // from disk - no network round trip, no download rate limit. A
+        // cached copy that no longer decrypts (truncated write, changed
+        // key) must not brick the attachment: drop the row and refetch.
+        let raw = await getCachedAttachment(attachment.id, attachment.sizeBytes);
+        let plaintext: Uint8Array<ArrayBuffer> | null = null;
+        if (raw) {
+          try {
+            plaintext = decrypt(raw);
+          } catch {
+            await deleteCachedAttachments([attachment.id]);
+            raw = null;
+          }
         }
-        const plaintext = toBlobPart(decryptBlob(conversationKey, raw));
+        if (!raw) raw = await fetchRaw();
+        if (!plaintext) {
+          try {
+            plaintext = decrypt(raw);
+          } catch {
+            throw new Error("This attachment's stored data is damaged and could not be decrypted.");
+          }
+        }
         const mimetype = resolveFileMimetype(meta.mimetype, meta.filename);
         const blob = new Blob([plaintext], { type: mimetype });
         const url = URL.createObjectURL(blob);
@@ -209,9 +236,8 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl, st
   );
 
   useEffect(() => {
-    const isTextDocument = kind === "docx" || kind === "csv" || kind === "markdown" || kind === "text";
     if (meta && kind !== "binary" && !isTextDocument && state.kind === "idle") void load();
-  }, [kind, load, meta, state.kind]);
+  }, [kind, isTextDocument, load, meta, state.kind]);
 
   const loadedUrl = state.kind === "loaded" ? state.url : null;
   useEffect(
@@ -303,15 +329,17 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl, st
         <div>
           <button
             type="button"
-            onClick={() => setDocumentOpen(true)}
+            onClick={() => (touchUi ? void load(true) : setDocumentOpen(true))}
             className="flex w-full items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-left text-[var(--text)] hover:ring-1 hover:ring-inset hover:ring-[var(--border-strong)]"
           >
             <FileText size={28} aria-hidden />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-semibold">{meta.filename}</span>
-              <span className="block text-xs text-[var(--text-muted)]">PDF document · Open full preview</span>
+              <span className="block text-xs text-[var(--text-muted)]">
+                {touchUi ? "PDF document · Tap to download" : "PDF document · Open full preview"}
+              </span>
             </span>
-            <Maximize2 size={16} aria-hidden />
+            {touchUi ? <Download size={16} aria-hidden /> : <Maximize2 size={16} aria-hidden />}
           </button>
           <PreviewFooter filename={meta.filename} size={meta.size} url={state.url} />
           {documentOpen &&
@@ -323,15 +351,17 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl, st
       );
     }
 
-    if (kind === "docx" || kind === "csv" || kind === "markdown" || kind === "text") {
+    if (isTextDocument) {
       return (
         <div className="min-w-0 max-w-full overflow-hidden">
           <CompactFileCard
             mimetype={state.mimetype}
             filename={meta.filename}
             size={meta.size}
-            action="Preview"
-            onClick={() => setDocumentOpen(true)}
+            // Touch/small screens skip the viewer entirely for documents:
+            // the tap downloads the decrypted file straight away.
+            action={touchUi ? "Download" : "Preview"}
+            onClick={() => (touchUi ? void load(true) : setDocumentOpen(true))}
           />
           <PreviewFooter filename={meta.filename} size={meta.size} url={state.url} />
           {documentOpen &&
@@ -363,8 +393,6 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl, st
       </a>
     );
   }
-
-  const isTextDocument = kind === "docx" || kind === "csv" || kind === "markdown" || kind === "text";
 
   if (state.kind === "loading" && isTextDocument) {
     return (
@@ -414,8 +442,10 @@ export function AttachmentPreview({ attachment, conversationKey, downloadUrl, st
       mimetype={meta.mimetype}
       filename={meta.filename}
       size={meta.size}
-      action={state.kind === "error" ? "Retry" : kind === "binary" ? "Download" : "Preview"}
-      onClick={() => void load(kind === "binary", isTextDocument)}
+      // Binary files always download; documents download on touch/small
+      // screens (no viewer there) and preview on desktop.
+      action={state.kind === "error" ? "Retry" : kind === "binary" || touchUi ? "Download" : "Preview"}
+      onClick={() => void load(kind === "binary" || touchUi, isTextDocument && !touchUi)}
       disabled={state.kind === "loading"}
     />
   );
