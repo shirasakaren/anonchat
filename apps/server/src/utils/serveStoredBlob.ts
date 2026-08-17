@@ -1,7 +1,18 @@
+import { XCHACHA_NONCE_BYTES } from "@anonchat/crypto";
 import type { FastifyReply } from "fastify";
 import type { StorageAdapter } from "../storage/types.js";
 import { Errors } from "./errors.js";
 import { getCachedBlob, MAX_ENTRY_BYTES, putCachedBlob } from "./blobCache.js";
+
+/**
+ * Every stored attachment blob is at least nonce + AEAD tag, so anything
+ * shorter than the nonce was never a valid encrypted file (a truncated or
+ * zero-byte write). Serving it would end in the client's "empty or
+ * damaged" decrypt error - report it as missing instead.
+ */
+function isUndecryptable(size: number): boolean {
+  return size < XCHACHA_NONCE_BYTES;
+}
 
 /**
  * Shared download path for stored attachment/asset blobs. Three layers:
@@ -20,7 +31,7 @@ export async function serveStoredBlob(options: {
   const { storage, storageKey, reply } = options;
 
   const cached = getCachedBlob(storageKey);
-  if (cached) {
+  if (cached && !isUndecryptable(cached.byteLength)) {
     reply
       .header("Content-Type", "application/octet-stream")
       .header("Content-Disposition", "attachment")
@@ -31,7 +42,7 @@ export async function serveStoredBlob(options: {
   }
 
   const info = await storage.stat(storageKey);
-  if (!info) {
+  if (!info || isUndecryptable(info.size)) {
     throw Errors.notFound("This attachment is no longer stored on the server.");
   }
 
