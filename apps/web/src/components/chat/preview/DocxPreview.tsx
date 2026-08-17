@@ -103,8 +103,10 @@ export function DocxPreview({ bytes, fullScreen = false }: Props) {
       )}
       <div
         ref={containerRef}
-        className={`docx-preview w-full min-w-0 max-w-full overflow-auto overscroll-contain ${
-          fullScreen ? "min-h-full" : "max-h-96"
+        // Same scroller split as TextCodePreview: the lightbox pane scrolls
+        // the pages vertically; inline in a bubble this div scrolls itself.
+        className={`docx-preview w-full min-w-0 max-w-full ${
+          fullScreen ? "min-h-full overflow-x-auto" : "max-h-96 overflow-auto overscroll-contain"
         }`}
       />
     </div>

@@ -14,7 +14,10 @@ export function MarkdownPreview({ bytes, fullScreen = false }: Props) {
 
   return (
     <div
-      className={`prose-message w-full min-w-0 max-w-full overflow-auto overscroll-contain rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 text-[var(--text)] ${fullScreen ? "min-h-full" : "max-h-80"}`}
+      // Same scroller split as TextCodePreview: inside the lightbox the
+      // pane scrolls (this div just grows, keeping overflow-x for wide
+      // tables); inline in a bubble this div scrolls itself, capped.
+      className={`prose-message w-full min-w-0 max-w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 text-[var(--text)] ${fullScreen ? "min-h-full overflow-x-auto" : "max-h-80 overflow-auto overscroll-contain"}`}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

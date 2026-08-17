@@ -115,7 +115,10 @@ export function DocumentLightbox({ filename, url, onClose, children, pdf = false
         ) : (
           <div
             ref={scrollRef}
-            className="min-h-0 min-w-0 max-w-full flex-1 overflow-auto bg-[var(--surface)] p-3 sm:p-6"
+            // The one true scroller for the whole file. overscroll-contain
+            // keeps the scroll inside this pane (no chaining into the chat
+            // page behind the overlay when the file's end is reached).
+            className="min-h-0 min-w-0 max-w-full flex-1 overflow-auto overscroll-contain bg-[var(--surface)] p-3 sm:p-6"
           >
             <div className="mx-auto w-full min-w-0 max-w-5xl overflow-hidden" style={{ zoom }}>
               {children}

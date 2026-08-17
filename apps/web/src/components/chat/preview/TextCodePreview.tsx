@@ -38,7 +38,13 @@ export function TextCodePreview({ bytes, language, fullScreen = false }: Props) 
 
   return (
     <pre
-      className={`prose-message m-0 w-full min-w-0 max-w-full overflow-auto overscroll-contain rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-xs text-[var(--text)] ${fullScreen ? "min-h-full" : "max-h-80"}`}
+      // In the lightbox the surrounding pane is the one true scroll
+      // container: this pre must stay a plain growing block (overflow-x
+      // only, for long code lines) - an overflow-auto box here would
+      // otherwise trap wheel/touch scrolling with its overscroll-contain
+      // and the file could never be scrolled past the first screen.
+      // Inline in a bubble it is the scroller itself, capped at max-h-80.
+      className={`prose-message m-0 w-full min-w-0 max-w-full rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-xs text-[var(--text)] ${fullScreen ? "min-h-full overflow-x-auto" : "max-h-80 overflow-auto overscroll-contain"}`}
     >
       {content.html === null ? (
         <code className={`block min-w-max language-${language}`}>{content.text}</code>

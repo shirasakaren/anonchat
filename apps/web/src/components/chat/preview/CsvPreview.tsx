@@ -90,7 +90,10 @@ export function CsvPreview({ bytes, fullScreen = false }: Props) {
 
   return (
     <div
-      className={`w-full min-w-0 max-w-full overflow-auto overscroll-contain rounded-lg border border-[var(--border)] text-[var(--text)] ${fullScreen ? "min-h-full" : "max-h-96"}`}
+      // Same scroller split as TextCodePreview: the lightbox pane scrolls
+      // vertically (overflow-x keeps wide tables scrollable); inline in a
+      // bubble this div scrolls itself, capped at max-h-96.
+      className={`w-full min-w-0 max-w-full rounded-lg border border-[var(--border)] text-[var(--text)] ${fullScreen ? "min-h-full overflow-x-auto" : "max-h-96 overflow-auto overscroll-contain"}`}
     >
       <table className="w-max min-w-full border-collapse text-xs">
         <thead className="sticky top-0 bg-[var(--surface-muted)]">
