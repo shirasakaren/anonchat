@@ -69,8 +69,9 @@ describe("serveStoredBlob", () => {
     [0, "zero-byte object"],
     [10, "truncated object"],
     [23, "one byte short of a nonce"],
-  ])("404s a %s (%s) instead of serving an undecryptable blob", async (_size, _label) => {
+  ])("404s a %s (%s) instead of serving an undecryptable blob", async (_size, label) => {
     const size = _size as number;
+    void label; // used by the %s in the test name above
     const reply = fakeReply();
     const storage = fakeStorage({ "attachments/broken": Buffer.alloc(size, 3) });
     await expect(
