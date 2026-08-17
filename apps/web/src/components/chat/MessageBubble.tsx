@@ -39,13 +39,11 @@ import { buildReplyPreviewInfo } from "./replyPreview.js";
 import { useToast } from "../../context/ToastContext.js";
 import { useTouchUi } from "./TapMessageHint.js";
 import type { ViewerActions } from "./preview/LightboxActionsMenu.js";
+import { QUICK_REACTIONS } from "./quickReactions.js";
 
 /** Slack/Discord-style: a message can carry a few link embeds/previews,
  *  not an unbounded wall of them if someone pastes a long list of URLs. */
 const MAX_EMBEDS_PER_MESSAGE = 3;
-
-/** The quick-react strip shown above the selected message. */
-const QUICK_REACTIONS = ["😄", "❤️", "👍", "😂", "😮"];
 
 /** Hold this long (without moving) to select a message - a fallback for
  *  photos, where a tap opens the full-screen viewer. Never the only way:
@@ -57,6 +55,11 @@ const SWIPE_START_PX = 12;
 const SWIPE_REPLY_PX = 64;
 /** The bubble tracks the finger up to this offset while swiping. */
 const SWIPE_MAX_PX = 96;
+/** How long after a dismissal the trailing click of the same tap stays
+ *  swallowed - long enough for mousedown→mouseup→click (a few ms in the
+ *  same pointer action), short enough that a deliberate second tap always
+ *  selects normally. */
+const TAP_DISMISS_BRIDGE_MS = 150;
 
 interface Props {
   message: DisplayMessage;
@@ -140,11 +143,37 @@ export function MessageBubble({
       // The sheet is portaled to document.body: clicks on it carry the
       // marker below and must not dismiss the selection.
       if (target?.closest("[data-message-sheet]")) return;
-      if (groupRef.current && !groupRef.current.contains(target)) setSelected(false);
+      if (groupRef.current && !groupRef.current.contains(target)) {
+        // The trailing click of this very same tap must be swallowed too
+        // (see the capture listener below) - record the bridge window.
+        suppressUntilRef.current = performance.now() + TAP_DISMISS_BRIDGE_MS;
+        setSelected(false);
+      }
     }
     document.addEventListener("mousedown", handleDown);
     return () => document.removeEventListener("mousedown", handleDown);
   }, [selected]);
+
+  // While the sheet is open, a tap outside it must ONLY dismiss - never
+  // open whatever it landed on (an image viewer, a file download, another
+  // bubble's selection). Mounted for the bubble's whole lifetime: the
+  // dismissal re-render above must not tear this down between the
+  // mousedown and the click of the same tap, so the check runs against a
+  // ref plus a short bridge window after the dismissal.
+  const selectedRef = useRef(false);
+  selectedRef.current = selected;
+  const suppressUntilRef = useRef(0);
+  useEffect(() => {
+    function handleClickCapture(e: MouseEvent) {
+      const target = e.target as Element | null;
+      if (target?.closest("[data-message-sheet]")) return;
+      if (!selectedRef.current && performance.now() > suppressUntilRef.current) return;
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    document.addEventListener("click", handleClickCapture, true);
+    return () => document.removeEventListener("click", handleClickCapture, true);
+  }, []);
 
   useEffect(() => {
     if (!selected) return;
@@ -483,22 +512,44 @@ export function MessageBubble({
             </div>
           ) : (
             <>
-              <div className="flex items-center gap-0.5 overflow-x-auto px-2 py-1.5 md:hidden">
-                {sheetItems.map((item) => (
-                  <button
-                    key={item.key}
-                    type="button"
-                    aria-label={item.label}
-                    title={item.label}
-                    onClick={item.onClick}
-                    className={clsx(
-                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl hover:bg-[var(--surface-muted)]",
-                      item.destructive ? "text-[var(--danger-fg)]" : "text-[var(--text)]",
-                    )}
-                  >
-                    {item.icon}
-                  </button>
-                ))}
+              {/* Touch: the action icons cluster on the left (generous
+                  spacing), the X alone on the far right - never mixed in
+                  with the actions it cancels. */}
+              <div className="flex items-center overflow-x-auto px-2 py-1.5 md:hidden">
+                <div className="flex shrink-0 items-center gap-2">
+                  {sheetItems
+                    .filter((item) => item.key !== "cancel")
+                    .map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        aria-label={item.label}
+                        title={item.label}
+                        onClick={item.onClick}
+                        className={clsx(
+                          "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl hover:bg-[var(--surface-muted)]",
+                          item.destructive ? "text-[var(--danger-fg)]" : "text-[var(--text)]",
+                        )}
+                      >
+                        {item.icon}
+                      </button>
+                    ))}
+                </div>
+                {(() => {
+                  const cancel = sheetItems.find((item) => item.key === "cancel");
+                  if (!cancel) return null;
+                  return (
+                    <button
+                      type="button"
+                      aria-label={cancel.label}
+                      title={cancel.label}
+                      onClick={cancel.onClick}
+                      className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--text)] hover:bg-[var(--surface-muted)]"
+                    >
+                      {cancel.icon}
+                    </button>
+                  );
+                })()}
               </div>
               <div className="hidden p-2 md:block">
                 {sheetItems.map((item) => (
@@ -521,7 +572,13 @@ export function MessageBubble({
   return (
     <div
       ref={groupRef}
-      className={clsx("group flex flex-col gap-1 [touch-action:pan-y]", isOwn ? "items-end" : "items-start")}
+      className={clsx(
+        "group flex flex-col gap-1 [touch-action:pan-y]",
+        isOwn ? "items-end" : "items-start",
+        // Selected messages float ABOVE the dim overlay (z-50): the bubble
+        // stays bright while the rest of the thread is behind the shade.
+        selected && canShowActions && "relative z-[60]",
+      )}
       // A transform is applied ONLY while the finger is actually swiping.
       // An always-present (even identity) transform makes this div the
       // containing block for position:fixed descendants, which confined
