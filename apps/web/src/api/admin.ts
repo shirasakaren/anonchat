@@ -257,7 +257,7 @@ export function softDeleteConversation(id: string): Promise<void> {
 
 export function bulkConversationAction(
   ids: string[],
-  action: "archive" | "delete" | "block" | "unarchive",
+  action: "archive" | "delete" | "block" | "unarchive" | "unblock",
 ): Promise<void> {
   return api.post<void>("/admin/conversations/bulk", { ids, action });
 }

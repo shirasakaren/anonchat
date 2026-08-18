@@ -252,7 +252,7 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
     });
   }
 
-  async function runBulkAction(action: "archive" | "delete" | "block") {
+  async function runBulkAction(action: "archive" | "delete" | "block" | "unarchive" | "unblock") {
     const ids = [...selectedIds];
     if (ids.length === 0 || bulkBusy) return;
     setBulkBusy(true);
@@ -261,15 +261,23 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
       setSelectedIds(new Set());
       setBulkMode(false);
       setLiveToken((n) => n + 1);
-      const label = { archive: "archived", delete: "moved to trash", block: "blocked" }[action];
+      const label = {
+        archive: "archived",
+        unarchive: "unarchived",
+        delete: "moved to trash",
+        block: "blocked",
+        unblock: "unblocked",
+      }[action];
       showToast({
         title: `${ids.length} ${ids.length === 1 ? "conversation" : "conversations"} ${label}`,
         message: "",
+        tone: "success",
       });
     } catch (error) {
       showToast({
         title: "Bulk action failed",
         message: error instanceof Error ? error.message : "Please try again.",
+        tone: "error",
       });
     } finally {
       setBulkBusy(false);
@@ -340,7 +348,9 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
       {/* Select mode lives behind each row's dropdown ("Select" in the
           chevron menu), not in the filter bar. The bar below shows the
           running selection and the bulk actions, with Cancel in line with
-          Archive / Block / Delete. */}
+          Archive / Block / Delete. Archive and Block flip to Unarchive /
+          Unblock when EVERY selected conversation already carries that
+          status, so the button always performs the visible action. */}
       {bulkMode && (
         <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border)] px-3 py-2">
           <button
@@ -359,23 +369,32 @@ export function ConversationList({ selectedId, onSelect, refreshToken }: Props) 
               : `Select all (${selectedIds.size} selected)`}
           </button>
           <div className="ml-auto flex items-center gap-1.5">
-            <button
-              type="button"
-              disabled={selectedIds.size === 0 || bulkBusy}
-              onClick={() => void runBulkAction("archive")}
-              className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] px-2 py-1.5 text-xs hover:bg-[var(--surface-muted)] disabled:opacity-40"
-            >
-              <Archive size={13} aria-hidden />
-              Archive
-            </button>
-            <button
-              type="button"
-              disabled={selectedIds.size === 0 || bulkBusy}
-              onClick={() => void runBulkAction("block")}
-              className="rounded-md border border-[var(--border)] px-2 py-1.5 text-xs hover:bg-[var(--surface-muted)] disabled:opacity-40"
-            >
-              Block
-            </button>
+            {(() => {
+              const selected = conversations.filter((c) => selectedIds.has(c.id));
+              const allArchived = selected.length > 0 && selected.every((c) => c.status === "ARCHIVED");
+              const allBlocked = selected.length > 0 && selected.every((c) => c.status === "BLOCKED");
+              return (
+                <>
+                  <button
+                    type="button"
+                    disabled={selectedIds.size === 0 || bulkBusy}
+                    onClick={() => void runBulkAction(allArchived ? "unarchive" : "archive")}
+                    className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] px-2 py-1.5 text-xs hover:bg-[var(--surface-muted)] disabled:opacity-40"
+                  >
+                    <Archive size={13} aria-hidden />
+                    {allArchived ? "Unarchive" : "Archive"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={selectedIds.size === 0 || bulkBusy}
+                    onClick={() => void runBulkAction(allBlocked ? "unblock" : "block")}
+                    className="rounded-md border border-[var(--border)] px-2 py-1.5 text-xs hover:bg-[var(--surface-muted)] disabled:opacity-40"
+                  >
+                    {allBlocked ? "Unblock" : "Block"}
+                  </button>
+                </>
+              );
+            })()}
             <button
               type="button"
               disabled={selectedIds.size === 0 || bulkBusy}

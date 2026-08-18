@@ -61,6 +61,9 @@ export function registerAdminConversationRoutes(app: FastifyInstance): void {
         case "block":
           await setConversationStatus(id, "BLOCKED");
           break;
+        case "unblock":
+          await setConversationStatus(id, "ACTIVE");
+          break;
         case "delete":
           await softDeleteConversation(id);
           break;

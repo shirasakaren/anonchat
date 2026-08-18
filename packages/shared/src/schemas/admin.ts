@@ -231,6 +231,6 @@ export interface SiteSettingsDto {
 
 export const BulkConversationsRequestSchema = z.object({
   ids: z.array(CuidSchema).min(1).max(100),
-  action: z.enum(["archive", "delete", "block", "unarchive"]),
+  action: z.enum(["archive", "delete", "block", "unarchive", "unblock"]),
 });
 export type BulkConversationsRequestInput = z.infer<typeof BulkConversationsRequestSchema>;
