@@ -196,7 +196,7 @@ export function AttachmentPreview({
   const isTextDocument = kind === "docx" || kind === "csv" || kind === "markdown" || kind === "text";
 
   const load = useCallback(
-    async (downloadAfterLoad = false, openDocumentAfterLoad = false) => {
+    async (downloadAfterLoad = false, openDocumentAfterLoad = false, silent = false) => {
       if (!meta) return;
       setState({ kind: "loading", progress: 0 });
       try {
@@ -257,10 +257,17 @@ export function AttachmentPreview({
         }
       } catch (error) {
         setState({ kind: "error" });
-        showToast({
-          title: "Attachment could not be opened",
-          message: error instanceof Error ? error.message : "Check your connection and try again.",
-        });
+        // Eager loads run silently: opening a chat with a broken
+        // attachment must not blast an error toast on its own. The card
+        // shows "Retry" instead, and only an explicit open/download
+        // attempt reports the failure.
+        if (!silent) {
+          showToast({
+            title: "Attachment could not be opened",
+            message: error instanceof Error ? error.message : "Check your connection and try again.",
+            tone: "error",
+          });
+        }
       }
     },
     [attachment.id, attachment.sizeBytes, conversationKey, downloadUrl, meta, showToast],
@@ -270,8 +277,11 @@ export function AttachmentPreview({
     // Images, videos, and audio preview everywhere; other kinds eager-load
     // only on desktop, where their cards actually open something. On touch
     // those cards are inert until a Download action asks for the bytes.
+    // Silent: an eager load that fails shows the Retry card, no toast.
     const visual = kind === "image" || kind === "video" || kind === "audio";
-    if (meta && kind !== "binary" && !isTextDocument && (visual || !touchUi) && state.kind === "idle") void load();
+    if (meta && kind !== "binary" && !isTextDocument && (visual || !touchUi) && state.kind === "idle") {
+      void load(false, false, true);
+    }
   }, [kind, isTextDocument, load, meta, state.kind, touchUi]);
 
   // The sheet's Download action for this attachment: decrypt and hand the
@@ -299,6 +309,7 @@ export function AttachmentPreview({
     showToast({
       title: "Video could not be played",
       message: "This browser may not support the video's codec. You can still download the original file.",
+      tone: "warning",
     });
   }
 
