@@ -79,7 +79,7 @@ export function RetentionPopover({ retention, who, onChange }: Props) {
   }
 
   return (
-    <div ref={wrapperRef} className="relative">
+    <div ref={wrapperRef} className="relative z-50">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
