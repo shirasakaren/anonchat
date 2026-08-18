@@ -33,6 +33,11 @@ const EMPTY_STATE: PickerState = {
   loading: false,
 };
 
+/** Pause after the last keystroke before the live search fires - short
+ *  enough to feel instant, long enough that "c", "ca", "cat" only costs
+ *  one query. */
+const LIVE_SEARCH_DEBOUNCE_MS = 400;
+
 /**
  * Theme-consistent GIF picker for the composer, backed by the server-side
  * GIPHY/KLIPY proxy (api/gifs.ts) - provider API keys never reach the
@@ -90,6 +95,28 @@ export function GifPicker({ providers, onSelect, onClose, embedded = false, busy
     void load({ mode: "trending", query: "" });
   }, [load]);
 
+  // Live search: the grid follows the keyword in real time, debounced so
+  // each keystroke doesn't cost its own provider query. Clearing the box
+  // falls back to trending again; the last-query guard keeps repeated
+  // identical debounce firings from re-querying the same term.
+  const lastQueryRef = useRef("");
+  useEffect(() => {
+    const query = searchDraft.trim();
+    if (query === lastQueryRef.current) return;
+    const timer = window.setTimeout(() => {
+      lastQueryRef.current = query;
+      void load(query ? { mode: "search", query } : { mode: "trending", query: "" });
+    }, LIVE_SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [searchDraft, load]);
+
+  function submitSearch() {
+    const query = searchDraft.trim();
+    if (!query) return;
+    lastQueryRef.current = query;
+    void load({ mode: "search", query });
+  }
+
   if (enabledProviders.length === 0) {
     return (
       <div
@@ -110,12 +137,6 @@ export function GifPicker({ providers, onSelect, onClose, embedded = false, busy
         </button>
       </div>
     );
-  }
-
-  function submitSearch() {
-    const query = searchDraft.trim();
-    if (!query) return;
-    void load({ mode: "search", query });
   }
 
   const attribution = aggregate
