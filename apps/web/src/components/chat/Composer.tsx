@@ -27,6 +27,7 @@ import { EmojiShortcutOverlay } from "./EmojiShortcutOverlay.js";
 import { CannedReplySlashOverlay } from "./CannedReplySlashOverlay.js";
 import { EmojiPicker } from "./emoji/EmojiPicker.js";
 import { GifPicker } from "./GifPicker.js";
+import { gifMediaUrl } from "../../api/gifs.js";
 import { maxAttachmentSizeMbForFile } from "./preview/textFileTypes.js";
 import { hasSpoofedMediaClaim, resolveFileMimetypeWithBytes } from "./preview/fileSniffing.js";
 import { useToast } from "../../context/ToastContext.js";
@@ -110,6 +111,9 @@ export function Composer({
   // would pop the virtual keyboard and defeat the point of the panel.
   const [showPanel, setShowPanel] = useState<"emoji" | "gifs" | null>(null);
   const [panelTab, setPanelTab] = useState<"emoji" | "gifs">("emoji");
+  // True while the chosen GIF's bytes are being fetched for sending -
+  // gates the picker grid against double-taps.
+  const [gifSending, setGifSending] = useState(false);
   const [shortcodeQuery, setShortcodeQuery] = useState<ActiveShortcode | null>(null);
   const [slashQuery, setSlashQuery] = useState<{ query: string } | null>(null);
   const [selectedSuggestion, setSelectedSuggestion] = useState(0);
@@ -373,6 +377,46 @@ export function Composer({
     // behavior also makes drag/drop and pasted files consistently return to
     // the message field.
     requestAnimationFrame(() => editor?.commands.focus());
+  }
+
+  /** Tapping a GIF in the picker SENDS it - fetched through the same-origin
+   *  media relay and sent as an image attachment, so the chat renders the
+   *  actual animated GIF instead of a bare link. Typed text stays in the
+   *  composer untouched; the GIF goes out as its own message. */
+  async function sendGif(gifUrl: string) {
+    if (gifSending || disabled) return;
+    setGifSending(true);
+    try {
+      const response = await fetch(gifMediaUrl(gifUrl), { credentials: "include" });
+      if (!response.ok) {
+        throw new Error(
+          response.status === 429
+            ? "Too many GIFs at once - wait a moment and try again."
+            : `The GIF could not be fetched (HTTP ${response.status}).`,
+        );
+      }
+      const blob = await response.blob();
+      const { category, limitMb } = maxAttachmentSizeMbForFile(attachmentLimits, "image/gif", "gif.gif");
+      if (blob.size > limitMb * 1024 * 1024) {
+        showToast({
+          title: "GIF is too large",
+          message: `The ${category} upload limit is ${limitMb} MB. Choose a smaller GIF.`,
+          tone: "warning",
+        });
+        return;
+      }
+      const file = new File([blob], `gif-${Date.now()}.gif`, { type: "image/gif" });
+      onSend("", [file]);
+      setShowPanel(null);
+    } catch (error) {
+      showToast({
+        title: "GIF could not be sent",
+        message: error instanceof Error ? error.message : "Please try again.",
+        tone: "error",
+      });
+    } finally {
+      setGifSending(false);
+    }
   }
 
   function removeFile(index: number) {
@@ -661,10 +705,10 @@ export function Composer({
                   <GifPicker
                     embedded
                     providers={gifProviders}
+                    busy={gifSending}
                     onClose={() => setShowPanel(null)}
                     onSelect={(gifUrl) => {
-                      insertAtCursor(gifUrl);
-                      setShowPanel(null);
+                      void sendGif(gifUrl);
                     }}
                   />
                 ) : null}

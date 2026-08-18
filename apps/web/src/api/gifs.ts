@@ -15,3 +15,13 @@ export function searchGifs(params: {
   if (params.q) query.set("q", params.q);
   return api.get(`/gifs/search?${query.toString()}`);
 }
+
+/**
+ * Same-origin URL for one provider GIF (picker thumbnail or the full GIF
+ * for sending). The server relays the bytes so the provider never learns
+ * the visitor, CSP's img-src/connect-src stay closed, and the picker's
+ * grid never shows broken images from GIPHY's media0-9 subdomains.
+ */
+export function gifMediaUrl(providerUrl: string): string {
+  return `/api/gifs/media?url=${encodeURIComponent(providerUrl)}`;
+}

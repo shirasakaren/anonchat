@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import clsx from "clsx";
 import type { GifResultDto } from "@anonchat/shared";
-import { searchGifs } from "../../api/gifs.js";
+import { gifMediaUrl, searchGifs } from "../../api/gifs.js";
 
 interface Props {
   providers: { giphy: boolean; klipy: boolean };
@@ -9,6 +10,9 @@ interface Props {
   /** Rendered inside the composer's Emoji/GIFs tabbed panel: the parent
    *  owns the frame, this keeps only the inner chrome. */
   embedded?: boolean;
+  /** The parent is fetching the chosen GIF to send it - dims the grid so
+   *  a second tap can't double-send. */
+  busy?: boolean;
 }
 
 type Provider = "giphy" | "klipy";
@@ -38,7 +42,7 @@ const EMPTY_STATE: PickerState = {
  * that one. Selecting a GIF inserts its URL into the message text, where
  * the existing GifEmbed pipeline renders it inline.
  */
-export function GifPicker({ providers, onSelect, onClose, embedded = false }: Props) {
+export function GifPicker({ providers, onSelect, onClose, embedded = false, busy = false }: Props) {
   const enabledProviders: Provider[] = [
     ...(providers.giphy ? (["giphy"] as Provider[]) : []),
     ...(providers.klipy ? (["klipy"] as Provider[]) : []),
@@ -151,7 +155,7 @@ export function GifPicker({ providers, onSelect, onClose, embedded = false }: Pr
         </button>
       </form>
 
-      <div className="mt-2 max-h-64 overflow-y-auto">
+      <div className={clsx("mt-2 max-h-64 overflow-y-auto", busy && "pointer-events-none opacity-50")}>
         {state.loading ? (
           <p className="p-4 text-center text-xs text-[var(--text-muted)]">Loading GIFs…</p>
         ) : state.error ? (
@@ -169,11 +173,14 @@ export function GifPicker({ providers, onSelect, onClose, embedded = false }: Pr
                 key={`${providerForQuery}-${gif.id}`}
                 type="button"
                 onClick={() => onSelect(gif.gifUrl)}
-                title="Insert GIF"
+                title="Send GIF"
                 className="group relative aspect-square overflow-hidden rounded-lg border border-[var(--border)] hover:border-[var(--border-strong)]"
               >
+                {/* The preview plays right here: an animated GIF served
+                    through the same-origin media relay, so CSP can never
+                    blank the grid. */}
                 <img
-                  src={gif.previewUrl}
+                  src={gifMediaUrl(gif.previewUrl)}
                   alt=""
                   loading="lazy"
                   className="h-full w-full object-cover transition-transform group-hover:scale-105"
@@ -184,7 +191,7 @@ export function GifPicker({ providers, onSelect, onClose, embedded = false }: Pr
         )}
       </div>
       <p className="mt-2 text-center text-[10px] text-[var(--text-muted)]">
-        {attribution} - GIFs insert as a link and render inline when sent.
+        {attribution} - tap a GIF to send it as a message.
       </p>
     </div>
   );
