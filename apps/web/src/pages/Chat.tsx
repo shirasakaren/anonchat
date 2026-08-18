@@ -443,6 +443,7 @@ export default function Chat() {
       showToast({
         title: files.length > 0 ? "Attachment upload failed" : "Message failed",
         message: reason,
+        tone: "error",
       });
     }
   }
@@ -461,7 +462,7 @@ export default function Chat() {
           setMessages((prev) =>
             prev.map((m) => (m.id === messageId ? { ...m, status: "failed", failureReason: reason } : m)),
           );
-          showToast({ title: "Edit failed", message: reason });
+          showToast({ title: "Edit failed", message: reason, tone: "error" });
         });
       return;
     }
@@ -520,6 +521,7 @@ export default function Chat() {
       showToast({
         title: "Message could not be deleted",
         message: error instanceof Error ? error.message : "Please try again.",
+        tone: "error",
       });
     }
   }
@@ -532,6 +534,7 @@ export default function Chat() {
       showToast({
         title: "Reaction could not be updated",
         message: error instanceof Error ? error.message : "Please try again.",
+        tone: "error",
       });
     }
   }

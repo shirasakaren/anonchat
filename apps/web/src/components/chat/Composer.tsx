@@ -317,6 +317,7 @@ export function Composer({
       showToast({
         title: "Attachment limit reached",
         message: `You can attach up to ${maxAttachments} files to one message.`,
+        tone: "warning",
       });
       requestAnimationFrame(() => editor?.commands.focus());
       return;
@@ -326,6 +327,7 @@ export function Composer({
       showToast({
         title: "Some files were not added",
         message: `Only ${available} more ${available === 1 ? "file fits" : "files fit"} in this message.`,
+        tone: "warning",
       });
     }
 
@@ -342,6 +344,7 @@ export function Composer({
         showToast({
           title: `${file.name} is too large`,
           message: `The ${category} upload limit is ${limitMb} MB. Choose a smaller file or ask the site owner to increase it.`,
+          tone: "warning",
         });
         continue;
       }
@@ -350,6 +353,7 @@ export function Composer({
         showToast({
           title: `${file.name} doesn't match its extension`,
           message: `The file's content looks like ${spoofed.actual}, not ${spoofed.claimed}. It will be sent as a regular file.`,
+          tone: "warning",
         });
       }
       accepted.push({ file, mimetype: effectiveMime });

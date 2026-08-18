@@ -343,9 +343,9 @@ export function MessageBubble({
   async function copyText() {
     try {
       await navigator.clipboard.writeText(message.text);
-      showToast({ title: "Copied", message: "" });
+      showToast({ title: "Copied", message: "", tone: "success" });
     } catch {
-      showToast({ title: "Copy failed", message: "Your browser blocked clipboard access." });
+      showToast({ title: "Copy failed", message: "Your browser blocked clipboard access.", tone: "error" });
     }
     dismiss();
   }

@@ -227,6 +227,7 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
     showToast({
       title,
       message: error instanceof Error ? error.message : "Please try again.",
+      tone: "error",
     });
   }
 
@@ -378,7 +379,7 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
       setPushSubscribed(true);
     } catch {
       setPushError("Couldn't enable push notifications. Please try again.");
-      showToast({ title: "Push notifications could not be enabled", message: "Please try again." });
+      showToast({ title: "Push notifications could not be enabled", message: "Please try again.", tone: "error" });
     } finally {
       setPushBusy(false);
     }
@@ -396,7 +397,7 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
       setPushSubscribed(false);
     } catch {
       setPushError("Couldn't disable push notifications. Please try again.");
-      showToast({ title: "Push notifications could not be disabled", message: "Please try again." });
+      showToast({ title: "Push notifications could not be disabled", message: "Please try again.", tone: "error" });
     } finally {
       setPushBusy(false);
     }

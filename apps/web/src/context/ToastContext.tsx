@@ -1,8 +1,12 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
-import { AlertCircle, CheckCircle2, Info, X } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle2, Info, Loader2, X } from "lucide-react";
 import clsx from "clsx";
 
-type ToastTone = "error" | "success" | "info";
+/** Every toast declares what kind of news it is - the tone drives the icon,
+ *  the accent color, and the ARIA role. Defaulting to "error" used to make
+ *  every notification show the red exclamation mark, even plain success
+ *  confirmations. */
+export type ToastTone = "info" | "success" | "warning" | "error" | "loading";
 
 interface ToastInput {
   title: string;
@@ -21,6 +25,14 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
+const TONE_ICONS = {
+  info: Info,
+  success: CheckCircle2,
+  warning: AlertTriangle,
+  error: AlertCircle,
+  loading: Loader2,
+} as const;
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const nextId = useRef(1);
@@ -32,7 +44,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const showToast = useCallback(
     (input: ToastInput) => {
       const id = nextId.current++;
-      const toast = { ...input, id, tone: input.tone ?? "error" };
+      const toast = { ...input, id, tone: input.tone ?? "info" };
       setToasts((current) => [...current.slice(-2), toast]);
       window.setTimeout(() => dismiss(id), 6500);
     },
@@ -50,29 +62,29 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         aria-atomic="false"
       >
         {toasts.map((toast) => {
-          const Icon = toast.tone === "error" ? AlertCircle : toast.tone === "success" ? CheckCircle2 : Info;
+          const Icon = TONE_ICONS[toast.tone];
+          const isNegative = toast.tone === "error" || toast.tone === "warning";
           return (
             <div
               key={toast.id}
-              role={toast.tone === "error" ? "alert" : "status"}
+              role={isNegative ? "alert" : "status"}
               className={clsx(
                 "pointer-events-auto flex w-full items-start gap-3 rounded-xl border bg-[var(--surface-raised)] p-3 text-[var(--text)] shadow-xl",
-                toast.tone === "error"
-                  ? "border-[var(--danger-fg)]"
-                  : toast.tone === "success"
-                    ? "border-[var(--link-fg)]"
-                    : "border-[var(--border-strong)]",
+                toast.tone === "error" && "border-[var(--danger-fg)]",
+                toast.tone === "warning" && "border-[var(--warning-fg)]",
+                toast.tone === "success" && "border-[var(--link-fg)]",
+                (toast.tone === "info" || toast.tone === "loading") && "border-[var(--border-strong)]",
               )}
             >
               <Icon
                 size={18}
                 className={clsx(
                   "mt-0.5 shrink-0",
-                  toast.tone === "error"
-                    ? "text-[var(--danger-fg)]"
-                    : toast.tone === "success"
-                      ? "text-[var(--link-fg)]"
-                      : "text-[var(--text-muted)]",
+                  toast.tone === "error" && "text-[var(--danger-fg)]",
+                  toast.tone === "warning" && "text-[var(--warning-fg)]",
+                  toast.tone === "success" && "text-[var(--link-fg)]",
+                  (toast.tone === "info" || toast.tone === "loading") && "text-[var(--text-muted)]",
+                  toast.tone === "loading" && "animate-spin",
                 )}
                 aria-hidden
               />
