@@ -18,6 +18,23 @@ const KLIPY_MEDIA_HOST = /^https:\/\/media\.klipy\.com\//;
 
 const PROVIDER_TIMEOUT_MS = 6_000;
 
+/**
+ * The one allowlist for every GIF URL this app will fetch - the search
+ * results above AND the media relay (/gifs/media) both pass through it,
+ * so the relay has exactly the same (zero) SSRF surface as the search.
+ */
+export function isAllowedGifMediaUrl(rawUrl: unknown): rawUrl is string {
+  if (typeof rawUrl !== "string") return false;
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "https:") return false;
+  return GIPHY_MEDIA_HOST.test(url.href) || KLIPY_MEDIA_HOST.test(url.href);
+}
+
 interface ProviderResult {
   id: string;
   previewUrl: string;

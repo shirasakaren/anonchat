@@ -64,8 +64,9 @@ export async function buildApp(): Promise<FastifyInstance> {
         defaultSrc: ["'self'"],
         // The GIF picker hotlinks thumbnails from the two provider CDNs;
         // the server-side GIF search (gifSearch.service.ts) only returns
-        // URLs from exactly these hosts.
-        imgSrc: ["'self'", "data:", "blob:", "https://media.giphy.com", "https://media.klipy.com"],
+        // URLs from exactly these hosts. GIPHY's media host is per-region
+        // subdomained (media0..media9.giphy.com), hence the wildcard.
+        imgSrc: ["'self'", "data:", "blob:", "https://*.giphy.com", "https://media.klipy.com"],
         mediaSrc: ["'self'", "blob:"],
         connectSrc: ["'self'", "ws:", "wss:"],
         scriptSrc: ["'self'"],
