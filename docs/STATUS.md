@@ -596,7 +596,7 @@ in-session only; the ranked list below is what survived:
 - **End-to-end browser verification** (Playwright, headless Chromium, real
   Postgres in Docker) confirmed:
   - Full onboarding wizard -> admin dashboard, no manual steps stuck
-  - Anonymous identity creation -> recovery phrase -> chat
+  - Anonymous identity creation (optional name only) -> straight into chat, recovery key viewable/copyable from the key icon in the chat header
   - A message sent by an anonymous user appears for the admin in real time,
     decrypts correctly, and the admin's reply appears for the user in real
     time, decrypts correctly

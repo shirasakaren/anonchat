@@ -27,7 +27,7 @@ All primitives come from the audited [`@noble`](https://paulmillr.com/noble/) li
 
 ### Anonymous identity
 
-A 256-bit random "recovery secret" is the only credential. `deriveIdentity()` deterministically derives both keypairs and a public display id from it. The server stores only the two **public** keys and the public id - never the secret, never anything from which it could be derived. This is intentional: it means the server can never reconstruct an anonymous user's private key, even under compulsion, and it is also why losing the recovery secret (with no logged-in browser left) is unrecoverable. The UI makes this explicit before the user leaves the onboarding screen.
+A 256-bit random "recovery secret" is the only credential. `deriveIdentity()` deterministically derives both keypairs and a public display id from it. The server stores only the two **public** keys and the public id - never the secret, never anything from which it could be derived. This is intentional: it means the server can never reconstruct an anonymous user's private key, even under compulsion, and it is also why losing the recovery secret (with no logged-in browser left) is unrecoverable. The UI surfaces this in the chat itself: the key icon in the chat header shows the recovery key on demand (and the switch-identity dialog points back to it), so the key is never hidden from the visitor - but first-time visitors are no longer forced through a save-it-now screen before they can chat.
 
 ### Admin identity
 
