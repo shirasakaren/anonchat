@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { encryptBlob } from "@anonchat/crypto";
 import { evictAttachmentsOf } from "../crypto/attachmentCache.js";
-import { ChevronRight, LogOut, StickyNote, Trash2 } from "lucide-react";
+import { ChevronRight, KeyRound, LogOut, StickyNote, Trash2 } from "lucide-react";
 import type {
   ConversationNoteDto,
   ConversationRetentionDto,
@@ -35,6 +35,7 @@ import { UnreadDivider } from "../components/chat/UnreadDivider.js";
 import { computeUnreadAnchor, getLastSeen, setLastSeen } from "../components/chat/lastSeen.js";
 import { DeleteMessageModal } from "../components/chat/DeleteMessageModal.js";
 import { DeleteIdentityModal } from "../components/chat/DeleteIdentityModal.js";
+import { RecoveryKeyModal } from "../components/chat/RecoveryKeyModal.js";
 import { ConfirmDialog } from "../components/common/ConfirmDialog.js";
 import { getLocallyDeletedMessageIds, hideMessageLocally } from "../components/chat/locallyDeletedMessages.js";
 import { MessageBubble } from "../components/chat/MessageBubble.js";
@@ -89,6 +90,7 @@ export default function Chat() {
   const [editing, setEditing] = useState<DisplayMessage | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DisplayMessage | null>(null);
   const [deleteIdentityOpen, setDeleteIdentityOpen] = useState(false);
+  const [recoveryKeyOpen, setRecoveryKeyOpen] = useState(false);
   const [confirmSwitch, setConfirmSwitch] = useState(false);
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => getLocallyDeletedMessageIds(session.conversationId));
   // First message the visitor hasn't seen yet on this device - the thread
@@ -637,6 +639,15 @@ export default function Chat() {
             >
               <StickyNote size={18} aria-hidden />
             </button>
+            <button
+              type="button"
+              onClick={() => setRecoveryKeyOpen(true)}
+              title="View recovery key"
+              aria-label="View recovery key"
+              className="rounded-lg p-1.5 text-[var(--text-muted)] hover:bg-[var(--surface-muted)]"
+            >
+              <KeyRound size={18} aria-hidden />
+            </button>
             {/* The account ID is only meaningful when there is room for it -
                 on small screens it is noise, and everything here must fit in
                 a single header row. */}
@@ -770,10 +781,11 @@ export default function Chat() {
       {deleteIdentityOpen && (
         <DeleteIdentityModal onDelete={deleteIdentity} onCancel={() => setDeleteIdentityOpen(false)} />
       )}
+      {recoveryKeyOpen && <RecoveryKeyModal publicId={session.publicId} onClose={() => setRecoveryKeyOpen(false)} />}
       {confirmSwitch && (
         <ConfirmDialog
           title="Switch identity?"
-          message={`You're about to log out of ${session.displayName ? `${session.displayName} · ` : ""}#${session.publicId}. You can come back to this identity later with its recovery key - make sure you still have it.`}
+          message={`You're about to log out of ${session.displayName ? `${session.displayName} · ` : ""}#${session.publicId}. You can come back to this identity later with its recovery key - tap the key icon in the chat header to copy it first.`}
           confirmLabel="Switch identity"
           destructive
           onConfirm={() => {

@@ -68,6 +68,19 @@ export async function loadIdentity(publicId: string): Promise<Identity | null> {
   return deriveIdentity(record.secret);
 }
 
+/**
+ * Re-formats the stored recovery secret back into its displayable phrase.
+ * Creation no longer forces a save-it-now screen, so the chat header's key
+ * icon uses this to show the visitor their key on demand - the secret has
+ * been in IndexedDB the whole time, nothing is generated or changed here.
+ */
+export async function getRecoveryPhrase(publicId: string): Promise<string | null> {
+  const db = await getDb();
+  const record = await db.get("identities", publicId);
+  if (!record) return null;
+  return formatRecoverySecret(record.secret);
+}
+
 /** Re-derives and stores an identity from a pasted recovery phrase (new device, or lost local storage). */
 export async function importIdentityFromRecoveryPhrase(
   phrase: string,
