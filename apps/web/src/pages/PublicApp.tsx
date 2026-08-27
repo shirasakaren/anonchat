@@ -3,7 +3,6 @@ import { getAdminMe } from "../api/admin.js";
 import { AnonymousSessionProvider, useAnonymousSession } from "../context/AnonymousSessionContext.js";
 import { FullScreenError, FullScreenLoader } from "../components/common/Loader.js";
 import PublicHome from "./PublicHome.js";
-import RecoveryConfirm from "./RecoveryConfirm.js";
 
 const Chat = lazy(() => import("./Chat.js"));
 
@@ -12,7 +11,6 @@ function PublicAppInner() {
   const [discarding, setDiscarding] = useState(false);
   const [checkedAdmin, setCheckedAdmin] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [pendingRecovery, setPendingRecovery] = useState<{ phrase: string; publicId: string } | null>(null);
 
   useEffect(() => {
     getAdminMe()
@@ -57,17 +55,12 @@ function PublicAppInner() {
       />
     );
   }
+  // Identity creation happens inside PublicHome and flips the session to
+  // "ready" itself, so the visitor lands straight in the chat window - the
+  // recovery key is no longer forced into a separate save-it-now screen. It
+  // stays available from the key icon in the chat header.
   if (status === "needs-identity") {
-    return <PublicHome onCreated={(phrase, publicId) => setPendingRecovery({ phrase, publicId })} />;
-  }
-  if (pendingRecovery) {
-    return (
-      <RecoveryConfirm
-        phrase={pendingRecovery.phrase}
-        publicId={pendingRecovery.publicId}
-        onAcknowledge={() => setPendingRecovery(null)}
-      />
-    );
+    return <PublicHome />;
   }
   return (
     <Suspense fallback={<FullScreenLoader label="Opening your conversation…" />}>

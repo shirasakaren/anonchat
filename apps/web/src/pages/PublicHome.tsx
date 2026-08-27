@@ -2,17 +2,27 @@ import { useEffect, useState } from "react";
 import { ArrowRight, ChevronDown, ShieldCheck } from "lucide-react";
 import { useSite } from "../context/SiteContext.js";
 import { useAnonymousSession } from "../context/AnonymousSessionContext.js";
+import { useToast } from "../context/ToastContext.js";
 import { listIdentities, type IdentitySummary } from "../crypto/identityStore.js";
 import { ApiError } from "../api/client.js";
 import { DefaultAvatar } from "../components/common/DefaultAvatar.js";
 
-type View = "landing" | "name" | "import";
+type View = "name" | "import";
 
-export default function PublicHome({ onCreated }: { onCreated: (phrase: string, publicId: string) => void }) {
+/**
+ * First-visit screen: a single optional name field. The identity (and its
+ * recovery key) is created silently in the background the moment the visitor
+ * taps Start chatting or Skip, and the chat window opens immediately - the
+ * key is never forced into a separate save-it-now step. It stays available
+ * from the key icon in the chat header, so a visitor who skipped can still
+ * copy it to another device whenever they want.
+ */
+export default function PublicHome() {
   const { site } = useSite();
   const { createNewIdentity, continueWithStoredIdentity, importFromRecoveryPhrase } = useAnonymousSession();
+  const { showToast } = useToast();
   const [identities, setIdentities] = useState<IdentitySummary[]>([]);
-  const [view, setView] = useState<View>("landing");
+  const [view, setView] = useState<View>("name");
   const [importText, setImportText] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -29,8 +39,14 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
     setBusy(true);
     setError(null);
     try {
-      const { recoveryPhrase, publicId } = await createNewIdentity(name);
-      onCreated(recoveryPhrase, publicId);
+      // createNewIdentity flips the session to "ready", so PublicApp
+      // swaps this screen for the chat window on its own - no extra step.
+      await createNewIdentity(name);
+      showToast({
+        title: "Chat started",
+        message: "Your recovery key is safe behind the key icon in the chat header.",
+        tone: "success",
+      });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not create your identity. Please try again.");
       setBusy(false);
@@ -76,10 +92,13 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
       </div>
 
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-raised)] p-6 shadow-sm">
-        {view === "landing" && (
+        {view === "name" && (
           <div className="space-y-4">
+            {/* Only shown when the visitor has switched away from another
+                identity on this device - continuing must stay one tap so
+                nobody recreates an identity by mistake. */}
             {identities.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3">
                 <p className="text-sm font-medium">Continue as:</p>
                 {identities.map((identity) => (
                   <button
@@ -87,7 +106,7 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
                     type="button"
                     disabled={busy}
                     onClick={() => handleContinue(identity.publicId)}
-                    className="flex w-full items-center justify-between rounded-lg border border-[var(--border)] px-3 py-2 text-sm hover:bg-[var(--surface-muted)] disabled:opacity-50"
+                    className="flex w-full items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm hover:bg-[var(--surface-muted)] disabled:opacity-50"
                   >
                     <span>{identity.label === "Anonymous" ? `Anonymous #${identity.publicId}` : identity.label}</span>
                     <ArrowRight size={16} aria-hidden />
@@ -95,14 +114,49 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
                 ))}
               </div>
             )}
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setView("name")}
-              className="w-full rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
+            <form
+              className="space-y-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void handleCreate(displayName);
+              }}
             >
-              {identities.length > 0 ? "Create a new anonymous identity" : "Start anonymous chat"}
-            </button>
+              <div>
+                <label className="block text-sm font-medium" htmlFor="identity-name">
+                  Your name
+                </label>
+                <input
+                  id="identity-name"
+                  autoFocus
+                  maxLength={80}
+                  value={displayName}
+                  onChange={(event) => setDisplayName(event.target.value)}
+                  placeholder="Optional"
+                  className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+                />
+                <p className="mt-1.5 text-xs text-[var(--text-muted)]">
+                  Optional. The admin will see this name, and you can skip it to stay Anonymous #XXXX-XXXX-XXXX.
+                </p>
+              </div>
+              {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void handleCreate()}
+                  className="flex-1 rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium hover:bg-[var(--surface-muted)] disabled:opacity-50"
+                >
+                  Skip
+                </button>
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="flex-1 rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
+                >
+                  Start chatting
+                </button>
+              </div>
+            </form>
             <button
               type="button"
               onClick={() => setView("import")}
@@ -110,62 +164,7 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
             >
               Have a recovery key from another device?
             </button>
-            {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
           </div>
-        )}
-
-        {view === "name" && (
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void handleCreate(displayName);
-            }}
-          >
-            <div>
-              <label className="block text-sm font-medium" htmlFor="identity-name">
-                Name this identity
-              </label>
-              <input
-                id="identity-name"
-                autoFocus
-                maxLength={80}
-                value={displayName}
-                onChange={(event) => setDisplayName(event.target.value)}
-                placeholder="Optional name"
-                className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-transparent px-3 py-2 text-sm"
-              />
-              <p className="mt-1.5 text-xs text-[var(--text-muted)]">
-                Optional. The admin will see this name, and you can skip it to stay Anonymous #XXXX-XXXX-XXXX.
-              </p>
-            </div>
-            {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void handleCreate()}
-                className="flex-1 rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium hover:bg-[var(--surface-muted)] disabled:opacity-50"
-              >
-                Skip
-              </button>
-              <button
-                type="submit"
-                disabled={busy}
-                className="flex-1 rounded-lg bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] disabled:opacity-50"
-              >
-                Continue
-              </button>
-            </div>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setView("landing")}
-              className="w-full text-center text-xs text-[var(--text-muted)] underline underline-offset-2"
-            >
-              Back
-            </button>
-          </form>
         )}
 
         {view === "import" && (
@@ -185,7 +184,7 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => setView("landing")}
+                onClick={() => setView("name")}
                 className="flex-1 rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium hover:bg-[var(--surface-muted)]"
               >
                 Back
@@ -202,9 +201,8 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
         )}
       </div>
 
-      {/* The privacy/security notes moved below the identity card and stay
-          tucked behind "Show details" so the create-identity box stays the
-          single focus of the screen. */}
+      {/* The privacy/security notes stay tucked behind "Show details" so the
+          name field stays the single focus of the screen. */}
       <button
         type="button"
         onClick={() => setShowDetails((value) => !value)}
@@ -220,6 +218,10 @@ export default function PublicHome({ onCreated }: { onCreated: (phrase: string, 
           <p className="flex items-start justify-center gap-1.5 text-xs text-[var(--text-muted)]">
             <ShieldCheck size={14} className="mt-px shrink-0 text-[var(--link-fg)]" aria-hidden />
             End-to-end encrypted - only your identity and {ownerName}'s key can decrypt these messages.
+          </p>
+          <p className="text-xs text-[var(--text-muted)]">
+            Keep your recovery key to use this conversation on another device - find it behind the key icon in the
+            chat header anytime.
           </p>
           {site?.visitorInsights.collectsIpAddress && (
             <p className="text-xs text-[var(--text-muted)]">
