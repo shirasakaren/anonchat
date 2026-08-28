@@ -42,6 +42,8 @@ import { getLocallyDeletedMessageIds, hideMessageLocally } from "../../component
 import { MessageBubble } from "../../components/chat/MessageBubble.js";
 import { TapMessageHint, useTapMessageHint, useTouchUi } from "../../components/chat/TapMessageHint.js";
 import { buildReplyPreviewInfo } from "../../components/chat/replyPreview.js";
+import { ReplyThumbnail } from "../../components/chat/ReplyThumbnail.js";
+import { scrollToMessage } from "../../components/chat/scrollToMessage.js";
 import { RetentionPopover } from "../../components/chat/RetentionPopover.js";
 import { TypingIndicator } from "../../components/chat/TypingIndicator.js";
 import { FullScreenLoader } from "../../components/common/Loader.js";
@@ -148,14 +150,26 @@ export function ConversationView({ conversationId, onChanged }: Props) {
     [conversationKey],
   );
 
+  // ConversationView is reused (not remounted) across conversations (see
+  // the note on the hiddenIds effect below), so switching chats quickly -
+  // open A, immediately open B - can leave two fetchConversation() calls
+  // in flight at once. Without a guard, A's slower response can resolve
+  // after B's and overwrite the view with A's messages/key while B's id is
+  // still showing, rarely but reproducibly "loading the wrong
+  // conversation." Every call gets a ticket; a call only commits its
+  // results if it's still the most recent one when its data is ready -
+  // an older call that resolves late is silently dropped instead.
+  const fetchRequestIdRef = useRef(0);
+
   const fetchConversation = useCallback(async () => {
+    const requestId = ++fetchRequestIdRef.current;
     const conv = await getAdminConversation(conversationId);
-    setConversation(conv);
-    setUserOnline(conv.userOnline);
+    if (requestId !== fetchRequestIdRef.current) return;
     const all: MessageDto[] = [];
     let cursor: string | undefined;
     do {
       const page = await getAdminMessages(conversationId, cursor);
+      if (requestId !== fetchRequestIdRef.current) return;
       all.push(...page.messages);
       cursor = page.nextCursor ?? undefined;
     } while (cursor);
@@ -177,6 +191,9 @@ export function ConversationView({ conversationId, onChanged }: Props) {
         status: "sent" as const,
       };
     });
+    if (requestId !== fetchRequestIdRef.current) return;
+    setConversation(conv);
+    setUserOnline(conv.userOnline);
     const lastSeen = getLastSeen("ADMIN", conversationId);
     setUnreadAnchorId(computeUnreadAnchor(decrypted, lastSeen)?.id ?? null);
     setMessages(decrypted);
@@ -393,10 +410,21 @@ export function ConversationView({ conversationId, onChanged }: Props) {
 
   // Compact single-line "Replying to: …" banner text for the composer -
   // truncated for long quotes, "Photo · cat.jpg"-style for attachments.
-  const replyPreviewText = useMemo(
-    () => (replyTo && conversationKey ? buildReplyPreviewInfo(replyTo, conversationKey).text : undefined),
+  const replyInfo = useMemo(
+    () => (replyTo && conversationKey ? buildReplyPreviewInfo(replyTo, conversationKey) : null),
     [replyTo, conversationKey],
   );
+  const replyPreviewText = replyInfo?.text;
+  const replyThumbnail =
+    replyInfo?.imageAttachment && conversationKey ? (
+      <ReplyThumbnail
+        attachmentId={replyInfo.imageAttachment.id}
+        sizeBytes={replyInfo.imageAttachment.sizeBytes}
+        mimetype={replyInfo.imageAttachment.mimetype}
+        downloadUrl={adminAttachmentUrl(conversationId, replyInfo.imageAttachment.id)}
+        conversationKey={conversationKey}
+      />
+    ) : undefined;
 
   // Only the single most-recently-read own (ADMIN) message should show
   // "Read" - computed once per messages change, not per-bubble.
@@ -768,6 +796,8 @@ export function ConversationView({ conversationId, onChanged }: Props) {
         }
         disabled={false}
         replyPreview={replyPreviewText}
+        replyThumbnail={replyThumbnail}
+        onJumpToReply={replyTo ? () => scrollToMessage(replyTo.id) : undefined}
         onCancelReply={() => setReplyTo(null)}
         editingPreview={editing ? "editing message" : undefined}
         initialText={editing?.text}

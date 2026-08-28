@@ -47,6 +47,8 @@ import { ExpandableProse } from "../components/chat/ExpandableProse.js";
 import { renderMessageMarkdown } from "../components/chat/markdown.js";
 import { buildReplyPreviewInfo } from "../components/chat/replyPreview.js";
 import { RetentionPopover } from "../components/chat/RetentionPopover.js";
+import { ReplyThumbnail } from "../components/chat/ReplyThumbnail.js";
+import { scrollToMessage } from "../components/chat/scrollToMessage.js";
 import {
   dismissNotificationEmailPrompt,
   isNotificationEmailPromptDismissed,
@@ -556,10 +558,20 @@ export default function Chat() {
   // The composer's "Replying to: …" banner shows a compact single-line
   // preview - truncated text, or a "Photo · cat.jpg"-style label when the
   // reply target is an attachment-only message.
-  const replyPreviewText = useMemo(
-    () => (replyTo ? buildReplyPreviewInfo(replyTo, conversationKey).text : undefined),
+  const replyInfo = useMemo(
+    () => (replyTo ? buildReplyPreviewInfo(replyTo, conversationKey) : null),
     [replyTo, conversationKey],
   );
+  const replyPreviewText = replyInfo?.text;
+  const replyThumbnail = replyInfo?.imageAttachment ? (
+    <ReplyThumbnail
+      attachmentId={replyInfo.imageAttachment.id}
+      sizeBytes={replyInfo.imageAttachment.sizeBytes}
+      mimetype={replyInfo.imageAttachment.mimetype}
+      downloadUrl={attachmentUrl(replyInfo.imageAttachment.id)}
+      conversationKey={conversationKey}
+    />
+  ) : undefined;
 
   // Only the single most-recently-read own message should show "Read" -
   // find its id once per messages change rather than inside MessageBubble
@@ -757,6 +769,8 @@ export default function Chat() {
           disabled={isBlocked}
           disabledReason={isBlocked ? "You can no longer send messages in this conversation." : undefined}
           replyPreview={replyPreviewText}
+          replyThumbnail={replyThumbnail}
+          onJumpToReply={replyTo ? () => scrollToMessage(replyTo.id) : undefined}
           onCancelReply={() => setReplyTo(null)}
           editingPreview={editing ? "editing message" : undefined}
           initialText={editing?.text}

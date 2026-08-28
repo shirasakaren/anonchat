@@ -50,7 +50,7 @@ describe("buildReplyPreviewInfo", () => {
     expect(info.text).toBe("line one line two");
   });
 
-  it("builds a photo label for an attachment-only image message", () => {
+  it("builds a photo label with a thumbnail reference for an attachment-only image message", () => {
     const meta = encryptAttachmentMeta(KEY, { filename: "cat.jpg", mimetype: "image/jpeg", size: 10 });
     const message = baseMessage({
       attachments: [{ id: "a1", meta, sizeBytes: 10, createdAt: "2026-08-16T10:00:00.000Z" }],
@@ -58,7 +58,16 @@ describe("buildReplyPreviewInfo", () => {
     expect(buildReplyPreviewInfo(message, KEY)).toEqual({
       kind: "attachment",
       text: "Photo · cat.jpg",
+      imageAttachment: { id: "a1", sizeBytes: 10, mimetype: "image/jpeg" },
     });
+  });
+
+  it("does not attach a thumbnail reference for a non-image attachment", () => {
+    const meta = encryptAttachmentMeta(KEY, { filename: "clip.mp4", mimetype: "video/mp4", size: 10 });
+    const message = baseMessage({
+      attachments: [{ id: "a1", meta, sizeBytes: 10, createdAt: "2026-08-16T10:00:00.000Z" }],
+    });
+    expect(buildReplyPreviewInfo(message, KEY).imageAttachment).toBeUndefined();
   });
 
   it("builds a video label for an attachment-only video message", () => {

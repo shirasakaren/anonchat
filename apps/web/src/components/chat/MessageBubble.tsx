@@ -37,6 +37,8 @@ import { EmojiPicker } from "./emoji/EmojiPicker.js";
 import type { DisplayMessage } from "./types.js";
 import { PendingAttachmentTransfer } from "./PendingAttachmentTransfer.js";
 import { buildReplyPreviewInfo } from "./replyPreview.js";
+import { ReplyThumbnail } from "./ReplyThumbnail.js";
+import { scrollToMessage } from "./scrollToMessage.js";
 import { useToast } from "../../context/ToastContext.js";
 import { useTouchUi } from "./TapMessageHint.js";
 import type { ViewerActions } from "./preview/LightboxActionsMenu.js";
@@ -618,18 +620,34 @@ export function MessageBubble({
       {...pressHandlers}
     >
       {showReplyPreview && (
-        <div
+        <button
+          type="button"
+          // Jumps back to the quoted message: scrolls it into view and
+          // flashes a highlight so it's unmistakable which row it landed
+          // on, especially useful once it's scrolled far out of sight.
+          onClick={() => replyPreviewMessage && scrollToMessage(replyPreviewMessage.id)}
+          aria-label={`Jump to replied message: ${replyInfo.text}`}
           className={clsx(
             // min-w-0 + truncate keep even a very long quoted message or
             // filename to a single compact line above the bubble.
-            "flex max-w-[80%] min-w-0 items-center gap-1.5 rounded-md border-l-2 px-2 py-1 text-xs text-[var(--text-muted)]",
+            "flex max-w-[80%] min-w-0 items-center gap-1.5 rounded-md border-l-2 px-2 py-1 text-left text-xs text-[var(--text-muted)] hover:bg-[var(--surface-muted)]",
             "border-[var(--color-accent-400)]",
             replyInfo.kind === "deleted" && "italic",
           )}
         >
-          {replyInfo.kind === "attachment" && <Paperclip size={11} className="shrink-0" aria-hidden />}
+          {replyInfo.imageAttachment ? (
+            <ReplyThumbnail
+              attachmentId={replyInfo.imageAttachment.id}
+              sizeBytes={replyInfo.imageAttachment.sizeBytes}
+              mimetype={replyInfo.imageAttachment.mimetype}
+              downloadUrl={attachmentUrlFor(replyInfo.imageAttachment.id)}
+              conversationKey={conversationKey}
+            />
+          ) : (
+            replyInfo.kind === "attachment" && <Paperclip size={11} className="shrink-0" aria-hidden />
+          )}
           <span className="min-w-0 truncate">{replyInfo.text}</span>
-        </div>
+        </button>
       )}
 
       {imageOnly ? (

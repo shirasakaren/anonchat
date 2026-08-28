@@ -8,6 +8,7 @@ import {
   type ClipboardEvent,
   type DragEvent,
   type KeyboardEvent,
+  type ReactNode,
 } from "react";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -63,6 +64,13 @@ interface Props {
   disabled: boolean;
   disabledReason?: string;
   replyPreview?: string;
+  /** Ultra-small decrypted preview of the reply target's image, when it has
+   *  one - rendered by the parent (which owns conversationKey) so Composer
+   *  itself stays decryption-agnostic. */
+  replyThumbnail?: ReactNode;
+  /** Jumps back to the message being replied to (scroll + highlight).
+   *  Absent while editing, and ignored unless replyPreview is also set. */
+  onJumpToReply?: () => void;
   onCancelReply?: () => void;
   editingPreview?: string;
   onCancelEdit?: () => void;
@@ -91,6 +99,8 @@ export function Composer({
   disabled,
   disabledReason,
   replyPreview,
+  replyThumbnail,
+  onJumpToReply,
   onCancelReply,
   editingPreview,
   onCancelEdit,
@@ -557,12 +567,24 @@ export function Composer({
 
       {(replyPreview || editingPreview) && (
         <div className="mb-2 flex items-center justify-between gap-2 rounded-md bg-[var(--surface-muted)] px-3 py-1.5 text-xs">
-          {/* min-w-0 (not just truncate) is what lets this flex child give
-              up width to the close button - a very long reply preview must
-              ellipsize instead of pushing the banner past the viewport. */}
-          <span className="min-w-0 truncate">
-            {editingPreview ? `Editing: ${editingPreview}` : `Replying to: ${replyPreview}`}
-          </span>
+          {replyPreview && !editingPreview && onJumpToReply ? (
+            <button
+              type="button"
+              onClick={onJumpToReply}
+              // min-w-0 (not just truncate) is what lets this flex child
+              // give up width to the close button - a very long reply
+              // preview must ellipsize instead of pushing the banner past
+              // the viewport.
+              className="flex min-w-0 items-center gap-1.5 rounded text-left hover:underline"
+            >
+              {replyThumbnail}
+              <span className="min-w-0 truncate">Replying to: {replyPreview}</span>
+            </button>
+          ) : (
+            <span className="min-w-0 truncate">
+              {editingPreview ? `Editing: ${editingPreview}` : `Replying to: ${replyPreview}`}
+            </span>
+          )}
           <button
             type="button"
             onClick={editingPreview ? onCancelEdit : onCancelReply}

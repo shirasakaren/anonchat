@@ -81,6 +81,25 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ── Jump-to-message highlight ─────────────────────────────────────────
+   Clicking a reply preview scrolls its target into view (scrollToMessage.ts)
+   and adds this class briefly so the row is unmistakable once it lands -
+   without it, a message that scrolled far off-screen just silently
+   reappears with no visual cue that anything happened. */
+@keyframes message-jump-highlight {
+  0%,
+  35% {
+    background-color: var(--selected-bg);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.message-jump-highlight {
+  animation: message-jump-highlight 1.6s ease-out;
+  border-radius: 0.75rem;
+}
+
 /* ── Chat shell height under the mobile keyboard ──────────────────────
    The chat page shell tracks the visual viewport so the composer sits
    directly above the on-screen keyboard, WhatsApp-style. `dvh` covers

@@ -11,6 +11,10 @@ export interface ReplyPreviewInfo {
   /** Single-line display text, already truncated. */
   text: string;
   kind: "text" | "attachment" | "deleted" | "empty";
+  /** Present only when kind is "attachment" and it's an image/GIF - lets
+   *  the reply chip show an ultra-small decrypted thumbnail (ReplyThumbnail)
+   *  instead of just an icon and filename. */
+  imageAttachment?: { id: string; sizeBytes: number; mimetype: string };
 }
 
 function truncateSingleLine(value: string): string {
@@ -51,7 +55,11 @@ export function buildReplyPreviewInfo(
   if (first) {
     const meta = decryptAttachmentMeta(conversationKey, first.meta);
     const label = meta ? attachmentLabel(meta) : "File";
-    return { kind: "attachment", text: truncateSingleLine(label) };
+    const imageAttachment =
+      meta && meta.mimetype.startsWith("image/")
+        ? { id: first.id, sizeBytes: first.sizeBytes, mimetype: meta.mimetype }
+        : undefined;
+    return { kind: "attachment", text: truncateSingleLine(label), imageAttachment };
   }
 
   return { kind: "empty", text: "" };
