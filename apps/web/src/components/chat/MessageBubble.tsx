@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { decryptAttachmentMeta, decryptReaction } from "../../crypto/conversationCrypto.js";
 import { renderMessageMarkdown } from "./markdown.js";
+import { getEmojiOnlyDisplay } from "./emojiOnly.js";
 import { AttachmentPreview, previewKind } from "./AttachmentPreview.js";
 import { ExpandableProse } from "./ExpandableProse.js";
 import { extractUrls } from "./embeds/urlExtraction.js";
@@ -371,6 +372,13 @@ export function MessageBubble({
   }
 
   const html = message.deleted || message.decryptionError ? null : renderMessageMarkdown(message.text);
+  // A handful of emoji and nothing else renders big, like WhatsApp/Telegram -
+  // skips the markdown pipeline entirely (there's nothing to format in pure
+  // emoji) rather than trying to cascade a font-size override through it.
+  const emojiOnly =
+    message.deleted || message.decryptionError || message.attachments.length > 0
+      ? null
+      : getEmojiOnlyDisplay(message.text);
 
   // A message that is ONLY photos renders each image as its own rounded
   // frame instead of one shared bubble rectangle: the shared wrapper used
@@ -777,7 +785,11 @@ export function MessageBubble({
                       ))}
                     </div>
                   )}
-                  {html && <ExpandableProse html={html} />}
+                  {emojiOnly ? (
+                    <p className={clsx("leading-tight", emojiOnly.sizeClass)}>{message.text.trim()}</p>
+                  ) : (
+                    html && <ExpandableProse html={html} />
+                  )}
                   {embedUrls.length > 0 && (
                     <div className="mt-2 space-y-2">
                       {embedUrls.map((url) => {
