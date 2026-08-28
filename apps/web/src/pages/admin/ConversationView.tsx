@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { formatDistanceToNowStrict } from "date-fns";
 import { encryptBlob } from "@anonchat/crypto";
 import { evictAttachmentsOf } from "../../crypto/attachmentCache.js";
-import { Info, Pencil, StickyNote } from "lucide-react";
+import { ArrowDown, Info, Pencil, StickyNote } from "lucide-react";
 import {
   DEFAULT_MAX_MESSAGE_LENGTH,
   type AdminConversationDto,
@@ -31,6 +31,7 @@ import { useSite } from "../../context/SiteContext.js";
 import { useRealtimeSocket } from "../../hooks/useRealtimeSocket.js";
 import { useEncryptedDraft } from "../../hooks/useEncryptedDraft.js";
 import { useKeyboardViewport } from "../../hooks/useKeyboardViewport.js";
+import { useWindowFocused } from "../../hooks/useWindowFocused.js";
 import { Composer } from "../../components/chat/Composer.js";
 import { ConnectionBanner } from "../../components/chat/ConnectionBanner.js";
 import { DateSeparator } from "../../components/chat/DateSeparator.js";
@@ -101,6 +102,42 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
+  // True for exactly the render right after the admin sends a message -
+  // that scroll-to-bottom must be an instant snap (a deliberate action, not
+  // a passively-followed incoming message), and reset the moment it's used.
+  const justSentRef = useRef(false);
+  // Mirrors nearBottomRef as actual state so the "jump to newest" button
+  // can react to it - the ref alone never triggers a re-render.
+  const [showJumpToNewest, setShowJumpToNewest] = useState(false);
+  // A read receipt must reflect the admin actually looking at this specific
+  // conversation, not just having the dashboard tab open in the background -
+  // the id of the newest unread visitor message waits here while unfocused
+  // and gets marked read once focus returns (see the effect below). Cleared
+  // on every conversation switch (ConversationView is reused, not remounted)
+  // so a pending id from the previous chat can never be applied to this one.
+  const focused = useWindowFocused();
+  const focusedRef = useRef(focused);
+  focusedRef.current = focused;
+  const pendingReadIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    pendingReadIdRef.current = null;
+  }, [conversationId]);
+  const markReadIfFocused = useCallback(
+    (messageId: string) => {
+      if (focusedRef.current) {
+        markAdminRead(conversationId, messageId).catch(() => {});
+      } else {
+        pendingReadIdRef.current = messageId;
+      }
+    },
+    [conversationId],
+  );
+  useEffect(() => {
+    if (focused && pendingReadIdRef.current) {
+      markAdminRead(conversationId, pendingReadIdRef.current).catch(() => {});
+      pendingReadIdRef.current = null;
+    }
+  }, [focused, conversationId]);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pendingRef = useRef<
     Map<
@@ -200,8 +237,8 @@ export function ConversationView({ conversationId, onChanged }: Props) {
     const newest = decrypted[decrypted.length - 1];
     if (newest) setLastSeen("ADMIN", conversationId, newest.id, newest.createdAt);
     const lastUser = [...all].reverse().find((m) => m.senderType === "USER");
-    if (lastUser && !lastUser.readAt) markAdminRead(conversationId, lastUser.id).catch(() => {});
-  }, [conversationId, identity]);
+    if (lastUser && !lastUser.readAt) markReadIfFocused(lastUser.id);
+  }, [conversationId, identity, markReadIfFocused]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -261,13 +298,23 @@ export function ConversationView({ conversationId, onChanged }: Props) {
         } else {
           scroller.scrollTop = scroller.scrollHeight;
         }
+        // ConversationView is reused across conversations (no remount), so
+        // nearBottomRef/showJumpToNewest can still hold a stale value from
+        // whichever chat was open before - recompute from where this fresh
+        // load actually landed instead of carrying that over.
+        handleThreadScroll();
       }
       return;
     }
     // New messages while pinned to the bottom: follow them and keep the
-    // last-seen cursor current so a later reopen anchors correctly.
+    // last-seen cursor current so a later reopen anchors correctly. A
+    // message the admin just sent snaps instantly instead of animating -
+    // smooth-scrolling a long way back from an old reply target either
+    // looks sluggish or (past a browser's smooth-scroll duration cap) ends
+    // up snapping anyway, so a deliberate send always just snaps.
     if (nearBottomRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      bottomRef.current?.scrollIntoView(justSentRef.current ? { behavior: "auto" } : { behavior: "smooth" });
+      justSentRef.current = false;
       const newest = messages[messages.length - 1];
       if (newest && !newest.id.startsWith("local-")) {
         setLastSeen("ADMIN", conversationId, newest.id, newest.createdAt);
@@ -278,7 +325,15 @@ export function ConversationView({ conversationId, onChanged }: Props) {
   function handleThreadScroll() {
     const scroller = scrollerRef.current;
     if (!scroller) return;
-    nearBottomRef.current = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80;
+    const atBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80;
+    nearBottomRef.current = atBottom;
+    setShowJumpToNewest(!atBottom);
+  }
+
+  function scrollToNewest() {
+    // A deliberate jump, not a passive follow - snaps instantly rather
+    // than animating, same reasoning as the just-sent case above.
+    bottomRef.current?.scrollIntoView({ behavior: "auto" });
   }
 
   // Same mobile-keyboard treatment as the visitor chat: the admin shell
@@ -318,7 +373,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
           // send completes (performSend below), so doing it again here for
           // the socket echo of that same message just double-fires it.
           if (event.message.senderType === "USER") {
-            markAdminRead(conversationId, event.message.id).catch(() => {});
+            markReadIfFocused(event.message.id);
             onChanged();
           }
           break;
@@ -392,7 +447,7 @@ export function ConversationView({ conversationId, onChanged }: Props) {
           break;
       }
     },
-    [conversationId, decryptDto, onChanged],
+    [conversationId, decryptDto, markReadIfFocused, onChanged],
   );
 
   const { status: wsStatus, send: wsSend } = useRealtimeSocket(handleWsEvent, true, reloadSilently);
@@ -533,7 +588,9 @@ export function ConversationView({ conversationId, onChanged }: Props) {
     // Sending always returns the view to the newest message, even if the
     // admin had scrolled up to reply to an older one - staying pinned to
     // wherever they replied from would leave them behind the live thread.
+    // Instant, not animated - see the effect above.
     nearBottomRef.current = true;
+    justSentRef.current = true;
     setMessages((prev) => [...prev, optimistic]);
     pendingRef.current.set(localId, { text, files, replyToId, previews: pendingAttachments });
     setReplyTo(null);
@@ -739,50 +796,63 @@ export function ConversationView({ conversationId, onChanged }: Props) {
 
       <ConnectionBanner status={wsStatus} />
 
-      <div ref={scrollerRef} onScroll={handleThreadScroll} className="flex-1 overflow-y-auto px-4 py-4">
-        {messages.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">
-            No messages yet.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {threadItems.map((item) =>
-              item.kind === "separator" ? (
-                <DateSeparator key={item.key} label={item.label} />
-              ) : item.kind === "unread" ? (
-                <UnreadDivider key={item.key} />
-              ) : (
-                <div key={item.key} data-message-id={item.message.id}>
-                  <MessageBubble
-                    message={item.message}
-                    isOwn={item.message.senderType === "ADMIN"}
-                    conversationKey={conversationKey}
-                    attachmentUrlFor={(id) => adminAttachmentUrl(conversationId, id)}
-                    canEdit={
-                      site
-                        ? Date.now() - new Date(item.message.createdAt).getTime() <=
-                          site.limits.messageEditWindowMinutes * 60_000
-                        : false
-                    }
-                    showReadReceipt={item.message.id === lastReadOwnMessageId}
-                    replyPreviewMessage={
-                      item.message.replyToId ? messages.find((m) => m.id === item.message.replyToId) : undefined
-                    }
-                    onReply={() => setReplyTo(item.message)}
-                    onEdit={() => setEditing(item.message)}
-                    onDelete={() => setDeleteTarget(item.message)}
-                    onReact={(emoji) => handleReact(item.message, emoji)}
-                    onRetry={() => handleRetry(item.message)}
-                    onFirstInteraction={dismissHint}
-                  />
-                </div>
-              ),
-            )}
-          </div>
+      <div className="relative min-h-0 flex-1">
+        <div ref={scrollerRef} onScroll={handleThreadScroll} className="h-full overflow-y-auto px-4 py-4">
+          {messages.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">
+              No messages yet.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {threadItems.map((item) =>
+                item.kind === "separator" ? (
+                  <DateSeparator key={item.key} label={item.label} />
+                ) : item.kind === "unread" ? (
+                  <UnreadDivider key={item.key} />
+                ) : (
+                  <div key={item.key} data-message-id={item.message.id}>
+                    <MessageBubble
+                      message={item.message}
+                      isOwn={item.message.senderType === "ADMIN"}
+                      conversationKey={conversationKey}
+                      attachmentUrlFor={(id) => adminAttachmentUrl(conversationId, id)}
+                      canEdit={
+                        site
+                          ? Date.now() - new Date(item.message.createdAt).getTime() <=
+                            site.limits.messageEditWindowMinutes * 60_000
+                          : false
+                      }
+                      showReadReceipt={item.message.id === lastReadOwnMessageId}
+                      replyPreviewMessage={
+                        item.message.replyToId ? messages.find((m) => m.id === item.message.replyToId) : undefined
+                      }
+                      onReply={() => setReplyTo(item.message)}
+                      onEdit={() => setEditing(item.message)}
+                      onDelete={() => setDeleteTarget(item.message)}
+                      onReact={(emoji) => handleReact(item.message, emoji)}
+                      onRetry={() => handleRetry(item.message)}
+                      onFirstInteraction={dismissHint}
+                    />
+                  </div>
+                ),
+              )}
+            </div>
+          )}
+          {userTyping && <TypingIndicator label="Typing…" />}
+          {touchUi && showTapHint && messages.length > 0 && <TapMessageHint />}
+          <div ref={bottomRef} />
+        </div>
+        {showJumpToNewest && (
+          <button
+            type="button"
+            onClick={scrollToNewest}
+            aria-label="Jump to newest message"
+            className="absolute bottom-3 right-4 flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-1.5 text-xs font-medium shadow-lg hover:bg-[var(--surface-muted)]"
+          >
+            <ArrowDown size={14} aria-hidden />
+            Jump to newest
+          </button>
         )}
-        {userTyping && <TypingIndicator label="Typing…" />}
-        {touchUi && showTapHint && messages.length > 0 && <TapMessageHint />}
-        <div ref={bottomRef} />
       </div>
 
       <Composer
