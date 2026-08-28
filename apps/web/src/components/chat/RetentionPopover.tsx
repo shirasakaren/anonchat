@@ -79,7 +79,12 @@ export function RetentionPopover({ retention, who, onChange }: Props) {
   }
 
   return (
-    <div ref={wrapperRef} className="relative z-50">
+    // z-50 only while the dropdown is actually open (needed so the
+    // desktop-anchored popover stacks above message bubble text below it) -
+    // applying it unconditionally used to let this trigger button poke
+    // through other overlays that sit above the header, like the shared
+    // note drawer's z-40 backdrop, and stay clickable behind them.
+    <div ref={wrapperRef} className={clsx("relative", open && "z-50")}>
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
