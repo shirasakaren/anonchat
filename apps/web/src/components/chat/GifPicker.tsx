@@ -121,7 +121,9 @@ export function GifPicker({ providers, onSelect, onClose, embedded = false, busy
     return (
       <div
         className={
-          embedded ? "p-4" : "absolute bottom-full left-0 z-30 mb-2 w-80 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] p-4 shadow-xl"
+          embedded
+            ? "p-4"
+            : "absolute bottom-full left-0 z-30 mb-2 w-80 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] p-4 shadow-xl"
         }
       >
         <p className="text-sm font-semibold">GIFs are not configured</p>
@@ -139,9 +141,7 @@ export function GifPicker({ providers, onSelect, onClose, embedded = false, busy
     );
   }
 
-  const attribution = aggregate
-    ? "Powered by GIPHY + KLIPY"
-    : `Powered by ${providerForQuery.toUpperCase()}`;
+  const attribution = aggregate ? "Powered by GIPHY + KLIPY" : `Powered by ${providerForQuery.toUpperCase()}`;
 
   return (
     <div

@@ -3,11 +3,15 @@ import { hasSpoofedMediaClaim, resolveFileMimetypeWithBytes } from "./fileSniffi
 
 function zipHead(): Uint8Array {
   // PK\x03\x04 followed by padding
-  return new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+  return new Uint8Array([
+    0x50, 0x4b, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  ]);
 }
 
 function pngHead(): Uint8Array {
-  return new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52]);
+  return new Uint8Array([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+  ]);
 }
 
 describe("resolveFileMimetypeWithBytes", () => {
@@ -20,13 +24,9 @@ describe("resolveFileMimetypeWithBytes", () => {
   });
 
   it("keeps a genuine docx (a zip container) as docx", () => {
-    expect(
-      resolveFileMimetypeWithBytes(
-        "application/octet-stream",
-        "report.docx",
-        zipHead(),
-      ),
-    ).toBe("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    expect(resolveFileMimetypeWithBytes("application/octet-stream", "report.docx", zipHead())).toBe(
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
   });
 
   it("keeps a genuine image claim when the bytes agree", () => {

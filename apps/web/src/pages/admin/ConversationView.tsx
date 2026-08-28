@@ -749,28 +749,28 @@ export function ConversationView({ conversationId, onChanged }: Props) {
                 <UnreadDivider key={item.key} />
               ) : (
                 <div key={item.key} data-message-id={item.message.id}>
-                <MessageBubble
-                  message={item.message}
-                  isOwn={item.message.senderType === "ADMIN"}
-                  conversationKey={conversationKey}
-                  attachmentUrlFor={(id) => adminAttachmentUrl(conversationId, id)}
-                  canEdit={
-                    site
-                      ? Date.now() - new Date(item.message.createdAt).getTime() <=
-                        site.limits.messageEditWindowMinutes * 60_000
-                      : false
-                  }
-                  showReadReceipt={item.message.id === lastReadOwnMessageId}
-                  replyPreviewMessage={
-                    item.message.replyToId ? messages.find((m) => m.id === item.message.replyToId) : undefined
-                  }
-                  onReply={() => setReplyTo(item.message)}
-                  onEdit={() => setEditing(item.message)}
-                  onDelete={() => setDeleteTarget(item.message)}
-                  onReact={(emoji) => handleReact(item.message, emoji)}
-                  onRetry={() => handleRetry(item.message)}
-                  onFirstInteraction={dismissHint}
-                />
+                  <MessageBubble
+                    message={item.message}
+                    isOwn={item.message.senderType === "ADMIN"}
+                    conversationKey={conversationKey}
+                    attachmentUrlFor={(id) => adminAttachmentUrl(conversationId, id)}
+                    canEdit={
+                      site
+                        ? Date.now() - new Date(item.message.createdAt).getTime() <=
+                          site.limits.messageEditWindowMinutes * 60_000
+                        : false
+                    }
+                    showReadReceipt={item.message.id === lastReadOwnMessageId}
+                    replyPreviewMessage={
+                      item.message.replyToId ? messages.find((m) => m.id === item.message.replyToId) : undefined
+                    }
+                    onReply={() => setReplyTo(item.message)}
+                    onEdit={() => setEditing(item.message)}
+                    onDelete={() => setDeleteTarget(item.message)}
+                    onReact={(emoji) => handleReact(item.message, emoji)}
+                    onRetry={() => handleRetry(item.message)}
+                    onFirstInteraction={dismissHint}
+                  />
                 </div>
               ),
             )}

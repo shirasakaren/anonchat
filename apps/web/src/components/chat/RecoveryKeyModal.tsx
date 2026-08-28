@@ -78,8 +78,8 @@ export function RecoveryKeyModal({ publicId, onClose }: Props) {
 
         {missing ? (
           <p role="alert" className="text-sm text-[var(--danger-fg)]">
-            This key isn't available on this device. It was created here, so if it's missing the local identity data
-            was cleared.
+            This key isn't available on this device. It was created here, so if it's missing the local identity data was
+            cleared.
           </p>
         ) : !phrase ? (
           <p className="p-4 text-center text-sm text-[var(--text-muted)]">Loading your key…</p>

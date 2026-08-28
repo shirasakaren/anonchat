@@ -171,7 +171,9 @@ export function RetentionPopover({ retention, who, onChange }: Props) {
                 onChange={(event) => void apply({ disappearingOnLogout: event.target.checked })}
                 className="mt-0.5"
               />
-              <span>Also delete the whole conversation when {visitorWord} log{who === "USER" ? "" : "s"} out</span>
+              <span>
+                Also delete the whole conversation when {visitorWord} log{who === "USER" ? "" : "s"} out
+              </span>
             </label>
           </section>
         </div>
@@ -180,15 +182,7 @@ export function RetentionPopover({ retention, who, onChange }: Props) {
   );
 }
 
-function DropdownChoice({
-  label,
-  selected,
-  onClick,
-}: {
-  label: string;
-  selected: boolean;
-  onClick: () => void;
-}) {
+function DropdownChoice({ label, selected, onClick }: { label: string; selected: boolean; onClick: () => void }) {
   return (
     <li>
       <button

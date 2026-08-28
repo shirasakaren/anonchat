@@ -59,7 +59,9 @@ const VALID_BLOB = Buffer.concat([Buffer.alloc(24, 7), Buffer.alloc(40, 1)]); //
 describe("serveStoredBlob", () => {
   it("404s when the object is missing", async () => {
     const reply = fakeReply();
-    await expect(serveStoredBlob({ storage: fakeStorage({}), storageKey: "gone", reply: reply as never })).rejects.toMatchObject({
+    await expect(
+      serveStoredBlob({ storage: fakeStorage({}), storageKey: "gone", reply: reply as never }),
+    ).rejects.toMatchObject({
       statusCode: 404,
     });
     expect(reply.sent.body).toBeUndefined();

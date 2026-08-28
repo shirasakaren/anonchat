@@ -95,11 +95,7 @@ export function LightboxActionsMenu({ actions, onCloseViewer, onMenuOpenChange }
         >
           {pickerOpen ? (
             <div className="mx-auto w-full">
-              <EmojiPicker
-                embedded
-                onClose={() => setPickerOpen(false)}
-                onSelect={(emoji) => pickEmoji(emoji)}
-              />
+              <EmojiPicker embedded onClose={() => setPickerOpen(false)} onSelect={(emoji) => pickEmoji(emoji)} />
             </div>
           ) : reactOpen ? (
             // Same curated strip as the bubble's reaction bar: the five
@@ -139,7 +135,12 @@ export function LightboxActionsMenu({ actions, onCloseViewer, onMenuOpenChange }
               <button
                 type="button"
                 role="menuitem"
-                onClick={() => run(() => { actions.onReply(); onCloseViewer(); })}
+                onClick={() =>
+                  run(() => {
+                    actions.onReply();
+                    onCloseViewer();
+                  })
+                }
                 className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-[var(--surface-muted)]"
               >
                 <Reply size={15} aria-hidden className="shrink-0 opacity-80" />
@@ -149,7 +150,12 @@ export function LightboxActionsMenu({ actions, onCloseViewer, onMenuOpenChange }
                 <button
                   type="button"
                   role="menuitem"
-                  onClick={() => run(() => { actions.onEdit(); onCloseViewer(); })}
+                  onClick={() =>
+                    run(() => {
+                      actions.onEdit();
+                      onCloseViewer();
+                    })
+                  }
                   className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-[var(--surface-muted)]"
                 >
                   <Pencil size={15} aria-hidden className="shrink-0 opacity-80" />
@@ -159,7 +165,12 @@ export function LightboxActionsMenu({ actions, onCloseViewer, onMenuOpenChange }
               <button
                 type="button"
                 role="menuitem"
-                onClick={() => run(() => { actions.onDelete(); onCloseViewer(); })}
+                onClick={() =>
+                  run(() => {
+                    actions.onDelete();
+                    onCloseViewer();
+                  })
+                }
                 className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-[var(--danger-fg)] hover:bg-[var(--surface-muted)]"
               >
                 <Trash2 size={15} aria-hidden className="shrink-0 opacity-80" />

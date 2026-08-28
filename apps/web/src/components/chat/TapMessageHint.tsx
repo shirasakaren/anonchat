@@ -3,9 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 const TAP_HINT_KEY = "anonchat:tapMessageHintDismissed";
 
 function detectTouchUi(): boolean {
-  return (
-    window.matchMedia("(pointer: coarse)").matches || !window.matchMedia("(min-width: 768px)").matches
-  );
+  return window.matchMedia("(pointer: coarse)").matches || !window.matchMedia("(min-width: 768px)").matches;
 }
 
 /**

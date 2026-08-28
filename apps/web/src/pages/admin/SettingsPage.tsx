@@ -519,7 +519,9 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
     const isVideo = file.type.startsWith("video/");
     const isImage = file.type.startsWith("image/");
     if (!isVideo && !isImage) {
-      setMediaError("Media must be an image, animated GIF, or video (PNG, JPEG, WebP, GIF, AVIF, MP4, WebM, OGG, MOV).");
+      setMediaError(
+        "Media must be an image, animated GIF, or video (PNG, JPEG, WebP, GIF, AVIF, MP4, WebM, OGG, MOV).",
+      );
       return;
     }
     const limitMb = isVideo ? site.limits.attachmentSize.videoMb : site.limits.attachmentSize.imageMb;
@@ -797,8 +799,8 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
               </div>
               {pendingMediaFiles.length > 0 && (
                 <p className="mt-3 text-xs text-[var(--text-muted)]">
-                  {pendingMediaFiles.length} new {pendingMediaFiles.length === 1 ? "file" : "files"} ready to
-                  upload - select Save changes to publish.
+                  {pendingMediaFiles.length} new {pendingMediaFiles.length === 1 ? "file" : "files"} ready to upload -
+                  select Save changes to publish.
                 </p>
               )}
               {(orderedProfileMedia.length > 0 || pendingMediaFiles.length > 0) && (
@@ -1168,8 +1170,8 @@ export default function SettingsPage({ view = "system" }: { view?: "profile" | "
             <section className="mb-8 rounded-xl border border-[var(--border)] p-4">
               <h2 className="mb-1 text-sm font-semibold">GIF picker</h2>
               <p className="mb-4 text-xs text-[var(--text-muted)]">
-                Add a GIPHY or KLIPY API key to enable the GIF picker in the chat composer for you and your
-                visitors. Keys stay on the server - the browser only ever talks to this app.
+                Add a GIPHY or KLIPY API key to enable the GIF picker in the chat composer for you and your visitors.
+                Keys stay on the server - the browser only ever talks to this app.
               </p>
               <label className="mb-3 block text-sm font-medium">
                 GIPHY API key

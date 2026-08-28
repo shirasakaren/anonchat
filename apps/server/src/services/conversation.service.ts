@@ -269,15 +269,9 @@ export async function setConversationRetention(
   const conversation = await prisma.conversation.update({
     where: { id: conversationId },
     data: {
-      ...(retention.disappearingEnabled !== undefined
-        ? { disappearingEnabled: retention.disappearingEnabled }
-        : {}),
-      ...(retention.disappearingSeconds !== undefined
-        ? { disappearingSeconds: retention.disappearingSeconds }
-        : {}),
-      ...(retention.disappearingOnLogout !== undefined
-        ? { disappearingOnLogout: retention.disappearingOnLogout }
-        : {}),
+      ...(retention.disappearingEnabled !== undefined ? { disappearingEnabled: retention.disappearingEnabled } : {}),
+      ...(retention.disappearingSeconds !== undefined ? { disappearingSeconds: retention.disappearingSeconds } : {}),
+      ...(retention.disappearingOnLogout !== undefined ? { disappearingOnLogout: retention.disappearingOnLogout } : {}),
     },
     include: { anonymousUser: { select: ANONYMOUS_USER_SELECT } },
   });
@@ -311,10 +305,12 @@ export async function hardDeleteConversation(conversationId: string): Promise<vo
 
   const storage = getStorageAdapter();
   await Promise.allSettled(
-    [...conversation.messages.flatMap((message) => message.attachments), ...conversation.noteAssets].map((attachment) => {
-      evictCachedBlob(attachment.storageKey);
-      return storage.delete(attachment.storageKey);
-    }),
+    [...conversation.messages.flatMap((message) => message.attachments), ...conversation.noteAssets].map(
+      (attachment) => {
+        evictCachedBlob(attachment.storageKey);
+        return storage.delete(attachment.storageKey);
+      },
+    ),
   );
 
   // "Permanent" must erase the identity row, not merely mark it deleted.

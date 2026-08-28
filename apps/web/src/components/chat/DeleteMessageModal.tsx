@@ -48,8 +48,8 @@ export function DeleteMessageModal({ isOwn, onDeleteForMe, onDeleteForEveryone, 
           <p className="mt-1 text-xs text-[var(--text-muted)]">
             {isOwn ? (
               <>
-                "Delete for me" only removes it from your own view on this device. "Delete for everyone" removes it
-                for both of you and can't be undone.
+                "Delete for me" only removes it from your own view on this device. "Delete for everyone" removes it for
+                both of you and can't be undone.
               </>
             ) : (
               <>

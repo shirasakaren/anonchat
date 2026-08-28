@@ -220,8 +220,8 @@ export default function PublicHome() {
             End-to-end encrypted - only your identity and {ownerName}'s key can decrypt these messages.
           </p>
           <p className="text-xs text-[var(--text-muted)]">
-            Keep your recovery key to use this conversation on another device - find it behind the key icon in the
-            chat header anytime.
+            Keep your recovery key to use this conversation on another device - find it behind the key icon in the chat
+            header anytime.
           </p>
           {site?.visitorInsights.collectsIpAddress && (
             <p className="text-xs text-[var(--text-muted)]">

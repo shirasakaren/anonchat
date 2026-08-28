@@ -23,10 +23,20 @@ export async function parseSendMessageBody(
   request: FastifyRequest,
   maxAttachments: number,
   maxAttachmentSizeMb: number,
-): Promise<{ content: EncryptedPayloadInput; replyToId: string | null; clientId: string | null; attachments: PendingAttachment[] }> {
+): Promise<{
+  content: EncryptedPayloadInput;
+  replyToId: string | null;
+  clientId: string | null;
+  attachments: PendingAttachment[];
+}> {
   if (!request.isMultipart()) {
     const body = SendMessageRequestSchema.parse(request.body);
-    return { content: body.content, replyToId: body.replyToId ?? null, clientId: body.clientId ?? null, attachments: [] };
+    return {
+      content: body.content,
+      replyToId: body.replyToId ?? null,
+      clientId: body.clientId ?? null,
+      attachments: [],
+    };
   }
 
   let contentRaw: string | undefined;

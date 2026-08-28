@@ -2,12 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { encryptBlob } from "@anonchat/crypto";
 import { evictAttachmentsOf } from "../crypto/attachmentCache.js";
 import { ChevronRight, KeyRound, LogOut, StickyNote, Trash2 } from "lucide-react";
-import type {
-  ConversationNoteDto,
-  ConversationRetentionDto,
-  MessageDto,
-  ServerWsEvent,
-} from "@anonchat/shared";
+import type { ConversationNoteDto, ConversationRetentionDto, MessageDto, ServerWsEvent } from "@anonchat/shared";
 import {
   attachmentUrl,
   deleteMessage,
@@ -734,24 +729,24 @@ export default function Chat() {
                   <UnreadDivider key={item.key} />
                 ) : (
                   <div key={item.key} data-message-id={item.message.id}>
-                  <MessageBubble
-                    message={item.message}
-                    isOwn={item.message.senderType === "USER"}
-                    conversationKey={conversationKey}
-                    attachmentUrlFor={attachmentUrl}
-                    canEdit={canEdit(item.message)}
-                    disableActions={isBlocked}
-                    showReadReceipt={item.message.id === lastReadOwnMessageId}
-                    replyPreviewMessage={
-                      item.message.replyToId ? messages.find((m) => m.id === item.message.replyToId) : undefined
-                    }
-                    onReply={() => setReplyTo(item.message)}
-                    onEdit={() => setEditing(item.message)}
-                    onDelete={() => setDeleteTarget(item.message)}
-                    onReact={(emoji) => handleReact(item.message, emoji)}
-                    onRetry={() => handleRetry(item.message)}
-                    onFirstInteraction={dismissHint}
-                  />
+                    <MessageBubble
+                      message={item.message}
+                      isOwn={item.message.senderType === "USER"}
+                      conversationKey={conversationKey}
+                      attachmentUrlFor={attachmentUrl}
+                      canEdit={canEdit(item.message)}
+                      disableActions={isBlocked}
+                      showReadReceipt={item.message.id === lastReadOwnMessageId}
+                      replyPreviewMessage={
+                        item.message.replyToId ? messages.find((m) => m.id === item.message.replyToId) : undefined
+                      }
+                      onReply={() => setReplyTo(item.message)}
+                      onEdit={() => setEditing(item.message)}
+                      onDelete={() => setDeleteTarget(item.message)}
+                      onReact={(emoji) => handleReact(item.message, emoji)}
+                      onRetry={() => handleRetry(item.message)}
+                      onFirstInteraction={dismissHint}
+                    />
                   </div>
                 ),
               )}

@@ -326,10 +326,7 @@ export function AttachmentPreview({
             <img
               src={state.url}
               alt={meta.filename}
-              className={clsx(
-                "max-w-full object-contain",
-                standalone ? "max-h-80 rounded-2xl" : "max-h-64 rounded-lg",
-              )}
+              className={clsx("max-w-full object-contain", standalone ? "max-h-80 rounded-2xl" : "max-h-64 rounded-lg")}
             />
             <span className="absolute right-1.5 bottom-1.5 rounded-md bg-black/60 p-1 text-white opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100">
               <ZoomIn size={14} aria-hidden />

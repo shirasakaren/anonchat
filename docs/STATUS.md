@@ -101,6 +101,7 @@ Deployed to https://chatwith.ren (multi-arch image; see
 produces arm64-only images that Railway silently fails to deploy).
 
 Bug fixes:
+
 - Message links with markdown syntax (`[url](url)`, what Tiptap serializes
   for autolinked URLs) no longer get double-linkified into a nested link
   whose href was the raw markdown source - clicking used to navigate to a
@@ -133,6 +134,7 @@ Bug fixes:
   whose uploaders disabled embedding.
 
 Features:
+
 - Disappearing messages (off / 24h / 7d / 90d, plus optional wipe on
   logout) and auto-delete chat (on visitor disconnect with a 60s grace,
   after both sides read, or after N days) - a timer control in both chat
@@ -148,6 +150,7 @@ Features:
   (no more auto-save + refresh); unsaved previews block navigation.
 
 Performance:
+
 - Multipart file parts stream straight into the storage adapter (local
   write stream / S3 lib-storage Upload) - each part must be consumed
   before the parser advances, so storage writes happen inside the parse

@@ -41,7 +41,7 @@ function sniff(bytes: Uint8Array): string | null {
   if (bytes.length >= 4 && ascii(0, 4) === "OggS") return "audio/ogg";
   if (bytes.length >= 4 && ascii(0, 4) === "fLaC") return "audio/flac";
   if (bytes.length >= 3 && ascii(0, 3) === "ID3") return "audio/mpeg";
-  if (bytes.length >= 2 && (bytes[0]! === 0xff && (bytes[1]! & 0xe0) === 0xe0)) return "audio/mpeg";
+  if (bytes.length >= 2 && bytes[0]! === 0xff && (bytes[1]! & 0xe0) === 0xe0) return "audio/mpeg";
   if (bytes.length >= 5 && ascii(0, 5) === "%PDF-") return "application/pdf";
   if (bytes.length >= 2 && ascii(0, 2) === "BM") return "image/bmp";
   if (bytes.length >= 2 && ascii(0, 2) === "MZ") return "application/x-msdownload";
@@ -76,11 +76,7 @@ function familyOf(mimetype: string): Family {
  * meaningful way (a renamed archive posing as media, or a real image
  * renamed to .zip), the bytes win - everything else keeps the claim.
  */
-export function resolveFileMimetypeWithBytes(
-  declaredMimetype: string,
-  filename: string,
-  bytes: Uint8Array,
-): string {
+export function resolveFileMimetypeWithBytes(declaredMimetype: string, filename: string, bytes: Uint8Array): string {
   const claimed = resolveFileMimetype(declaredMimetype, filename);
   const sniffed = sniff(bytes);
   if (!sniffed) return claimed;

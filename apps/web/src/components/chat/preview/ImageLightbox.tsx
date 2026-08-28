@@ -158,9 +158,7 @@ export function ImageLightbox({ url, filename, onClose, actions }: Props) {
           >
             <Download size={18} aria-hidden />
           </a>
-          {actions && (
-            <LightboxActionsMenu actions={actions} onCloseViewer={onClose} onMenuOpenChange={setMenuOpen} />
-          )}
+          {actions && <LightboxActionsMenu actions={actions} onCloseViewer={onClose} onMenuOpenChange={setMenuOpen} />}
           <button
             type="button"
             onClick={onClose}

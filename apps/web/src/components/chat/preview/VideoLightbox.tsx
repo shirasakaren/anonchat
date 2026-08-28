@@ -63,9 +63,7 @@ export function VideoLightbox({ url, filename, onClose, onError, actions }: Prop
           >
             <Download size={18} aria-hidden />
           </a>
-          {actions && (
-            <LightboxActionsMenu actions={actions} onCloseViewer={onClose} onMenuOpenChange={setMenuOpen} />
-          )}
+          {actions && <LightboxActionsMenu actions={actions} onCloseViewer={onClose} onMenuOpenChange={setMenuOpen} />}
           <button
             ref={closeRef}
             type="button"

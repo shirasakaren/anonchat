@@ -476,7 +476,15 @@ export function MessageBubble({
   // One list drives both renderings: an icon-only row on touch (over the
   // conversation navbar) and the labeled vertical list on pointer devices.
   const sheetItems: SheetItem[] = [
-    { key: "reply", icon: <Reply size={18} aria-hidden />, label: "Reply", onClick: () => { dismiss(); onReply(); } },
+    {
+      key: "reply",
+      icon: <Reply size={18} aria-hidden />,
+      label: "Reply",
+      onClick: () => {
+        dismiss();
+        onReply();
+      },
+    },
     ...(message.text.trim().length > 0
       ? [{ key: "copy", icon: <Copy size={18} aria-hidden />, label: "Copy", onClick: () => void copyText() }]
       : []),
@@ -490,14 +498,27 @@ export function MessageBubble({
       },
     })),
     ...(isOwn && canEdit
-      ? [{ key: "edit", icon: <Pencil size={18} aria-hidden />, label: "Edit", onClick: () => { dismiss(); onEdit(); } }]
+      ? [
+          {
+            key: "edit",
+            icon: <Pencil size={18} aria-hidden />,
+            label: "Edit",
+            onClick: () => {
+              dismiss();
+              onEdit();
+            },
+          },
+        ]
       : []),
     {
       key: "delete",
       icon: <Trash2 size={18} aria-hidden />,
       label: "Delete",
       destructive: true,
-      onClick: () => { dismiss(); onDelete(); },
+      onClick: () => {
+        dismiss();
+        onDelete();
+      },
     },
     { key: "cancel", icon: <X size={18} aria-hidden />, label: "Cancel", onClick: dismiss },
   ];
@@ -652,7 +673,12 @@ export function MessageBubble({
 
       {imageOnly ? (
         <div className="min-w-0 max-w-[80%]">
-          <div className={clsx("relative flex min-w-0 max-w-full items-end gap-1", selected && canShowActions && "rounded-2xl ring-2 ring-[var(--color-accent-500)]")}>
+          <div
+            className={clsx(
+              "relative flex min-w-0 max-w-full items-end gap-1",
+              selected && canShowActions && "rounded-2xl ring-2 ring-[var(--color-accent-500)]",
+            )}
+          >
             {isOwn && <HoverActions {...messageActionsProps} />}
             <div
               className={clsx(
@@ -842,18 +868,46 @@ export function MessageBubble({
           <MessageDropdown
             anchorRect={menuRect}
             items={[
-              { icon: <Reply size={15} aria-hidden />, label: "Reply", onClick: () => { setMenuRect(null); onReply(); } },
+              {
+                icon: <Reply size={15} aria-hidden />,
+                label: "Reply",
+                onClick: () => {
+                  setMenuRect(null);
+                  onReply();
+                },
+              },
               ...(message.text.trim().length > 0
-                ? [{ icon: <Copy size={15} aria-hidden />, label: "Copy", onClick: () => { setMenuRect(null); void copyText(); } }]
+                ? [
+                    {
+                      icon: <Copy size={15} aria-hidden />,
+                      label: "Copy",
+                      onClick: () => {
+                        setMenuRect(null);
+                        void copyText();
+                      },
+                    },
+                  ]
                 : []),
               ...(isOwn && canEdit
-                ? [{ icon: <Pencil size={15} aria-hidden />, label: "Edit", onClick: () => { setMenuRect(null); onEdit(); } }]
+                ? [
+                    {
+                      icon: <Pencil size={15} aria-hidden />,
+                      label: "Edit",
+                      onClick: () => {
+                        setMenuRect(null);
+                        onEdit();
+                      },
+                    },
+                  ]
                 : []),
               {
                 icon: <Trash2 size={15} aria-hidden />,
                 label: "Delete",
                 destructive: true,
-                onClick: () => { setMenuRect(null); onDelete(); },
+                onClick: () => {
+                  setMenuRect(null);
+                  onDelete();
+                },
               },
             ]}
             onClose={() => setMenuRect(null)}
@@ -899,10 +953,7 @@ function MessageDropdown({
 }) {
   // +1 row for the Cancel entry at the bottom.
   const estimatedHeight = (items.length + 1) * DROPDOWN_ITEM_HEIGHT_PX + DROPDOWN_PADDING_PX;
-  const left = Math.min(
-    Math.max(8, anchorRect.right - DROPDOWN_WIDTH_PX),
-    window.innerWidth - DROPDOWN_WIDTH_PX - 8,
-  );
+  const left = Math.min(Math.max(8, anchorRect.right - DROPDOWN_WIDTH_PX), window.innerWidth - DROPDOWN_WIDTH_PX - 8);
   const opensDown = anchorRect.bottom + 8 + estimatedHeight <= window.innerHeight;
   const top = opensDown ? anchorRect.bottom + 8 : Math.max(8, anchorRect.top - estimatedHeight - 8);
 

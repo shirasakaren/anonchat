@@ -54,7 +54,10 @@ async function searchGiphy(key: string, query: GifSearchQueryInput): Promise<Pro
     rating: "r",
   });
   if (query.mode === "search" && query.q) params.set("q", query.q);
-  const url = query.mode === "trending" ? `https://api.giphy.com/v1/gifs/trending?${params}` : `https://api.giphy.com/v1/gifs/search?${params}`;
+  const url =
+    query.mode === "trending"
+      ? `https://api.giphy.com/v1/gifs/trending?${params}`
+      : `https://api.giphy.com/v1/gifs/search?${params}`;
   const response = await fetch(url, { signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS) });
   if (!response.ok) throw new Error(`GIPHY returned HTTP ${response.status}`);
   const json = (await response.json()) as {
@@ -83,7 +86,10 @@ async function searchKlipy(key: string, query: GifSearchQueryInput): Promise<Pro
     media_filter: "tinygif,gif",
   });
   if (query.mode === "search" && query.q) params.set("q", query.q);
-  const url = query.mode === "trending" ? `https://api.klipy.com/v1/trending?${params}` : `https://api.klipy.com/v1/search?${params}`;
+  const url =
+    query.mode === "trending"
+      ? `https://api.klipy.com/v1/trending?${params}`
+      : `https://api.klipy.com/v1/search?${params}`;
   const response = await fetch(url, { signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS) });
   if (!response.ok) throw new Error(`KLIPY returned HTTP ${response.status}`);
   const json = (await response.json()) as {
@@ -105,8 +111,7 @@ async function searchKlipy(key: string, query: GifSearchQueryInput): Promise<Pro
 
 export async function searchGifs(query: GifSearchQueryInput): Promise<{ results: GifResultDto[]; error?: string }> {
   const settings = await getSiteSettings();
-  const providers: Array<"giphy" | "klipy"> =
-    query.provider === "all" ? ["giphy", "klipy"] : [query.provider];
+  const providers: Array<"giphy" | "klipy"> = query.provider === "all" ? ["giphy", "klipy"] : [query.provider];
 
   // "all" searches whichever providers are actually configured and merges
   // the two result lists by interleaving, capped at the requested limit.

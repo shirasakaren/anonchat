@@ -40,7 +40,10 @@ export type DisappearingSeconds = (typeof DISAPPEARING_OPTIONS_SECONDS)[number];
 export const RetentionRequestSchema = z.object({
   disappearingEnabled: z.boolean().optional(),
   disappearingSeconds: z
-    .union([z.literal(null), z.coerce.number().refine((n) => DISAPPEARING_OPTIONS_SECONDS.includes(n as DisappearingSeconds))])
+    .union([
+      z.literal(null),
+      z.coerce.number().refine((n) => DISAPPEARING_OPTIONS_SECONDS.includes(n as DisappearingSeconds)),
+    ])
     .optional(),
   disappearingOnLogout: z.boolean().optional(),
 });

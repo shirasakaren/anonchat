@@ -683,7 +683,11 @@ export function Composer({
             </button>
             {showPanel && (
               <div className="absolute bottom-full left-0 z-30 mb-2 w-[min(340px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] shadow-lg">
-                <div role="tablist" aria-label="Emoji or GIFs" className="flex gap-1 border-b border-[var(--border)] px-2 py-1.5">
+                <div
+                  role="tablist"
+                  aria-label="Emoji or GIFs"
+                  className="flex gap-1 border-b border-[var(--border)] px-2 py-1.5"
+                >
                   <button
                     type="button"
                     role="tab"

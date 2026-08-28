@@ -13,4 +13,3 @@ trade-offs, and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how the
 system fits together.
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/anonchat?referralCode=FHzp8r&utm_medium=integration&utm_source=template&utm_campaign=generic)
-
