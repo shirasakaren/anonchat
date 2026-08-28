@@ -20,7 +20,14 @@ export default function Inbox() {
           refreshToken={refreshToken}
         />
       </div>
-      <div className={conversationId ? "block w-full" : "hidden md:block md:flex-1"}>
+      {/* min-w-0 is load-bearing: as a flex item of the row above, this pane
+          otherwise defaults to a min-width based on its content's intrinsic
+          size - an unbroken long reply preview (URL, filename) then refuses
+          to shrink and grows the whole row past the viewport instead of
+          truncating, pushing the composer's Send button off-screen with no
+          scrollbar to reach it (the ancestor <main> in DashboardLayout clips
+          overflow-x, so it's invisible, not just scrolled away). */}
+      <div className={conversationId ? "min-w-0 block w-full" : "hidden md:block md:flex-1"}>
         {conversationId ? (
           <div className="flex h-full flex-col">
             <button
