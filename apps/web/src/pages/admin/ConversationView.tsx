@@ -530,6 +530,10 @@ export function ConversationView({ conversationId, onChanged }: Props) {
       pendingAttachments,
       transferProgress: files.length > 0 ? 0 : undefined,
     };
+    // Sending always returns the view to the newest message, even if the
+    // admin had scrolled up to reply to an older one - staying pinned to
+    // wherever they replied from would leave them behind the live thread.
+    nearBottomRef.current = true;
     setMessages((prev) => [...prev, optimistic]);
     pendingRef.current.set(localId, { text, files, replyToId, previews: pendingAttachments });
     setReplyTo(null);
